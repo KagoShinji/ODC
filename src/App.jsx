@@ -8,6 +8,7 @@ import { ServicesSection } from './components/sections/Services';
 import { PortfolioSection } from './components/sections/Portfolio';
 import { ContactSection } from './components/sections/Contact';
 import { SplashScreen } from './components/ui/SplashScreen';
+import { Chatbot } from './components/ui/Chatbot';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,13 +28,16 @@ function App() {
         {isLoading ? (
           <SplashScreen key="splash" finishLoading={() => setIsLoading(false)} />
         ) : (
-          <Layout key="layout">
-            <Hero />
-            <AboutSection />
-            <ServicesSection />
-            <PortfolioSection />
-            <ContactSection />
-          </Layout>
+          <>
+            <Layout key="layout">
+              <Hero />
+              <AboutSection />
+              <ServicesSection />
+              <PortfolioSection />
+              <ContactSection />
+            </Layout>
+            <Chatbot />
+          </>
         )}
       </AnimatePresence>
     </Router>
