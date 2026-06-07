@@ -1,4 +1,4 @@
-﻿import { motion as Motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 import {
     ArrowRight,
     ArrowSquareOut,
@@ -10,6 +10,7 @@ import {
     Lightning,
     ShieldCheck,
     Sparkle,
+    Trophy,
 } from '@phosphor-icons/react';
 
 const easeOut = [0.22, 1, 0.36, 1];
@@ -38,19 +39,12 @@ const businessMarqueeLogos = [
     { name: 'CPRMED', src: '/logos/cprmedlogo.png' },
     { name: 'SPEC', src: '/logos/speclogo.jpg' },
     { name: 'The Knee Arthritis', src: '/thekneearthritis&orthopaedicinstitute.png' },
+    { name: 'Jump Serve Sports Center Mandaue', src: '/logos/jumpservemandauelogo.png' },
+    { name: 'KennyDink Moalboal Cebu', src: '/logos/kennydinklogo.jpg' },
+    { name: 'SupportTeach', src: '/logos/supportteachlogo.svg' },
 ];
 
 const businessSystemShowcases = [
-    {
-        title: 'The Pickle Point Cebu',
-        type: 'Court booking platform',
-        logo: '/logos/picklepointnewlogo.jpg',
-        preview: '/thepicklepointcebu.jpg',
-        href: 'https://thepicklepointcebu.com',
-        description: 'A booking-focused website that turns visitor intent into scheduled play with clear court discovery and reservation flow.',
-        featured: true,
-        theme: 'pickle',
-    },
     {
         title: 'Firsel Tattoo',
         type: 'Artist portfolio',
@@ -114,6 +108,55 @@ const businessSystemShowcases = [
         href: 'https://odyssey-clinic-system.vercel.app/portal',
         description: 'A specialist medical institute landing page designed for patient confidence, procedure clarity, and referral readiness.',
         theme: 'medical',
+    },
+    {
+        title: 'SupportTeach',
+        type: 'Learning management system',
+        logo: '/logos/supportteachlogo.svg',
+        preview: '/images/supportteach.png',
+        href: 'https://supportteach.netlify.app/',
+        description: 'An educational platform built for structured learning delivery, student progress tracking, and teacher-driven course management with clean workflow-first UI.',
+        theme: 'supportteach',
+    },
+];
+
+const pickleballShowcases = [
+    {
+        title: 'The Pickle Point Cebu',
+        type: 'Court booking platform',
+        logo: '/logos/picklepointnewlogo.jpg',
+        preview: '/thepicklepointcebu.jpg',
+        href: 'https://thepicklepointcebu.com',
+        description: 'The go-to pickleball destination in Mandaue City — offering premium court access, fast reservations, and a community-first experience that keeps players coming back week after week.',
+        featured: true,
+        theme: 'pickle',
+        location: 'Mandaue City',
+        highlight: '🏆 Most Popular Court Venue in Mandaue City',
+        stats: [
+            { value: 'Pickleball', label: 'Specialty' },
+            { value: 'Live Booking', label: 'System' },
+            { value: "Mandaue's #1", label: 'Reputation' },
+        ],
+    },
+    {
+        title: 'KennyDink Moalboal Cebu',
+        type: 'Resort & pickleball booking platform',
+        logo: '/logos/kennydinklogo.jpg',
+        preview: '/kennydink.png',
+        href: 'https://kennydinkmoalboalcebu.com',
+        description: 'A resort-integrated pickleball court booking platform for Moalboal — blending leisure discovery, court reservations, and guest experience into one polished site.',
+        theme: 'kennydink',
+        location: 'Moalboal, Cebu',
+    },
+    {
+        title: 'Jump Serve Sports Center Mandaue',
+        type: 'Sports facility website',
+        logo: '/logos/jumpservemandauelogo.png',
+        preview: '/jumpserve.png',
+        href: 'https://jumpservesportscenter.com',
+        description: 'A high-energy sports center website built for court discovery, schedule browsing, and fast reservation intent for volleyball and multi-sport facilities.',
+        theme: 'jumpserve',
+        location: 'Mandaue City',
     },
 ];
 
@@ -349,6 +392,85 @@ function SystemsShowcase() {
     );
 }
 
+function PickleballCard({ item, index }) {
+    return (
+        <Motion.a
+            href={item.href}
+            target="_blank"
+            rel="noreferrer"
+            {...sectionMotion}
+            transition={{ duration: 0.82, delay: index * 0.1, ease: easeOut }}
+            className={`pickleball-card ${item.featured ? 'is-featured' : ''} ${item.theme}`}
+            aria-label={`Open ${item.title}`}
+        >
+            {item.highlight && (
+                <div className="pickleball-highlight-badge">
+                    <span>{item.highlight}</span>
+                </div>
+            )}
+            <div className="pickleball-card-preview">
+                <img src={item.preview} alt={`${item.title} preview`} loading="lazy" />
+            </div>
+            <div className="pickleball-card-content">
+                <div className="pickleball-logo-wrap">
+                    <img src={item.logo} alt={`${item.title} logo`} loading="lazy" />
+                </div>
+                <div className="pickleball-card-copy">
+                    <div className="pickleball-card-meta">
+                        <span className="pickleball-type">{item.type}</span>
+                        {item.location && (
+                            <span className="pickleball-location">{item.location}</span>
+                        )}
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p>{item.description}</p>
+                </div>
+                {item.stats && (
+                    <div className="pickleball-stats">
+                        {item.stats.map((stat) => (
+                            <div className="pickleball-stat" key={stat.label}>
+                                <strong>{stat.value}</strong>
+                                <span>{stat.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                <span className="pickleball-open-link">
+                    Open website
+                    <ArrowSquareOut size={14} weight="bold" />
+                </span>
+            </div>
+        </Motion.a>
+    );
+}
+
+function PickleballShowcase() {
+    return (
+        <section id="pickleball" className="landing-section pickleball-section">
+            <div className="pickleball-section-bg" aria-hidden="true" />
+            <div className="landing-shell">
+                <div className="pickleball-section-header">
+                    <SectionHeader
+                        eyebrow="Court & sports systems"
+                        title="Powering Cebu's court culture."
+                        copy="Dedicated platforms for sports centers and court venues — built to handle bookings, schedules, and on-court experiences with precision and clarity."
+                    />
+                    <div className="pickleball-badge">
+                        <Trophy size={18} weight="fill" />
+                        <span>3 Live Venues</span>
+                    </div>
+                </div>
+
+                <div className="pickleball-grid">
+                    {pickleballShowcases.map((item, index) => (
+                        <PickleballCard key={item.title} item={item} index={index} />
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+}
+
 function GovernmentShowcase() {
     return (
         <section id="civic" className="landing-section government-showcase-section premium-government-section">
@@ -459,6 +581,7 @@ export function Home() {
         <div className="reference-landing premium-landing">
             <HeroSection />
             <SystemsShowcase />
+            <PickleballShowcase />
             <GovernmentShowcase />
             <FinalCta />
         </div>

@@ -63,6 +63,30 @@ const projects = [
         description: 'Comprehensive gym management system for operations, member workflows, and admin oversight.',
         impact: 'Gym management system'
     },
+    {
+        id: 8,
+        title: 'Jump Serve Sports Center Mandaue',
+        category: 'Systems',
+        image: '/jumpserve.png',
+        description: 'A high-energy sports center website built for court discovery, schedule browsing, and fast reservation intent for volleyball and multi-sport facilities.',
+        impact: 'Sports facility website'
+    },
+    {
+        id: 9,
+        title: 'KennyDink Moalboal Cebu',
+        category: 'Systems',
+        image: '/kennydink.png',
+        description: 'A resort-integrated pickleball court booking platform for Moalboal — blending leisure discovery, court reservations, and guest experience into one polished site.',
+        impact: 'Resort & court booking'
+    },
+    {
+        id: 10,
+        title: 'SupportTeach',
+        category: 'Systems',
+        image: '/images/supportteach.png',
+        description: 'An educational platform built for structured learning delivery, student progress tracking, and teacher-driven course management with clean workflow-first UI.',
+        impact: 'LMS & progress tracker'
+    },
 ];
 
 export function PortfolioSection() {
