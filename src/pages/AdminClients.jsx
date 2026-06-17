@@ -62,14 +62,20 @@ const getDueDateStatus = (dueDateStr) => {
   return 'ok';
 };
 
+const toLocalDateString = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 const calculateDueDateFromDay = (day) => {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const maxDays = new Date(year, month + 1, 0).getDate();
   const targetDay = Math.min(Number(day), maxDays);
-  const d = new Date(year, month, targetDay);
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(new Date(year, month, targetDay));
 };
 
 const shiftDueDate = (currentDueDateStr, cycle) => {
@@ -84,7 +90,7 @@ const shiftDueDate = (currentDueDateStr, cycle) => {
   } else {
     date.setDate(date.getDate() + 30);
   }
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 };
 
 const getNextMonthDueDate = (currentDueDateStr, billingDay) => {
@@ -97,8 +103,7 @@ const getNextMonthDueDate = (currentDueDateStr, billingDay) => {
   }
   const maxDays = new Date(nextYear, nextMonth + 1, 0).getDate();
   const targetDay = Math.min(Number(billingDay), maxDays);
-  const nextDate = new Date(nextYear, nextMonth, targetDay);
-  return nextDate.toISOString().split('T')[0];
+  return toLocalDateString(new Date(nextYear, nextMonth, targetDay));
 };
 
 export default function AdminClients({ firebaseUser }) {

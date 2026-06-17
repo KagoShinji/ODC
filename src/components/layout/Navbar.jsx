@@ -75,9 +75,9 @@ export function Navbar() {
                     <button
                         type="button"
                         onClick={() => scrollToSection('home')}
-                        className="inline-flex items-center gap-2 text-sm font-display font-black tracking-[-0.04em] text-white transition-colors"
+                        className="inline-flex items-center gap-2 text-sm font-display font-black tracking-[-0.04em] text-white transition-colors hover:opacity-80"
                     >
-                        <span className="grid h-5 w-5 place-items-center rounded-full border border-white/15 text-[9px]">OD</span>
+                        <img src="/logos/odcnewlogo.png" alt="ODC Logo" className="h-6 w-auto" />
                         Odyssey
                     </button>
 

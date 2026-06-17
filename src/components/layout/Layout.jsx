@@ -19,7 +19,7 @@ export function Layout({ children }) {
                 <div className="relative mx-auto grid w-[min(1480px,calc(100%-clamp(1rem,5vw,5.5rem)))] items-end gap-8 md:grid-cols-[1fr_auto]">
                     <div>
                         <div className="mb-5 inline-flex items-center gap-2 font-display text-sm font-black tracking-[-0.04em]">
-                            <span className="grid h-6 w-6 place-items-center rounded-full border border-[#101718]/20 text-[9px]">OD</span>
+                            <img src="/logos/odcnewlogo.png" alt="ODC Logo" className="h-6 w-auto brightness-0" />
                             OdysseyPH IT Solutions
                         </div>
                         <p className="max-w-xl text-sm leading-relaxed text-[#101718]/58">

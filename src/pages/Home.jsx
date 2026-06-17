@@ -42,6 +42,8 @@ const businessMarqueeLogos = [
     { name: 'Jump Serve Sports Center Mandaue', src: '/logos/jumpservemandauelogo.png' },
     { name: 'KennyDink Moalboal Cebu', src: '/logos/kennydinklogo.jpg' },
     { name: 'SupportTeach', src: '/logos/supportteachlogo.svg' },
+    { name: 'Jump Serve Mactan', src: '/logos/jumpservemactanlogo.jpg' },
+    { name: 'Nickleball Avenue', src: '/logos/nickleballavenuelogo.jpg' },
 ];
 
 const businessSystemShowcases = [
@@ -157,6 +159,26 @@ const pickleballShowcases = [
         description: 'A high-energy sports center website built for court discovery, schedule browsing, and fast reservation intent for volleyball and multi-sport facilities.',
         theme: 'jumpserve',
         location: 'Mandaue City',
+    },
+    {
+        title: 'Jump Serve Mactan',
+        type: 'Sports facility website',
+        logo: '/logos/jumpservemactanlogo.jpg',
+        preview: '/jumpservemactan.png',
+        href: 'https://jumpservepickleball.com',
+        description: 'A high-energy sports center website built for court discovery, schedule browsing, and fast reservation intent for pickleball facilities in Mactan.',
+        theme: 'jumpserve',
+        location: 'Mactan',
+    },
+    {
+        title: 'Nickleball Avenue',
+        type: 'Pickleball venue',
+        logo: '/logos/nickleballavenuelogo.jpg',
+        preview: '/nickleballavenue.png',
+        href: 'https://nickleballavenue.com',
+        description: 'A premium pickleball venue providing excellent courts, simple online booking, and an active player community.',
+        theme: 'pickle',
+        location: 'Talisay Cebu',
     },
 ];
 
@@ -457,7 +479,7 @@ function PickleballShowcase() {
                     />
                     <div className="pickleball-badge">
                         <Trophy size={18} weight="fill" />
-                        <span>3 Live Venues</span>
+                        <span>5 Live Venues</span>
                     </div>
                 </div>
 

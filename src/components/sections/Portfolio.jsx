@@ -87,6 +87,22 @@ const projects = [
         description: 'An educational platform built for structured learning delivery, student progress tracking, and teacher-driven course management with clean workflow-first UI.',
         impact: 'LMS & progress tracker'
     },
+    {
+        id: 11,
+        title: 'Jump Serve Mactan',
+        category: 'Systems',
+        image: '/jumpservemactan.png',
+        description: 'A dedicated pickleball facility website in Mactan built for court discovery and reservations.',
+        impact: 'Sports facility website'
+    },
+    {
+        id: 12,
+        title: 'Nickleball Avenue',
+        category: 'Systems',
+        image: '/nickleballavenue.png',
+        description: 'A premium pickleball venue platform providing excellent courts and simple online booking.',
+        impact: 'Pickleball venue platform'
+    }
 ];
 
 export function PortfolioSection() {
