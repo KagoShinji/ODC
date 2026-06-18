@@ -18,7 +18,8 @@ service cloud.firestore {
     }
 
     match /invoices/{docId} {
-      allow read, create, update, delete: if request.auth != null;
+      allow get: if request.auth != null || resource == null || resource.data.status != 'paid';
+      allow list, create, update, delete: if request.auth != null;
     }
 
     match /expenses/{docId} {
@@ -26,7 +27,15 @@ service cloud.firestore {
     }
 
     match /moas/{docId} {
-      allow read, create, update, delete: if request.auth != null;
+      allow get: if request.auth != null || resource == null || resource.data.get('clientSigned', false) != true;
+      allow create, delete: if request.auth != null;
+      allow list: if request.auth != null;
+      allow update: if request.auth != null || (
+        resource.data.get('clientSigned', false) != true &&
+        request.resource.data.clientSigned == true &&
+        request.resource.data.clientSigneeName is string &&
+        request.resource.data.clientSigneeName.size() > 0
+      );
     }
 
     match /supportTickets/{ticketId} {
@@ -53,6 +62,18 @@ service cloud.firestore {
 
     match /inventory/{docId} {
       allow read, create, update, delete: if request.auth != null;
+    }
+
+    match /certificates/{docId} {
+      allow create, delete: if request.auth != null;
+      allow list: if request.auth != null;
+      allow get: if request.auth != null || resource == null || resource.data.status != 'Accepted';
+      allow update: if request.auth != null || (
+        resource.data.status == 'Pending' &&
+        request.resource.data.status == 'Accepted' &&
+        request.resource.data.signeeName is string &&
+        request.resource.data.signeeName.size() > 0
+      );
     }
 
     match /{document=**} {

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase } from 'lucide-react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase, Copy, Check, Award, PenTool } from 'lucide-react';
+import CustomModal from '../components/ui/CustomModal';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -34,6 +35,25 @@ const EXPENSE_CATEGORIES = [
 const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 const today = () => new Date().toISOString().split('T')[0];
 const fmtDate = (s) => { if (!s) return ''; const d = new Date(s + 'T00:00:00'); return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }); };
+const fmtDateTimeLong = (ts) => {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getSigFontSizePrint = (name) => {
+  const len = (name || '').length;
+  if (len > 25) return '14px';
+  if (len > 20) return '16px';
+  if (len > 15) return '19px';
+  return '24px';
+};
 const calcTotal = (items) => (items || []).reduce((s, i) => s + Number(i.amount || 0), 0);
 
 function printInvoice(inv) {
@@ -42,7 +62,34 @@ function printInvoice(inv) {
   const rows = (inv.items || []).map(i =>
     `<tr><td class="td">${i.service || ''}</td><td class="td ar">${fmt(i.amount)}</td></tr>`
   ).join('');
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${inv.invoiceNumber}</title><style>
+
+  const preparedSection = inv.preparedSigned ? `
+    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(inv.preparedSigneeName || inv.preparedBy || CO.preparedBy)}; color: #111; text-align: center; margin-top: 10px; min-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${inv.preparedSigneeName || inv.preparedBy || CO.preparedBy}</div>
+    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
+    <div style="font-size: 8px; color: #777; text-align: center; margin-top: 4px; line-height: 1.3;">
+      DIGITALLY PREPARED & SIGNED<br>
+      Date: ${fmtDateTimeLong(inv.preparedSignedAt)}
+    </div>
+  ` : `
+    <div class="sig-block" style="text-align:center;margin-top:32px;margin-bottom:2px">${inv.preparedBy || CO.preparedBy}</div>
+    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
+  `;
+
+  const approvedSection = inv.approvedSigned ? `
+    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(inv.approvedSigneeName || CO.approvedBy)}; color: #111; text-align: center; margin-top: 10px; min-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${inv.approvedSigneeName || CO.approvedBy}</div>
+    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
+    <div style="font-size: 8px; color: #777; text-align: center; margin-top: 4px; line-height: 1.3;">
+      DIGITALLY APPROVED & SIGNED<br>
+      Date: ${fmtDateTimeLong(inv.approvedSignedAt)}
+    </div>
+  ` : `
+    <div class="sig-block" style="text-align:center;margin-top:32px;margin-bottom:2px">${CO.approvedBy}</div>
+    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
+  `;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${inv.invoiceNumber}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
 .pg{width:794px;min-height:1100px;padding:50px 60px;margin:0 auto}
@@ -92,8 +139,8 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
   </div>
   <div class="ft">
     <div><b>Payment Information:</b><br><br>Bank Name: ${CO.bankName}<br>Account No.: ${CO.bankAccount}<br>Account Name: ${CO.bankAccountName}<br><br>Contact Name: ${CO.approvedBy}<br>Number: ${CO.approvedPhone}</div>
-    <div><b>Prepared By:</b><br><div class="sig-block">${inv.preparedBy || CO.preparedBy}</div><div class="sig"></div></div>
-    <div><b>Approved By:</b><br><div class="sig-block">${CO.approvedBy}</div><div class="sig"></div></div>
+    <div><b>Prepared By:</b><br>${preparedSection}</div>
+    <div><b>Approved By:</b><br>${approvedSection}</div>
   </div>
   ${(inv.qrCodes || []).length > 0 ? `
   <div class="qr-row">
@@ -101,7 +148,13 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     ${(inv.qrCodes || []).includes('maribank') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchmaribank.png" alt="MariBank QR" /><div class="qr-label">MariBank — Scan to Pay</div></div>` : ''}
   </div>` : ''}
 </div>
-<script>window.onload=function(){window.print()}</script>
+<script>
+  document.fonts.ready.then(function() {
+    setTimeout(function() {
+      window.print();
+    }, 250);
+  });
+</script>
 </body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
@@ -362,7 +415,13 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     <div><b>Approved By:</b><br><div class="sig-block">${CO.approvedBy}</div><div class="sig"></div></div>
   </div>
 </div>
-<script>window.onload=function(){window.print()}</script>
+<script>
+  document.fonts.ready.then(function() {
+    setTimeout(function() {
+      window.print();
+    }, 250);
+  });
+</script>
 </body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
@@ -377,6 +436,84 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
   // Invoices State
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [copiedId, setCopiedId] = useState(null);
+  const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'alert', icon: 'info', promptFields: [], onConfirm: null });
+
+  const showAlert = (title, message, icon = 'info') => {
+    setModal({ isOpen: true, title, message, type: 'alert', icon });
+  };
+
+  const handleCopyLink = (invId) => {
+    const link = `${window.location.origin}/invoice/${invId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedId(invId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  const handlePrepareSign = (inv) => {
+    setModal({
+      isOpen: true,
+      title: 'Sign as Preparer',
+      message: 'Please enter your signing details:',
+      type: 'prompt',
+      icon: 'question',
+      promptFields: [
+        { key: 'name', label: 'Full Name', defaultValue: inv.preparedBy || "Johnjosefir Roca", placeholder: 'e.g. Johnjosefir Roca' },
+        { key: 'title', label: 'Title / Designation', defaultValue: 'Odyssey Staff Rep', placeholder: 'e.g. Odyssey Staff Rep' }
+      ],
+      onConfirm: async (fields) => {
+        if (!fields.name || !fields.name.trim()) {
+          showAlert('Name Required', 'Full Name is required to sign.', 'warning');
+          return;
+        }
+        try {
+          await updateDoc(doc(db, 'invoices', inv.id), {
+            preparedSigned: true,
+            preparedSigneeName: fields.name.trim(),
+            preparedSigneeTitle: fields.title.trim() || 'Odyssey Staff Rep',
+            preparedSignedAt: serverTimestamp(),
+          });
+          load();
+        } catch (e) {
+          console.error("Error signing prepared invoice:", e);
+          showAlert('Signing Error', 'Failed to sign invoice. Please try again.', 'warning');
+        }
+      }
+    });
+  };
+
+  const handleApproveSign = (inv) => {
+    setModal({
+      isOpen: true,
+      title: 'Approve & Sign Invoice',
+      message: 'Please enter your approval signature details:',
+      type: 'prompt',
+      icon: 'question',
+      promptFields: [
+        { key: 'name', label: 'Full Name', defaultValue: CO.approvedBy, placeholder: 'e.g. Jetch Merald S. Madaya' },
+        { key: 'title', label: 'Title / Designation', defaultValue: 'Owner, OdysseyPH IT Solutions', placeholder: 'e.g. Owner' }
+      ],
+      onConfirm: async (fields) => {
+        if (!fields.name || !fields.name.trim()) {
+          showAlert('Name Required', 'Full Name is required to sign.', 'warning');
+          return;
+        }
+        try {
+          await updateDoc(doc(db, 'invoices', inv.id), {
+            approvedSigned: true,
+            approvedSigneeName: fields.name.trim(),
+            approvedSigneeTitle: fields.title.trim() || 'Owner, OdysseyPH IT Solutions',
+            approvedSignedAt: serverTimestamp(),
+          });
+          load();
+        } catch (e) {
+          console.error("Error signing approved invoice:", e);
+          showAlert('Signing Error', 'Failed to approve and sign invoice.', 'warning');
+        }
+      }
+    });
+  };
   const [refreshing, setRefreshing] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -441,19 +578,40 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
   // Load Invoices and Expenses
   const load = useCallback(async (spin = true) => {
     if (spin) setRefreshing(true);
-    try {
-      const snapInvoices = await getDocs(query(collection(db, 'invoices'), orderBy('createdAt', 'desc')));
-      setInvoices(snapInvoices.docs.map(d => ({ id: d.id, ...d.data() })));
-      
-      const snapExpenses = await getDocs(query(collection(db, 'expenses'), orderBy('createdAt', 'desc')));
-      setExpenses(snapExpenses.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-    setExpensesLoading(false);
-    setRefreshing(false);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 500);
   }, []);
 
-  useEffect(() => { load(false); }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    setExpensesLoading(true);
+    
+    // Listen to invoices
+    const qInvoices = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'));
+    const unsubscribeInvoices = onSnapshot(qInvoices, (snap) => {
+      setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+    }, (err) => {
+      console.error("Error listening to invoices:", err);
+      setLoading(false);
+    });
+
+    // Listen to expenses
+    const qExpenses = query(collection(db, 'expenses'), orderBy('createdAt', 'desc'));
+    const unsubscribeExpenses = onSnapshot(qExpenses, (snap) => {
+      setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setExpensesLoading(false);
+    }, (err) => {
+      console.error("Error listening to expenses:", err);
+      setExpensesLoading(false);
+    });
+
+    return () => {
+      unsubscribeInvoices();
+      unsubscribeExpenses();
+    };
+  }, []);
 
   // Invoice Items Management
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, { id: Date.now(), service: '', amount: '' }] }));
@@ -501,10 +659,23 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
     setPayConfirming(false);
   };
 
-  const handleDelete = async (inv) => {
-    if (!window.confirm(`Delete ${inv.invoiceNumber}?`)) return;
-    await deleteDoc(doc(db, 'invoices', inv.id));
-    setInvoices(prev => prev.filter(i => i.id !== inv.id));
+  const handleDelete = (inv) => {
+    setModal({
+      isOpen: true,
+      title: 'Delete Invoice',
+      message: `Are you sure you want to delete invoice ${inv.invoiceNumber}? This action cannot be undone.`,
+      type: 'confirm',
+      icon: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'invoices', inv.id));
+          setInvoices(prev => prev.filter(i => i.id !== inv.id));
+        } catch (e) {
+          console.error("Error deleting:", e);
+          showAlert('Delete Error', 'Failed to delete invoice document.', 'warning');
+        }
+      }
+    });
   };
 
   // Expenses CRUD handlers
@@ -548,10 +719,23 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
     setSavingExpense(false);
   };
 
-  const handleDeleteExpense = async (exp) => {
-    if (!window.confirm(`Delete expense "${exp.title}"?`)) return;
-    await deleteDoc(doc(db, 'expenses', exp.id));
-    setExpenses(prev => prev.filter(e => e.id !== exp.id));
+  const handleDeleteExpense = (exp) => {
+    setModal({
+      isOpen: true,
+      title: 'Delete Expense',
+      message: `Are you sure you want to delete expense "${exp.title}"? This action cannot be undone.`,
+      type: 'confirm',
+      icon: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'expenses', exp.id));
+          setExpenses(prev => prev.filter(e => e.id !== exp.id));
+        } catch (e) {
+          console.error("Error deleting:", e);
+          showAlert('Delete Error', 'Failed to delete expense entry.', 'warning');
+        }
+      }
+    });
   };
 
   // Pre-calculations
@@ -739,6 +923,39 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
                       </td>
                       <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleCopyLink(inv.id)}
+                            style={{
+                              ...S.btn,
+                              background: copiedId === inv.id ? 'rgba(52,211,153,0.15)' : 'rgba(96,165,250,0.1)',
+                              color: copiedId === inv.id ? '#34d399' : '#60a5fa',
+                            }}
+                            title="Copy Client Invoice Link"
+                          >
+                            {copiedId === inv.id ? <Check size={12} /> : <Copy size={12} />}
+                            {copiedId === inv.id ? 'Copied Link!' : 'Copy Link'}
+                          </button>
+
+                          {!inv.preparedSigned && (
+                            <button
+                              onClick={() => handlePrepareSign(inv)}
+                              style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }}
+                              title="Sign as Prepared By"
+                            >
+                              <PenTool size={12} /> Sign Prepared
+                            </button>
+                          )}
+
+                          {isSuperAdmin && !inv.approvedSigned && (
+                            <button
+                              onClick={() => handleApproveSign(inv)}
+                              style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', border: '1px solid rgba(255,106,26,0.3)' }}
+                              title="Approve & Sign Invoice"
+                            >
+                              <Award size={12} /> Sign Approved
+                            </button>
+                          )}
+
                           {inv.status === 'paid' ? (
                             <button onClick={() => setViewInv(inv)} style={{ ...S.btn, background: 'rgba(96,165,250,0.1)', color: '#60a5fa' }} title="View Details"><Eye size={14} /> View</button>
                           ) : (
@@ -1113,7 +1330,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>{viewInv.invoiceNumber}</h3>
               <button onClick={() => setViewInv(null)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
-            {[['Bill To', viewInv.billTo], ['Project', viewInv.project], ['Date', fmtDate(viewInv.date)], ['Payment Terms', viewInv.paymentTerms], ['Prepared By', viewInv.preparedBy || CO.preparedBy], ['Approved By', CO.approvedBy]].map(([k, v]) => (
+            {[['Bill To', viewInv.billTo], ['Project', viewInv.project], ['Date', fmtDate(viewInv.date)], ['Payment Terms', viewInv.paymentTerms], ['Prepared By', viewInv.preparedSigned ? `${viewInv.preparedSigneeName} (Signed)` : (viewInv.preparedBy || CO.preparedBy)], ['Approved By', viewInv.approvedSigned ? `${viewInv.approvedSigneeName} (Signed)` : CO.approvedBy]].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                 <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>{k}</span>
                 <span style={{ color: '#fff', fontSize: 13, fontWeight: 500 }}>{v}</span>
@@ -1326,6 +1543,17 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         @keyframes spin{to{transform:rotate(360deg)}}
         .inv-row:hover { background: rgba(255,255,255,0.06) !important; }
       `}</style>
+      <CustomModal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        icon={modal.icon}
+        promptFields={modal.promptFields}
+        onConfirm={modal.onConfirm}
+        confirmText="Confirm"
+      />
     </div>
   );
 }

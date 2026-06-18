@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { db, auth } from '../lib/firebase';
 import AdminInvoices from './AdminInvoices';
 import AdminMOA from './AdminMOA';
+import AdminAcceptance from './AdminAcceptance';
 import AdminTickets from './AdminTickets';
 import AdminClients from './AdminClients';
 import AdminMaintenance from './AdminMaintenance';
@@ -45,6 +46,7 @@ import {
     MailSearch,
     TrendingUp,
     Package,
+    Award,
 } from 'lucide-react';
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
@@ -384,6 +386,7 @@ function AdminDashboard({ firebaseUser }) {
                         { id: 'inventory', label: 'Inventory', Icon: Package },
                         { id: 'invoices', label: 'Invoices & Finance', Icon: TrendingUp }, 
                         { id: 'moa', label: 'MOA', Icon: FileSignature }, 
+                        { id: 'acceptance', label: 'Acceptance', Icon: Award }, 
                         { id: 'tickets', label: 'Tickets', Icon: MessageSquare }, 
                         { id: 'clients', label: 'Clients', Icon: Users },
                         { id: 'maintenance', label: 'Maintenance', Icon: Hammer },
@@ -520,6 +523,10 @@ function AdminDashboard({ firebaseUser }) {
 
                 {activeTab === 'moa' && superAdmin && (
                     <AdminMOA firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                )}
+
+                {activeTab === 'acceptance' && superAdmin && (
+                    <AdminAcceptance firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
                 )}
 
                 {activeTab === 'tickets' && superAdmin && (

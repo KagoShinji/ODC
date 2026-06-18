@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Eye } from 'lucide-react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Eye, Copy, Check, Award } from 'lucide-react';
+import CustomModal from '../components/ui/CustomModal';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -25,6 +26,25 @@ const fmtDateLong = (s) => {
   const d = new Date(s + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
+const fmtDateTimeLong = (ts) => {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getSigFontSizePrint = (name) => {
+  const len = (name || '').length;
+  if (len > 25) return '16px';
+  if (len > 20) return '20px';
+  if (len > 15) return '24px';
+  return '32px';
+};
 
 function printMOA(moa) {
   const logoUrl = window.location.origin + '/images/odcclearlogo.png';
@@ -43,7 +63,42 @@ function printMOA(moa) {
   const formattedLiability = (moa.liability || []).map(term => `<li>${term}</li>`).join('');
   const formattedGeneral = (moa.generalTerms || []).map(term => `<li>${term}</li>`).join('');
 
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MOA - ${moa.clientName || 'Generated'}</title><style>
+  const clientSig = moa.clientSigned ? `
+    <div style="font-weight: bold; margin-bottom: 8px;">PARTY A (CLIENT):</div>
+    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(moa.clientSigneeName)}; color: #111; margin: 10px 0; min-height: 38px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${moa.clientSigneeName}</div>
+    <div class="sig-name" style="text-align: center; border-top: 1px solid #000; padding-top: 5px; font-weight: bold;">${moa.clientSigneeName}</div>
+    <div class="sig-title" style="text-align: center; font-size: 11px; margin-top: 2px;">${moa.clientSigneeTitle || 'Authorized Representative'}</div>
+    <div style="font-size: 8px; color: #64748b; line-height: 1.3; font-family: sans-serif; text-align: center; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
+      DIGITALLY SIGNED VIA ODC PORTAL<br>
+      Date: ${fmtDateTimeLong(moa.clientSignedAt)} | IP: ${moa.clientIp || 'Not Recorded'}
+    </div>
+  ` : `
+    <div style="font-weight: bold; margin-bottom: 50px;">PARTY A (CLIENT):</div>
+    <div class="sig-name" style="border-top: 1px solid #000; padding-top: 5px; font-weight: bold;">${moa.clientName || '__________________________'}</div>
+    <div class="sig-title" style="font-size: 11px; margin-top: 2px;">Signature: __________________________</div>
+    <div class="sig-date" style="margin-top: 15px;">Date: __________________________</div>
+  `;
+
+  const providerSig = moa.providerSigned ? `
+    <div style="font-weight: bold; margin-bottom: 8px;">PARTY B (SERVICE PROVIDER):</div>
+    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(moa.providerSigneeName)}; color: #111; margin: 10px 0; min-height: 38px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${moa.providerSigneeName}</div>
+    <div class="sig-name" style="text-align: center; border-top: 1px solid #000; padding-top: 5px; font-weight: bold;">${moa.providerSigneeName}</div>
+    <div class="sig-title" style="text-align: center; font-size: 11px; margin-top: 2px;">${moa.providerSigneeTitle || 'Owner, OdysseyPH IT Solutions'}</div>
+    <div style="font-size: 8px; color: #64748b; line-height: 1.3; font-family: sans-serif; text-align: center; margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
+      DIGITALLY APPROVED & SIGNED<br>
+      Date: ${fmtDateTimeLong(moa.providerSignedAt)}
+    </div>
+  ` : `
+    <div style="font-weight: bold; margin-bottom: 50px;">PARTY B (SERVICE PROVIDER):</div>
+    <div class="sig-name" style="border-top: 1px solid #000; padding-top: 5px; font-weight: bold;">${moa.providerName || CO.serviceProviderName}</div>
+    <div class="sig-title" style="font-size: 11px; margin-top: 2px;">${moa.providerBusiness || CO.serviceProviderBusiness}</div>
+    <div class="sig-title" style="font-size: 11px; margin-top: 2px;">Signature: __________________________</div>
+    <div class="sig-date" style="margin-top: 15px;">Date: ${fmtDateLong(moa.date || today())}</div>
+  `;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>MOA - ${moa.clientName || 'Generated'}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+  <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'Times New Roman', Times, serif; font-size: 14px; color: #000; background: #fff; line-height: 1.6; }
 .pg { width: 794px; padding: 60px 80px; margin: 0 auto; position: relative; }
@@ -66,7 +121,7 @@ li { margin-bottom: 5px; }
 .sig-section { margin-top: 60px; }
 .sig-intro { margin-bottom: 40px; text-transform: uppercase; }
 .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
-.sig-block { margin-top: 20px; }
+.sig-block { margin-top: 20px; border: 1px solid #eee; padding: 15px; border-radius: 6px; background: #fafafa; }
 .sig-name { border-top: 1px solid #000; padding-top: 5px; margin-top: 40px; font-weight: bold; }
 .sig-title { font-size: 12px; margin-top: 2px; }
 .sig-date { margin-top: 15px; }
@@ -76,6 +131,7 @@ li { margin-bottom: 5px; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .pg { padding: 40px 60px; width: 100%; margin: 0; box-shadow: none; }
   .no-break { page-break-inside: avoid; }
+  .sig-block { background: #fff !important; border: 1px solid #ddd !important; }
 }
 </style></head><body>
 
@@ -98,18 +154,11 @@ li { margin-bottom: 5px; }
     <div class="sig-section no-break">
       <div class="sig-grid">
         <div class="sig-block">
-          <div style="font-weight: bold; margin-bottom: 50px;">PARTY A (CLIENT):</div>
-          <div class="sig-name">${moa.clientName || '__________________________'}</div>
-          <div class="sig-title">Signature: __________________________</div>
-          <div class="sig-date">Date: __________________________</div>
+          ${clientSig}
         </div>
 
         <div class="sig-block">
-          <div style="font-weight: bold; margin-bottom: 50px;">PARTY B (SERVICE PROVIDER):</div>
-          <div class="sig-name">${moa.providerName || CO.serviceProviderName}</div>
-          <div class="sig-title">${moa.providerBusiness || CO.serviceProviderBusiness}</div>
-          <div class="sig-title">Signature: __________________________</div>
-          <div class="sig-date">Date: ${fmtDateLong(moa.date || today())}</div>
+          ${providerSig}
         </div>
       </div>
     </div>
@@ -247,18 +296,11 @@ li { margin-bottom: 5px; }
 
     <div class="sig-grid">
       <div class="sig-block">
-        <div style="font-weight: bold; margin-bottom: 50px;">PARTY A (CLIENT):</div>
-        <div class="sig-name">${moa.clientName}</div>
-        <div class="sig-title">Signature: __________________________</div>
-        <div class="sig-date">Date: __________________________</div>
+        ${clientSig}
       </div>
 
       <div class="sig-block">
-        <div style="font-weight: bold; margin-bottom: 50px;">PARTY B (SERVICE PROVIDER):</div>
-        <div class="sig-name">${moa.providerName || CO.serviceProviderName}</div>
-        <div class="sig-title">${moa.providerBusiness || CO.serviceProviderBusiness}</div>
-        <div class="sig-title">Signature: __________________________</div>
-        <div class="sig-date">Date: ${fmtDateLong(moa.date)}</div>
+        ${providerSig}
       </div>
     </div>
   </div>
@@ -266,7 +308,13 @@ li { margin-bottom: 5px; }
   `}
 
 </div>
-<script>window.onload=function(){setTimeout(function(){window.print();}, 500);}</script>
+<script>
+  document.fonts.ready.then(function() {
+    setTimeout(function() {
+      window.print();
+    }, 250);
+  });
+</script>
 </body></html>`;
   const w = window.open('', '_blank');
   w.document.write(html);
@@ -322,20 +370,76 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
   const [freeformText, setFreeformText] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
+  const [copiedId, setCopiedId] = useState(null);
+  const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'alert', icon: 'info', promptFields: [], onConfirm: null });
+
+  const showAlert = (title, message, icon = 'info') => {
+    setModal({ isOpen: true, title, message, type: 'alert', icon });
+  };
+
+  const handleCopyLink = (moaId) => {
+    const link = `${window.location.origin}/moa/${moaId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedId(moaId);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
+  const handleProviderSign = (moa) => {
+    setModal({
+      isOpen: true,
+      title: 'Sign as Service Provider',
+      message: 'Please enter your signing name and title/designation below:',
+      type: 'prompt',
+      icon: 'question',
+      promptFields: [
+        { key: 'name', label: 'Full Name', defaultValue: 'Jetch Merald S. Madaya', placeholder: 'e.g. Jetch Merald S. Madaya' },
+        { key: 'title', label: 'Title / Designation', defaultValue: 'Owner, OdysseyPH IT Solutions', placeholder: 'e.g. Owner' }
+      ],
+      onConfirm: async (fields) => {
+        if (!fields.name || !fields.name.trim()) {
+          showAlert('Name Required', 'Full Name is required to sign the agreement.', 'warning');
+          return;
+        }
+        try {
+          await updateDoc(doc(db, 'moas', moa.id), {
+            providerSigned: true,
+            providerSigneeName: fields.name.trim(),
+            providerSigneeTitle: fields.title.trim() || 'Owner, OdysseyPH IT Solutions',
+            providerSignedAt: serverTimestamp(),
+          });
+          load();
+        } catch (e) {
+          console.error("Error signing MOA:", e);
+          showAlert('Signing Error', 'Failed to sign the agreement. Please try again.', 'warning');
+        }
+      }
+    });
+  };
   const [ffFooter, setFfFooter] = useState({ clientName: '', providerName: CO.serviceProviderName, providerBusiness: CO.serviceProviderBusiness, date: today(), hideFooter: false });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async (spin = true) => {
     if (spin) setRefreshing(true);
-    try {
-      const snap = await getDocs(query(collection(db, 'moas'), orderBy('createdAt', 'desc')));
-      setMoas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    } catch (e) { console.error(e); }
-    setLoading(false);
-    setRefreshing(false);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 500);
   }, []);
 
-  useEffect(() => { load(false); }, [load]);
+  useEffect(() => {
+    setLoading(true);
+    const q = query(collection(db, 'moas'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setMoas(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoading(false);
+      setRefreshing(false);
+    }, (err) => {
+      console.error("Error listening to MOAs:", err);
+      setLoading(false);
+      setRefreshing(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Scope Management
   const addScopeGroup = () => setForm(f => ({ ...f, scope: [...(f.scope || []), { id: Date.now(), title: '', items: [''] }] }));
@@ -423,7 +527,11 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
   const copyPrompt = () => {
     const prompt = `Please generate a Memorandum of Agreement based on my requirements. You must return ONLY a valid JSON object matching exactly this structure, no markdown formatting or extra text:\n\n{\n  "clientName": "Name of contact",\n  "clientBusiness": "Name of Business",\n  "clientAddress": "Address",\n  "projectCost": "amount in numbers only",\n  "timeline": "e.g. 1 week",\n  "maintenancePeriod": "e.g. 1 month",\n  "scope": [\n    {\n      "title": "Group Title",\n      "items": ["Feature 1", "Feature 2"]\n    }\n  ]\n}`;
     navigator.clipboard.writeText(prompt);
-    alert('Prompt copied to clipboard! Paste this into ChatGPT/Claude along with your MOA requirements, then paste the resulting JSON here.');
+    showAlert(
+      'Prompt Copied!',
+      'Prompt copied to clipboard! Paste this into ChatGPT/Claude along with your MOA requirements, then paste the resulting JSON here.',
+      'success'
+    );
   };
 
   const autoExtractFfFooter = useCallback(() => {
@@ -460,6 +568,8 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
       providerName: ffFooter.providerName || CO.serviceProviderName,
       providerBusiness: ffFooter.providerBusiness || CO.serviceProviderBusiness,
       hideFooter: ffFooter.hideFooter,
+      clientSigned: false,
+      providerSigned: false,
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
       createdBy: firebaseUser.email,
@@ -530,7 +640,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
       } else {
         const now = new Date();
         const num = `MOA-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(moas.length + 1).padStart(3, '0')}`;
-        await addDoc(collection(db, 'moas'), { ...payload, moaNumber: num, createdAt: serverTimestamp(), createdBy: firebaseUser.email });
+        await addDoc(collection(db, 'moas'), { ...payload, moaNumber: num, clientSigned: false, providerSigned: false, createdAt: serverTimestamp(), createdBy: firebaseUser.email });
       }
       setShowSidebar(false);
       load();
@@ -538,10 +648,23 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
     setSaving(false);
   };
 
-  const handleDelete = async (moa) => {
-    if (!window.confirm(`Delete ${moa.moaNumber} for ${moa.clientName}?`)) return;
-    await deleteDoc(doc(db, 'moas', moa.id));
-    setMoas(prev => prev.filter(i => i.id !== moa.id));
+  const handleDelete = (moa) => {
+    setModal({
+      isOpen: true,
+      title: 'Delete MOA',
+      message: `Are you sure you want to delete agreement ${moa.moaNumber} for ${moa.clientName}? This action cannot be undone.`,
+      type: 'confirm',
+      icon: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteDoc(doc(db, 'moas', moa.id));
+          setMoas(prev => prev.filter(i => i.id !== moa.id));
+        } catch (e) {
+          console.error("Error deleting:", e);
+          showAlert('Delete Error', 'Failed to delete MOA document.', 'warning');
+        }
+      }
+    });
   };
 
   return (
@@ -606,6 +729,29 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
                   <td style={{ padding: '18px 24px', textAlign: 'right', color: '#ff9a4a', fontWeight: 700, fontSize: 16, verticalAlign: 'middle' }}>₱{fmt(moa.projectCost)}</td>
                   <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => handleCopyLink(moa.id)}
+                        style={{
+                          ...S.btn,
+                          background: copiedId === moa.id ? 'rgba(52,211,153,0.15)' : 'rgba(96,165,250,0.1)',
+                          color: copiedId === moa.id ? '#34d399' : '#60a5fa',
+                        }}
+                        title="Copy Client Sign-off Link"
+                      >
+                        {copiedId === moa.id ? <Check size={12} /> : <Copy size={12} />}
+                        {copiedId === moa.id ? 'Copied Link!' : 'Copy Link'}
+                      </button>
+
+                      {isSuperAdmin && !moa.providerSigned && (
+                        <button
+                          onClick={() => handleProviderSign(moa)}
+                          style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', border: '1px solid rgba(255,106,26,0.3)' }}
+                          title="Sign MOA as Provider"
+                        >
+                          <Award size={12} /> Sign
+                        </button>
+                      )}
+
                       <button onClick={() => printMOA(moa)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print MOA"><Printer size={14} /> Print</button>
                       {isSuperAdmin && (
                         <button onClick={() => moa.isFreeform ? openFreeformEdit(moa) : openEdit(moa)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit Form"><Edit2 size={14} /></button>
@@ -860,6 +1006,17 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         @keyframes spin{to{transform:rotate(360deg)}}
         .moa-row:hover { background: rgba(255,255,255,0.06) !important; }
       `}</style>
+      <CustomModal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        title={modal.title}
+        message={modal.message}
+        type={modal.type}
+        icon={modal.icon}
+        promptFields={modal.promptFields}
+        onConfirm={modal.onConfirm}
+        confirmText="Confirm"
+      />
     </div>
   );
 }
