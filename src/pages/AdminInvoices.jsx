@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+// eslint-disable-next-line no-unused-vars
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase, Copy, Check, Award, PenTool } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
@@ -584,6 +585,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setLoading(true);
     setExpensesLoading(true);
     

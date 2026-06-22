@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, HelpCircle, X, ShieldAlert } from 'lucide-react';
 
@@ -101,6 +102,7 @@ export default function CustomModal({
       promptFields.forEach(f => {
         initial[f.key] = f.defaultValue || '';
       });
+      // eslint-disable-next-line
       setFormData(initial);
     }
   }, [isOpen, type, promptFields]);

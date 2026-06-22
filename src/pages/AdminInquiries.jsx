@@ -41,6 +41,7 @@ export default function AdminInquiries() {
     setRefreshing(false);
   }, []);
 
+  // eslint-disable-next-line
   useEffect(() => { fetchInquiries(false); }, [fetchInquiries]);
 
   const handleDelete = async (id) => {

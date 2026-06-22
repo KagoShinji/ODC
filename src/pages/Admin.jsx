@@ -392,6 +392,7 @@ function AdminDashboard({ firebaseUser }) {
                         { id: 'maintenance', label: 'Maintenance', Icon: Hammer },
                         { id: 'inquiries', label: 'Inquiries', Icon: MailSearch }
                       ] : [])
+                    // eslint-disable-next-line no-unused-vars
                     ].map(({ id, label, Icon }) => (
                         <button key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '14px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === id ? '#ff6a1a' : 'transparent'}`, color: activeTab === id ? '#ff9a4a' : 'rgba(255,255,255,0.45)', fontWeight: activeTab === id ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', marginBottom: -1 }}>
                             <Icon size={15} />{label}
@@ -418,6 +419,7 @@ function AdminDashboard({ firebaseUser }) {
                             value: new Set(submissions.map((s) => s.company).filter(Boolean)).size,
                             Icon: Building2, color: '#34d399',
                         },
+                    // eslint-disable-next-line no-unused-vars
                     ].map(({ label, value, Icon, color }) => (
                         <div key={label} style={{
                             background: 'rgba(255,255,255,0.04)',

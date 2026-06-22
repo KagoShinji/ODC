@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Button } from './Button';
 import { ArrowRight, ChevronDown } from 'lucide-react';

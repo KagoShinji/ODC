@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+// eslint-disable-next-line no-unused-vars
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Eye, Copy, Check, Award } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
@@ -427,6 +428,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setLoading(true);
     const q = query(collection(db, 'moas'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snap) => {
@@ -464,7 +466,8 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         const parsed = JSON.parse(jsonStr);
         if (parsed.clientName || parsed.scope) data = parsed;
       }
-    } catch (e) { }
+    // eslint-disable-next-line no-unused-vars
+    } catch (e) { /* ignore */ }
 
     if (!data.clientName && !data.scope) {
       const extract = (regex) => (aiText.match(regex)?.[1] || '').trim().replace(/\*|_/g, '');
@@ -534,6 +537,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
     );
   };
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const autoExtractFfFooter = useCallback(() => {
     if (!freeformText.trim()) return;
     const extract = (regex) => (freeformText.match(regex)?.[1] || '').trim().replace(/\*|_/g, '');

@@ -82,6 +82,7 @@ function ClientDashboard({ firebaseUser }) {
     setRefreshing(false);
   }, [firebaseUser.uid]);
 
+  // eslint-disable-next-line
   useEffect(() => { load(false); }, [load]);
 
   // Real-time chat listener

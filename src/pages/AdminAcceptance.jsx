@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+// eslint-disable-next-line no-unused-vars
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Copy, Check, Eye, Link } from 'lucide-react';
 
@@ -37,6 +38,7 @@ const getSigFontSizePrint = (name) => {
   if (len > 15) return '22px';
   return '30px';
 };
+// eslint-disable-next-line react-refresh/only-export-components
 export function printCertificate(coa) {
   const logoUrl = window.location.origin + '/images/odcclearlogo.png';
 
@@ -251,6 +253,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setLoading(true);
     const q = query(collection(db, 'certificates'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snap) => {

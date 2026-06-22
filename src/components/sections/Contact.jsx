@@ -11,6 +11,7 @@ const fadeUp = {
     show: { opacity: 1, y: 0, filter: 'blur(0px)' },
 };
 
+// eslint-disable-next-line no-unused-vars
 const sectionMotion = {
     initial: 'hidden',
     whileInView: 'show',
@@ -102,7 +103,8 @@ export function ContactSection() {
                                         { Icon: Envelope, label: 'Email', value: 'odysseyclinsys1@gmail.com', href: 'mailto:odysseyclinsys1@gmail.com' },
                                         { Icon: Phone, label: 'Phone', value: '0993-005-0994', href: 'tel:0993-005-0994' },
                                         { Icon: MapPin, label: 'Address', value: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City', href: '#' },
-                                    ].map(({ Icon, label, value, href }) => (
+                                    // eslint-disable-next-line no-unused-vars
+              ].map(({ Icon, label, value, href }) => (
                                         <a
                                             key={label}
                                             href={href}

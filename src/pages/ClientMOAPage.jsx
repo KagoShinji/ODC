@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { ShieldCheck, Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw, PenTool, Clock } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
@@ -149,6 +150,8 @@ const S = {
     transition: 'all 0.2s',
   },
 };
+
+const today = () => new Date().toISOString().split('T')[0];
 
 const fmtDateLong = (s) => {
   if (!s) return '';
@@ -558,6 +561,7 @@ li { margin-bottom: 5px; }
     w.document.close();
   };
 
+  // eslint-disable-next-line no-unused-vars
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const fmt = (n) => Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 

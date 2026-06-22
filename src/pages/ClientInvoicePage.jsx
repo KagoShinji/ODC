@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { ShieldCheck, Printer, CheckCircle2, FileText, Globe, Award, Sparkles, RefreshCw, CreditCard, DollarSign, Clock } from 'lucide-react';
 

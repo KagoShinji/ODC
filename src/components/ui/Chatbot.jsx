@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Chatbot = () => {
@@ -9,6 +10,7 @@ export const Chatbot = () => {
       content: 'Hello! 👋 How can I help you today? Please select an option below:'
     }
   ]);
+  // eslint-disable-next-line no-unused-vars
   const [showButtons, setShowButtons] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);

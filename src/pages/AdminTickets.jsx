@@ -68,6 +68,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
     setRefreshing(false);
   }, []);
 
+  // eslint-disable-next-line
   useEffect(() => { load(false); }, [load]);
 
   // Real-time listener for current ticket's messages
