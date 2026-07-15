@@ -8,7 +8,7 @@ import { ShieldCheck, Printer, CheckCircle2, FileText, Globe, Award, Sparkles, R
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',
   approvedBy: 'Jetch Merald S. Madaya',

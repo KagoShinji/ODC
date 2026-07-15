@@ -6,7 +6,7 @@ import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Copy, Check, Eye, Link } fr
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',
   serviceProviderBusiness: 'OdysseyPH IT Solutions',
@@ -343,7 +343,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Certificates of Acceptance</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: '4px 0 0 0' }}>Issue project completion and turnover records to clients for digital signature.</p>
@@ -361,7 +361,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
       </div>
 
       {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
+      <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 28 }}>
         {[
           { l: 'Total Certificates', v: coas.length, c: '#fff' },
           { l: 'Accepted & Signed', v: coas.filter(c => c.status === 'Accepted').length, c: '#34d399' },
@@ -383,7 +383,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
           No certificates generated yet. Click "Create Certificate" to turn over a project.
         </div>
       ) : (
-        <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+        <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 950 }}>
             <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
               <tr>
@@ -460,7 +460,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 550, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
                 {editingId ? 'Edit Turnover Certificate' : 'New Turnover Certificate'}
               </h3>
@@ -477,7 +477,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
                     <label style={S.lbl}>Project / System Name</label>
                     <input style={S.inp} value={form.projectName} onChange={e => setForm(f => ({ ...f, projectName: e.target.value }))} placeholder="e.g. Multi-Tenant Pickleball Court Booking System" required />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                     <div>
                       <label style={S.lbl}>Project Cost (₱)</label>
                       <input type="number" min="0" step="0.01" style={S.inp} value={form.projectCost} onChange={e => setForm(f => ({ ...f, projectCost: e.target.value }))} placeholder="Optional cost" />
@@ -512,7 +512,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
               {/* Odyssey Rep Defaults */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <h4 style={{ color: '#94a3b8', margin: '0 0 14px 0', fontSize: 13, fontWeight: 600 }}>Odyssey Representative Details</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <label style={S.lbl}>Rep Name</label>
                     <input style={S.inp} value={form.providerRep} onChange={e => setForm(f => ({ ...f, providerRep: e.target.value }))} required />
@@ -526,7 +526,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
 
               {/* Scope Features List (Optional) */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <h4 style={{ color: '#34d399', margin: 0, fontSize: 13, fontWeight: 600 }}>Project Scope / Completed Deliverables</h4>
                   <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>OPTIONAL</span>
                 </div>

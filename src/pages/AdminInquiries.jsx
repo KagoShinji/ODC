@@ -72,7 +72,7 @@ export default function AdminInquiries() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Service Inquiries</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>Manage maintenance plan requests from the pricing page.</p>

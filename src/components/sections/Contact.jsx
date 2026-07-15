@@ -100,7 +100,7 @@ export function ContactSection() {
                                 <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-6">Direct Contact</h3>
                                 <div className="space-y-4">
                                     {[
-                                        { Icon: Envelope, label: 'Email', value: 'odysseyclinsys1@gmail.com', href: 'mailto:odysseyclinsys1@gmail.com' },
+                                        { Icon: Envelope, label: 'Email', value: 'odysseyphitsolutions@gmail.com', href: 'mailto:odysseyphitsolutions@gmail.com' },
                                         { Icon: Phone, label: 'Phone', value: '0993-005-0994', href: 'tel:0993-005-0994' },
                                         { Icon: MapPin, label: 'Address', value: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City', href: '#' },
                                     // eslint-disable-next-line no-unused-vars

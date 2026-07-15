@@ -790,7 +790,7 @@ export default function AdminInventory({ firebaseUser }) {
   return (
     <div style={{ position: 'relative' }}>
       {/* Top Title Bar */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Package size={22} color="#ff6a1a" /> Inventory & Accountability
         </h2>
@@ -805,7 +805,7 @@ export default function AdminInventory({ firebaseUser }) {
       </div>
 
       {/* Dynamic Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
+      <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Total Tracked Items', value: stats.totalUnique, color: '#ff9a4a', desc: 'Distinct catalog models' },
           { label: 'Warehouse Stock', value: stats.totalInWarehouse, color: '#34d399', desc: 'Units ready for issuance' },
@@ -870,7 +870,7 @@ export default function AdminInventory({ firebaseUser }) {
           No inventory items matched the criteria. Create one using the 'Add Item' button.
         </div>
       ) : (
-        <div style={{ ...S.card, padding: 0, overflowX: 'auto' }}>
+        <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
               <tr>
@@ -978,7 +978,7 @@ export default function AdminInventory({ firebaseUser }) {
         <>
           <div onClick={() => setShowAddDrawer(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 460, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                 <PlusCircle size={20} color="#ff6a1a" /> Add Catalog Item
               </h3>
@@ -997,7 +997,7 @@ export default function AdminInventory({ firebaseUser }) {
                 <input style={S.inp} value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Paper Rolls" required />
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.lbl}>Category *</label>
                   <select
@@ -1014,7 +1014,7 @@ export default function AdminInventory({ firebaseUser }) {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.lbl}>Initial Stock Quantity *</label>
                   <input type="number" min="0" style={S.inp} value={addForm.totalQuantity} onChange={e => setAddForm(f => ({ ...f, totalQuantity: e.target.value }))} placeholder="e.g. 50" required />
@@ -1072,7 +1072,7 @@ export default function AdminInventory({ firebaseUser }) {
             </div>
 
             {/* Quick Metrics */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+            <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
               <div style={{ background: 'rgba(52, 211, 153, 0.05)', border: '1px solid rgba(52, 211, 153, 0.1)', borderRadius: 12, padding: 14 }}>
                 <span style={{ display: 'block', color: 'rgba(52, 211, 153, 0.7)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>Warehouse (Available)</span>
                 <span style={{ fontSize: 24, fontWeight: 700, color: '#34d399', display: 'block', marginTop: 4 }}>
@@ -1254,7 +1254,7 @@ export default function AdminInventory({ firebaseUser }) {
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', maxWidth: 480, background: '#0f1218', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, zIndex: 111, padding: 28, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
             
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
               <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: 0, textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {actionType === 'issue' && <UserCheck size={18} color="#60a5fa" />}
                 {actionType === 'transfer' && <ArrowRightLeft size={18} color="#c084fc" />}

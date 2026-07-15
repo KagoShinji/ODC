@@ -1,0 +1,80 @@
+/* Responsive styles for Admin Panel */
+
+/* Header Adjustments */
+@media (max-width: 768px) {
+  .admin-header {
+    flex-wrap: wrap !important;
+    height: auto !important;
+    padding: 12px 16px !important;
+    gap: 12px !important;
+  }
+}
+
+/* Tabs Horizontal Scrolling */
+.admin-tabs-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+.admin-tabs-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+.admin-tabs-container {
+  white-space: nowrap !important;
+  flex-wrap: nowrap !important;
+  padding-bottom: 2px !important;
+  min-width: max-content;
+}
+
+/* Main padding */
+@media (max-width: 768px) {
+  .admin-main {
+    padding: 16px 12px !important;
+  }
+}
+
+/* Toolbars (Search, Buttons, Filters) */
+@media (max-width: 768px) {
+  .admin-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+  .admin-toolbar > div {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .admin-toolbar button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  /* Select dropdowns in filters */
+  .admin-filters-group {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+  .admin-filters-group select {
+    width: 100% !important;
+  }
+}
+
+/* Metrics Grids */
+@media (max-width: 640px) {
+  .admin-metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Table Card Wrappers */
+@media (max-width: 768px) {
+  .admin-table-card {
+    padding: 0 !important;
+    border-radius: 8px !important;
+  }
+  /* Ensure the table cell padding is reduced on mobile */
+  .admin-table-card th,
+  .admin-table-card td {
+    padding: 12px 12px !important;
+  }
+}

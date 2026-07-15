@@ -180,7 +180,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Support Tickets</h2>
           {stats.open > 0 && (
@@ -199,7 +199,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 20 }}>
+      <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 20 }}>
         {[
           { l: 'Total Tickets', v: stats.total, c: '#fff' },
           { l: 'Open', v: stats.open, c: '#f87171' },
@@ -243,7 +243,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
       ) : filteredTickets.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No tickets found in this view.</div>
       ) : (
-        <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+        <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
               <tr>
@@ -305,7 +305,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 500, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Submit New Ticket</h3>
               <button onClick={() => setShowSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -323,7 +323,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
 
               <div>
                 <label style={S.lbl}>Priority</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 8 }}>
+                <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 8 }}>
                   {['Low', 'Medium', 'High'].map(p => {
                     const c = PRIORITY_COLORS[p];
                     const active = form.priority === p;
@@ -352,7 +352,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setAssignModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 440 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>Assign Ticket</h3>
               <button onClick={() => setAssignModal(null)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
@@ -399,7 +399,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                     <div>
                       <label style={S.lbl}>Priority</label>
                       <span style={{ display: 'inline-flex', padding: '4px 10px', fontSize: 11, fontWeight: 600, background: pc.bg, color: pc.text, border: `1px solid ${pc.border}`, borderRadius: 8 }}>

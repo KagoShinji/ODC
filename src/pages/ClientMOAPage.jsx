@@ -9,7 +9,7 @@ import CustomModal from '../components/ui/CustomModal';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',
   serviceProviderBusiness: 'OdysseyPH IT Solutions',

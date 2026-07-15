@@ -7,7 +7,7 @@ import CustomModal from '../components/ui/CustomModal';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',
   serviceProviderBusiness: 'OdysseyPH IT Solutions',
@@ -673,7 +673,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Memorandum of Agreement</h2>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
@@ -692,7 +692,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
+      <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
         {[
           { l: 'Total MOAs', v: moas.length, c: '#fff' },
         ].map(({ l, v, c }) => (
@@ -710,7 +710,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
       ) : moas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No MOAs generated yet.</div>
       ) : (
-        <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+        <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
               <tr>
@@ -776,7 +776,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 600, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>{editingId ? 'Edit MOA' : 'New MOA'}</h3>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button type="button" onClick={() => setShowAiModal(true)} style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', padding: '6px 12px' }}>✨ Auto-Fill from AI</button>
@@ -808,7 +808,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
               {/* Party B & General */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <h4 style={{ color: '#60a5fa', margin: '0 0 16px 0', fontSize: 14 }}>Party B (Provider) Details</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 12 }}>
+                <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 12 }}>
                   <div>
                     <label style={S.lbl}>Provider Rep Name</label>
                     <input style={S.inp} value={form.providerName} onChange={e => setForm(f => ({ ...f, providerName: e.target.value }))} required />
@@ -835,7 +835,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
 
               {/* Scope of Work */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <label style={{ ...S.lbl, marginBottom: 0 }}>2. Scope of Work</label>
                   <button type="button" onClick={addScopeGroup} style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 12, padding: '4px 10px' }}><Plus size={13} /> Add Group</button>
                 </div>
@@ -873,7 +873,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
                 <textarea style={{ ...S.inp, resize: 'vertical', minHeight: 100 }} value={(form.paymentTerms || []).join('\n')} onChange={e => handleListChange('paymentTerms', e.target.value)} required />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={S.lbl}>6. Dev Timeline</label>
                   <input style={S.inp} value={form.timeline} onChange={e => setForm(f => ({ ...f, timeline: e.target.value }))} placeholder="e.g. One (1) Week" required />
@@ -912,7 +912,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowAiModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 500 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>✨ Auto-Fill from AI</h3>
               <button onClick={() => setShowAiModal(false)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
@@ -945,7 +945,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowFreeformModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 700 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>⚡ Quick Paste (Freeform MOA)</h3>
               <button onClick={() => setShowFreeformModal(false)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
@@ -963,12 +963,12 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
             />
 
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: 20, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)', marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <h4 style={{ color: '#ff9a4a', margin: 0, fontSize: 14, fontWeight: 600 }}>Footer / Signature Details</h4>
                 <button type="button" onClick={autoExtractFfFooter} style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', fontSize: 11, padding: '4px 10px' }}>⚡ Auto-fill from text</button>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={S.lbl}>Client Representative (Party A)</label>
                   <input style={{ ...S.inp, fontSize: 13 }} value={ffFooter.clientName} onChange={e => setFfFooter(prev => ({ ...prev, clientName: e.target.value }))} placeholder="e.g. JETCH MERALD S. MADAYA" />
@@ -979,7 +979,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
                 </div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.lbl}>Provider Representative (Party B)</label>
                   <input style={{ ...S.inp, fontSize: 13 }} value={ffFooter.providerName} onChange={e => setFfFooter(prev => ({ ...prev, providerName: e.target.value }))} />

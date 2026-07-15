@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import '../admin-responsive.css';
 import { db, auth } from '../lib/firebase';
 import AdminInvoices from './AdminInvoices';
 import AdminMOA from './AdminMOA';
@@ -327,7 +328,7 @@ function AdminDashboard({ firebaseUser }) {
                 borderBottom: '1px solid rgba(255,255,255,0.07)',
                 padding: '0 24px',
             }}>
-                <div style={{
+                <div className="admin-header" style={{
                     maxWidth: 1200, margin: '0 auto',
                     height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
@@ -378,8 +379,8 @@ function AdminDashboard({ firebaseUser }) {
             </header>
 
             {/* Tab bar */}
-            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,13,20,0.6)', backdropFilter: 'blur(10px)' }}>
-                <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4 }}>
+            <div className="admin-tabs-wrapper" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,13,20,0.6)', backdropFilter: 'blur(10px)' }}>
+                <div className="admin-tabs-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4 }}>
                     {[
                       { id: 'contacts', label: 'Contacts', Icon: LayoutList }, 
                       ...(superAdmin ? [
@@ -402,11 +403,11 @@ function AdminDashboard({ firebaseUser }) {
             </div>
 
             {/* Main content */}
-            <main style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+            <main className="admin-main" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
 
                 {activeTab === 'contacts' && <>
                 {/* Stats */}
-                <div style={{
+                <div className="admin-metrics-grid" style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                     gap: 16, marginBottom: 32,
@@ -436,7 +437,7 @@ function AdminDashboard({ firebaseUser }) {
                 </div>
 
                 {/* Toolbar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                <div className="admin-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
                         <Search size={15} color="rgba(255,255,255,0.3)" style={{
                             position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',

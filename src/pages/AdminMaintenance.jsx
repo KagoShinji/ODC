@@ -101,7 +101,7 @@ export default function AdminMaintenance() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Maintenance Plans Management</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>Modify the pricing, features, and content of the maintenance plans page.</p>
@@ -121,10 +121,10 @@ export default function AdminMaintenance() {
       {/* Plans Section */}
       <div>
         <h3 style={S.sectionTtl}>1. Pricing Tiers</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 24 }}>
+        <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: 24 }}>
           {config.plans.map((plan, pIdx) => (
             <div key={pIdx} style={S.card}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <input style={{ ...S.inp, width: 'auto', fontWeight: 700, fontSize: 16, background: 'none', border: 'none', padding: 0 }} value={plan.name} onChange={e => {
                   const newPlans = [...config.plans];
                   newPlans[pIdx].name = e.target.value;
@@ -140,7 +140,7 @@ export default function AdminMaintenance() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
                   <label style={S.lbl}>Price</label>
                   <input style={S.inp} value={plan.price} onChange={e => {
@@ -222,7 +222,7 @@ export default function AdminMaintenance() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
+      <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 24 }}>
         {/* Minor Requests */}
         <div style={S.card}>
           <h3 style={S.sectionTtl}>2. Minor Requests Definitions</h3>

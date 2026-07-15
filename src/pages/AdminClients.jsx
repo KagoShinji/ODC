@@ -11,7 +11,7 @@ import {
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',
   approvedBy: 'Jetch Merald S. Madaya',
@@ -539,7 +539,7 @@ export default function AdminClients({ firebaseUser }) {
   return (
     <div style={{ position: 'relative' }}>
       {/* Top Header Row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Client Management</h2>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
@@ -552,7 +552,7 @@ export default function AdminClients({ firebaseUser }) {
       </div>
 
       {/* Sub-navigation Subtabs */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
+      <div className="admin-tabs-wrapper" style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
         {[
           { id: 'directory', label: 'Client Directory', count: clients.length, Icon: Users },
           { id: 'billing', label: 'Billing Tracker', count: activeBillingClients.length, Icon: CreditCard }
@@ -600,7 +600,7 @@ export default function AdminClients({ firebaseUser }) {
       {/* TAB 1: CLIENT DIRECTORY */}
       {activeSubTab === 'directory' && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
             {[
               { l: 'Total Clients', v: clients.length, c: '#fff' },
             ].map(({ l, v, c }) => (
@@ -618,7 +618,7 @@ export default function AdminClients({ firebaseUser }) {
           ) : filteredDirectory.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No clients registered yet.</div>
           ) : (
-            <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+            <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
                 <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
                   <tr>
@@ -680,7 +680,7 @@ export default function AdminClients({ firebaseUser }) {
       {activeSubTab === 'billing' && (
         <>
           {/* Tracker Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
             {[
               { l: 'Monitored Clients', v: activeBillingClients.length, c: '#fff' },
               { l: 'Due This Month', v: dueThisMonth.length, c: '#fb923c' },
@@ -695,7 +695,7 @@ export default function AdminClients({ firebaseUser }) {
           </div>
 
           {/* Filtering and Toolbar */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="admin-toolbar" style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
               <Search size={15} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
               <input
@@ -767,7 +767,7 @@ export default function AdminClients({ firebaseUser }) {
               No clients matched your criteria.
             </div>
           ) : (
-            <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+            <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 950 }}>
                 <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
                   <tr>
@@ -890,7 +890,7 @@ export default function AdminClients({ firebaseUser }) {
         <>
           <div onClick={() => setShowSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 460, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Register Client</h3>
               <button onClick={() => setShowSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -1063,7 +1063,7 @@ export default function AdminClients({ firebaseUser }) {
         <>
           <div onClick={() => setShowBillingSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 440, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Configure Billing</h3>
               <button onClick={() => setShowBillingSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -1208,7 +1208,7 @@ export default function AdminClients({ firebaseUser }) {
         <>
           <div onClick={() => setShowInvoiceSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 520, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Generate Invoice</h3>
               <button onClick={() => setShowInvoiceSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -1222,7 +1222,7 @@ export default function AdminClients({ firebaseUser }) {
                 <label style={S.lbl}>Project</label>
                 <input style={S.inp} value={invoiceForm.project} onChange={e => setInvoiceForm(f => ({ ...f, project: e.target.value }))} placeholder="e.g. Clinic Management" required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={S.lbl}>Date</label>
                   <input type="date" style={S.inp} value={invoiceForm.date} onChange={e => setInvoiceForm(f => ({ ...f, date: e.target.value }))} required />
@@ -1234,12 +1234,12 @@ export default function AdminClients({ firebaseUser }) {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <label style={S.lbl}>Line Items</label>
                   <button type="button" onClick={addInvoiceItem} style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 12, padding: '4px 10px' }}><Plus size={13} /> Add Row</button>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                     <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Service</span>
                     <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Amount (₱)</span>
                     <span />
@@ -1251,7 +1251,7 @@ export default function AdminClients({ firebaseUser }) {
                       <button type="button" onClick={() => removeInvoiceItem(item.id)} disabled={invoiceForm.items.length === 1} style={{ ...S.btn, padding: 4, background: 'none', color: '#f87171', opacity: invoiceForm.items.length === 1 ? 0.3 : 1 }}><X size={14} /></button>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600 }}>Total</span>
                     <span style={{ color: '#ff9a4a', fontSize: 16, fontWeight: 700, textAlign: 'right' }}>₱{fmt(invoiceFormTotal)}</span>
                     <span />

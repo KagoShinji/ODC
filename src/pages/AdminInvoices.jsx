@@ -7,7 +7,7 @@ import CustomModal from '../components/ui/CustomModal';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
-  email: 'odysseyclinsys1@gmail.com',
+  email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',
   approvedBy: 'Jetch Merald S. Madaya',
@@ -797,7 +797,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
   return (
     <div style={{ position: 'relative' }}>
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Invoices & Finance</h2>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
@@ -822,7 +822,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
       </div>
 
       {/* Sub-Tabs Sub-navigation */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
+      <div className="admin-tabs-wrapper" style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
         {[
           { id: 'invoices', label: 'Invoices', count: invoices.length, Icon: FileText },
           { id: 'expenses', label: 'Expenses', count: expenses.length, Icon: Briefcase },
@@ -874,7 +874,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
       {activeSubTab === 'invoices' && (
         <>
           {/* Invoice Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
             {[{ l: 'Total Invoices', v: invoices.length, c: '#fff' }, { l: 'Paid Invoices', v: paid.length, c: '#34d399' }, { l: 'Unpaid Invoices', v: unpaid.length, c: '#f87171' }, { l: 'Total Revenue', v: `₱${fmt(revenue)}`, c: '#ff9a4a' }].map(({ l, v, c }) => (
               <div key={l} style={{ ...S.card }}>
                 <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
@@ -890,7 +890,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
           ) : invoices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No invoices yet.</div>
           ) : (
-            <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+            <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                 <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
                   <tr>
@@ -985,7 +985,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
       {activeSubTab === 'expenses' && (
         <>
           {/* Expenses Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 28 }}>
             {[
               { l: 'Total Expenses Recorded', v: expenses.length, c: '#fff' },
               { l: 'Paid Expenses', v: `₱${fmt(paidExpensesAmount)}`, c: '#34d399' },
@@ -1006,7 +1006,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
           ) : expenses.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No expenses recorded yet.</div>
           ) : (
-            <div style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
+            <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto', overflowY: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
                 <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
                   <tr>
@@ -1066,10 +1066,10 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
       {activeSubTab === 'summary' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Key Combined Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
             {/* Revenue card */}
             <div style={{ ...S.card, border: '1px solid rgba(52,211,153,0.15)', background: 'linear-gradient(135deg, rgba(52,211,153,0.02), rgba(255,255,255,0.03))' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Total Net Revenue</span>
                 <span style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399', borderRadius: '50%', p: 6, display: 'flex', padding: 6 }}><ArrowUpRight size={16} /></span>
               </div>
@@ -1079,7 +1079,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
 
             {/* Operating Expense card */}
             <div style={{ ...S.card, border: '1px solid rgba(248,113,113,0.15)', background: 'linear-gradient(135deg, rgba(248,113,113,0.02), rgba(255,255,255,0.03))' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Operating Expenditures</span>
                 <span style={{ background: 'rgba(248,113,113,0.12)', color: '#f87171', borderRadius: '50%', p: 6, display: 'flex', padding: 6 }}><ArrowDownRight size={16} /></span>
               </div>
@@ -1094,7 +1094,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
               const positive = netProfit >= 0;
               return (
                 <div style={{ ...S.card, border: `1px solid ${positive ? 'rgba(251,191,36,0.15)' : 'rgba(239,68,68,0.2)'}`, background: 'linear-gradient(135deg, rgba(251,191,36,0.02), rgba(255,255,255,0.03))' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Net Income</span>
                     <span style={{ background: positive ? 'rgba(251,191,36,0.12)' : 'rgba(239,68,68,0.15)', color: positive ? '#fbbf24' : '#ef4444', borderRadius: '50%', display: 'flex', padding: 6 }}><DollarSign size={16} /></span>
                   </div>
@@ -1107,7 +1107,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
             })()}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
             {/* Category Breakdown list */}
             <div style={{ ...S.card }}>
               <h3 style={{ color: '#fff', fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 10 }}>Expenditure Category Breakdown</h3>
@@ -1173,7 +1173,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
           <>
             <div onClick={() => setReportModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
             <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 440 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>Generate Shareholder Report</h3>
                 <button onClick={() => setReportModal(false)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
               </div>
@@ -1181,7 +1181,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
               
               <div style={{ marginBottom: 18 }}>
                 <label style={S.lbl}>Report Scope</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
+                <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>
                   {[
                     { id: 'overall', label: 'Overall' },
                     { id: 'yearly', label: 'Yearly' },
@@ -1294,14 +1294,14 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setPayModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 440 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>Mark as Paid</h3>
               <button onClick={() => setPayModal(null)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>{payModal.inv.invoiceNumber} · {payModal.inv.billTo} · <span style={{ color: '#ff9a4a', fontWeight: 700 }}>₱{fmt(payModal.inv.total)}</span></div>
             <div style={{ marginBottom: 18 }}>
               <label style={S.lbl}>Payment Method</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
                 {[{ id: 'cash', label: '💵 Cash' }, { id: 'gotyme', label: '🏦 GoTyme' }, { id: 'maribank', label: '🏧 MariBank' }, { id: 'gcash', label: '📱 GCash' }].map(({ id, label }) => (
                   <button key={id} type="button" onClick={() => setPayMethod(id)} style={{ ...S.btn, justifyContent: 'center', padding: '12px 0', background: payMethod === id ? 'rgba(255,106,26,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${payMethod === id ? 'rgba(255,106,26,0.6)' : 'rgba(255,255,255,0.1)'}`, color: payMethod === id ? '#ff9a4a' : 'rgba(255,255,255,0.6)', fontWeight: payMethod === id ? 700 : 400, borderRadius: 12 }}>{label}</button>
                 ))}
@@ -1328,7 +1328,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setViewInv(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 500, maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>{viewInv.invoiceNumber}</h3>
               <button onClick={() => setViewInv(null)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
@@ -1368,7 +1368,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 520, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>{editingId ? 'Edit Invoice' : 'New Invoice'}</h3>
               <button onClick={() => setShowSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -1382,7 +1382,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
                 <label style={S.lbl}>Project</label>
                 <input style={S.inp} value={form.project} onChange={e => setForm(f => ({ ...f, project: e.target.value }))} placeholder="e.g. Clinic Management" required />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={S.lbl}>Date</label>
                   <input type="date" style={S.inp} value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required />
@@ -1394,12 +1394,12 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
               </div>
 
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <label style={S.lbl}>Line Items</label>
                   <button type="button" onClick={addItem} style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 12, padding: '4px 10px' }}><Plus size={13} /> Add Row</button>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                     <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Service</span>
                     <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Amount (₱)</span>
                     <span />
@@ -1411,7 +1411,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
                       <button type="button" onClick={() => removeItem(item.id)} disabled={form.items.length === 1} style={{ ...S.btn, padding: 4, background: 'none', color: '#f87171', opacity: form.items.length === 1 ? 0.3 : 1 }}><X size={14} /></button>
                     </div>
                   ))}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 32px', padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
                     <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, fontWeight: 600 }}>Total</span>
                     <span style={{ color: '#ff9a4a', fontSize: 16, fontWeight: 700, textAlign: 'right' }}>₱{fmt(formTotal)}</span>
                     <span />
@@ -1463,7 +1463,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         <>
           <div onClick={() => setShowExpenseSidebar(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
           <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 520, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
               <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>{expenseEditingId ? 'Edit Expense' : 'Record Expense'}</h3>
               <button onClick={() => setShowExpenseSidebar(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
             </div>
@@ -1481,7 +1481,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={S.lbl}>Amount (₱)</label>
                   <input type="number" min="0" step="0.01" style={S.inp} value={expenseForm.amount} onChange={e => setExpenseForm(f => ({ ...f, amount: e.target.value }))} placeholder="0.00" required />
@@ -1491,7 +1491,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
                   <input type="date" style={S.inp} value={expenseForm.date} onChange={e => setExpenseForm(f => ({ ...f, date: e.target.value }))} required />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                 <div>
                   <label style={S.lbl}>Payee / Vendor</label>
                   <input style={S.inp} value={expenseForm.payee} onChange={e => setExpenseForm(f => ({ ...f, payee: e.target.value }))} placeholder="e.g. PLDT" required />
