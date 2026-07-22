@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { secondaryAuth } from '../lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { 
@@ -102,15 +102,20 @@ const getNextMonthDueDate = (currentDueDateStr, billingDay) => {
     nextYear += 1;
   }
   const maxDays = new Date(nextYear, nextMonth + 1, 0).getDate();
-  const targetDay = Math.min(Number(billingDay), maxDays);
-  return toLocalDateString(new Date(nextYear, nextMonth, targetDay));
 };
+
+const DEFAULT_PLANS = [
+  { name: 'Basic Care Plan', price: '₱1,500' },
+  { name: 'Standard Care Plan', price: '₱3,500' },
+  { name: 'Premium Continuous Improvement', price: '₱7,500' }
+];
 
 export default function AdminClients({ firebaseUser }) {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [maintenancePlans, setMaintenancePlans] = useState([]);
   
   // Sub-tabs navigation
   const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'billing'
@@ -123,11 +128,15 @@ export default function AdminClients({ firebaseUser }) {
   const [billingForm, setBillingForm] = useState({
     billingType: 'flat_rate',
     billingRate: '',
+    billingCurrency: 'PHP',
+    exchangeRate: '58.0',
     billingCycle: 'monthly',
     dueType: 'day_of_month',
     billingDay: '2',
     nextDueDate: new Date().toISOString().split('T')[0],
-    currentBookingsCount: 0
+    currentBookingsCount: 0,
+    maintenancePlan: 'none',
+    maintenanceRate: ''
   });
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -138,12 +147,16 @@ export default function AdminClients({ firebaseUser }) {
   const [editBillingForm, setEditBillingForm] = useState({
     billingType: 'flat_rate',
     billingRate: '',
+    billingCurrency: 'PHP',
+    exchangeRate: '58.0',
     billingCycle: 'monthly',
     dueType: 'day_of_month',
     billingDay: '2',
     nextDueDate: '',
     currentBookingsCount: 0,
-    lastBilledDate: ''
+    lastBilledDate: '',
+    maintenancePlan: 'none',
+    maintenanceRate: ''
   });
   const [savingBilling, setSavingBilling] = useState(false);
 
@@ -179,6 +192,48 @@ export default function AdminClients({ firebaseUser }) {
 
   useEffect(() => { load(false); }, [load]);
 
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'maintenanceSettings', 'config'));
+        if (snap.exists() && snap.data().plans) {
+          setMaintenancePlans(snap.data().plans);
+        } else {
+          setMaintenancePlans(DEFAULT_PLANS);
+        }
+      } catch (e) {
+        console.error('Error fetching maintenance config:', e);
+        setMaintenancePlans(DEFAULT_PLANS);
+      }
+    };
+    fetchPlans();
+  }, []);
+
+  const parsePriceToNumber = (priceStr) => {
+    if (!priceStr) return 0;
+    const clean = priceStr.replace(/[^\d.]/g, '');
+    return Number(clean) || 0;
+  };
+
+  const handlePlanChange = (val, isEdit = false) => {
+    const setFormFn = isEdit ? setEditBillingForm : setBillingForm;
+    if (val === 'none') {
+      setFormFn(f => ({ ...f, maintenancePlan: val, maintenanceRate: '' }));
+    } else if (val === 'custom') {
+      setFormFn(f => ({ ...f, maintenancePlan: val }));
+    } else {
+      const selected = maintenancePlans.find(p => p.name === val);
+      if (selected) {
+        const parsedRate = parsePriceToNumber(selected.price);
+        setFormFn(f => ({ 
+          ...f, 
+          maintenancePlan: val, 
+          maintenanceRate: String(parsedRate)
+        }));
+      }
+    }
+  };
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -210,6 +265,10 @@ export default function AdminClients({ firebaseUser }) {
         // Optional Billing config
         billingType: billingSetup ? billingForm.billingType : null,
         billingRate: billingSetup ? Number(billingForm.billingRate || 0) : null,
+        billingCurrency: billingSetup ? (billingForm.billingCurrency || 'PHP') : null,
+        exchangeRate: billingSetup && billingForm.billingCurrency === 'USD' ? Number(billingForm.exchangeRate || 58.0) : null,
+        maintenancePlan: billingSetup ? (billingForm.maintenancePlan || 'none') : null,
+        maintenanceRate: billingSetup ? Number(billingForm.maintenanceRate || 0) : null,
         billingCycle: billingSetup ? (billingForm.billingType === 'flat_rate' ? billingForm.billingCycle : null) : null,
         billingDay: billingSetup && billingForm.dueType === 'day_of_month' ? Number(billingForm.billingDay) : null,
         nextDueDate: billingSetup 
@@ -228,11 +287,15 @@ export default function AdminClients({ firebaseUser }) {
       setBillingForm({
         billingType: 'flat_rate',
         billingRate: '',
+        billingCurrency: 'PHP',
+        exchangeRate: '58.0',
         billingCycle: 'monthly',
         dueType: 'day_of_month',
         billingDay: '2',
         nextDueDate: new Date().toISOString().split('T')[0],
-        currentBookingsCount: 0
+        currentBookingsCount: 0,
+        maintenancePlan: 'none',
+        maintenanceRate: ''
       });
       load();
     } catch (err) { 
@@ -255,6 +318,10 @@ export default function AdminClients({ firebaseUser }) {
     const payload = {
       billingType: editBillingForm.billingType,
       billingRate: Number(editBillingForm.billingRate || 0),
+      billingCurrency: editBillingForm.billingCurrency || 'PHP',
+      exchangeRate: editBillingForm.billingCurrency === 'USD' ? Number(editBillingForm.exchangeRate || 58.0) : null,
+      maintenancePlan: editBillingForm.maintenancePlan || 'none',
+      maintenanceRate: Number(editBillingForm.maintenanceRate || 0),
       billingCycle: editBillingForm.billingType === 'flat_rate' ? editBillingForm.billingCycle : null,
       billingDay: editBillingForm.dueType === 'day_of_month' ? Number(editBillingForm.billingDay) : null,
       nextDueDate: editBillingForm.dueType === 'day_of_month' 
@@ -297,19 +364,43 @@ export default function AdminClients({ firebaseUser }) {
       return;
     }
 
-    let billingAmount = 0;
-    let serviceDesc = '';
+    let baseAmount = 0;
+    let baseDesc = '';
     const todayStr = new Date().toISOString().split('T')[0];
 
+    const isUSD = client.billingCurrency === 'USD';
+    const rateInUSD = Number(client.billingRate);
+    const exRate = Number(client.exchangeRate || 58.0);
+    const rateInPHP = isUSD ? rateInUSD * exRate : rateInUSD;
+
     if (client.billingType === 'flat_rate') {
-      billingAmount = Number(client.billingRate);
+      baseAmount = rateInPHP;
       const cycleLabel = client.billingCycle === 'monthly' ? 'Monthly' : client.billingCycle === 'quarterly' ? 'Quarterly' : 'Yearly';
       const monthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      serviceDesc = `${cycleLabel} Maintenance Fee — ${monthStr}`;
+      baseDesc = isUSD 
+        ? `${cycleLabel} Flat Rate — ${monthStr} ($${rateInUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} @ ₱${exRate.toFixed(2)}/USD)`
+        : `${cycleLabel} Flat Rate — ${monthStr}`;
     } else if (client.billingType === 'per_booking') {
       const bookings = Number(client.currentBookingsCount || 0);
-      billingAmount = Number(client.billingRate) * bookings;
-      serviceDesc = `Per-Booking Maintenance Fee (${bookings} bookings @ ₱${client.billingRate})`;
+      baseAmount = rateInPHP * bookings;
+      baseDesc = isUSD
+        ? `Per-Booking Maintenance Fee (${bookings} bookings @ $${rateInUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} @ ₱${exRate.toFixed(2)}/USD)`
+        : `Per-Booking Maintenance Fee (${bookings} bookings @ ₱${client.billingRate})`;
+    }
+
+    const items = [];
+    if (client.billingType) {
+      items.push({ id: 1, service: baseDesc, amount: String(baseAmount.toFixed(2)) });
+    }
+
+    // Additional Maintenance Plan Fee
+    if (client.maintenancePlan && client.maintenancePlan !== 'none') {
+      const mPlanPrice = Number(client.maintenanceRate || 0);
+      items.push({
+        id: Date.now() + 1,
+        service: `Maintenance Support — ${client.maintenancePlan}`,
+        amount: String(mPlanPrice.toFixed(2))
+      });
     }
 
     setInvoicingClient(client);
@@ -318,7 +409,7 @@ export default function AdminClients({ firebaseUser }) {
       project: client.business || 'Maintenance Support',
       date: todayStr,
       paymentTerms: 'Cash/Bank Transfer',
-      items: [{ id: 1, service: serviceDesc, amount: String(billingAmount) }],
+      items: items.length > 0 ? items : [{ id: 1, service: 'Maintenance support', amount: '0' }],
       notes: 'Generated from Client Billing Tracker.',
       qrCodes: ['gotyme', 'maribank'],
       preparedBy: firebaseUser.email || CO.preparedBy
@@ -404,6 +495,10 @@ export default function AdminClients({ firebaseUser }) {
     setEditBillingForm({
       billingType: client.billingType || 'flat_rate',
       billingRate: client.billingRate !== undefined && client.billingRate !== null ? client.billingRate : '',
+      billingCurrency: client.billingCurrency || 'PHP',
+      exchangeRate: client.exchangeRate !== undefined && client.exchangeRate !== null ? client.exchangeRate : '58.0',
+      maintenancePlan: client.maintenancePlan || 'none',
+      maintenanceRate: client.maintenanceRate !== undefined && client.maintenanceRate !== null ? client.maintenanceRate : '',
       billingCycle: client.billingCycle || 'monthly',
       dueType: client.billingDay ? 'day_of_month' : 'manual',
       billingDay: client.billingDay || '2',
@@ -429,12 +524,24 @@ export default function AdminClients({ firebaseUser }) {
   
   const projectedRevenue = clients.reduce((acc, c) => {
     if (!c.billingType) return acc;
+    const isUSD = c.billingCurrency === 'USD';
+    const rateInUSD = Number(c.billingRate || 0);
+    const exRate = Number(c.exchangeRate || 58.0);
+    const rateInPHP = isUSD ? rateInUSD * exRate : rateInUSD;
+
+    let clientTotal = 0;
     if (c.billingType === 'flat_rate') {
-      return acc + Number(c.billingRate || 0);
+      clientTotal = rateInPHP;
     } else if (c.billingType === 'per_booking') {
-      return acc + (Number(c.billingRate || 0) * Number(c.currentBookingsCount || 0));
+      clientTotal = rateInPHP * Number(c.currentBookingsCount || 0);
     }
-    return acc;
+    
+    // Add the maintenance rate (always in PHP) if configured
+    if (c.maintenancePlan && c.maintenancePlan !== 'none') {
+      clientTotal += Number(c.maintenanceRate || 0);
+    }
+
+    return acc + clientTotal;
   }, 0);
 
   // Filter client directory list
@@ -782,9 +889,22 @@ export default function AdminClients({ firebaseUser }) {
                 <tbody>
                   {filteredBilling.map(client => {
                     const accumulates = client.billingType === 'per_booking';
-                    const amountDue = client.billingType === 'flat_rate'
-                      ? (client.billingRate || 0)
-                      : (client.billingType === 'per_booking' ? (client.billingRate || 0) * (client.currentBookingsCount || 0) : 0);
+                    const isUSD = client.billingCurrency === 'USD';
+                    const rateInUSD = Number(client.billingRate || 0);
+                    const exRate = Number(client.exchangeRate || 58.0);
+                    const rateInPHP = isUSD ? rateInUSD * exRate : rateInUSD;
+
+                    const baseAmountPHP = client.billingType === 'flat_rate'
+                      ? rateInPHP
+                      : (client.billingType === 'per_booking' ? rateInPHP * (client.currentBookingsCount || 0) : 0);
+                    
+                    const maintenanceAmt = (client.maintenancePlan && client.maintenancePlan !== 'none') ? Number(client.maintenanceRate || 0) : 0;
+                    
+                    const amountDue = baseAmountPHP + maintenanceAmt;
+
+                    const matchingPlan = maintenancePlans.find(p => p.name === client.maintenancePlan);
+                    const standardRate = matchingPlan ? parsePriceToNumber(matchingPlan.price) : null;
+                    const isNegotiated = client.maintenancePlan && client.maintenancePlan !== 'custom' && client.maintenancePlan !== 'none' && standardRate !== null && Number(client.maintenanceRate || 0) !== standardRate;
 
                     return (
                       <tr key={client.id} className="billing-row" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}>
@@ -805,12 +925,34 @@ export default function AdminClients({ firebaseUser }) {
                         <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                           {client.billingType ? (
                             <div>
-                              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>
-                                {client.billingType.replace('_', ' ')}
+                              {/* Base billing details */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ color: '#fff', fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>
+                                  {client.billingType.replace('_', ' ')}:
+                                </span>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+                                  {isUSD ? `$${rateInUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : `₱${rateInUSD.toLocaleString()}`}
+                                  {client.billingType === 'flat_rate' ? `/${client.billingCycle || 'mo'}` : '/booking'}
+                                </span>
                               </div>
-                              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>
-                                ₱{(client.billingRate || 0).toLocaleString()} {client.billingType === 'flat_rate' ? `/${client.billingCycle || 'mo'}` : '/booking'}
-                              </div>
+                              {isUSD && (
+                                <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 1 }}>
+                                  (₱{rateInPHP.toLocaleString('en-PH', { minimumFractionDigits: 2 })} @ ₱{exRate.toFixed(2)}/USD)
+                                </div>
+                              )}
+                              
+                              {/* Additional Maintenance plan details */}
+                              {client.maintenancePlan && client.maintenancePlan !== 'none' && (
+                                <div style={{ marginTop: 6, paddingTop: 4, borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
+                                  <div style={{ color: '#fbbf24', fontSize: 11, fontWeight: 600 }}>
+                                    + {client.maintenancePlan}
+                                  </div>
+                                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    ₱{Number(client.maintenanceRate || 0).toLocaleString()}/mo
+                                    {isNegotiated && <span style={{ color: '#ff9a4a', fontSize: 10, fontWeight: 600 }}>(Negotiated)</span>}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontStyle: 'italic' }}>Not Configured</span>
@@ -965,18 +1107,83 @@ export default function AdminClients({ firebaseUser }) {
                   </div>
 
                   <div>
-                    <label style={S.lbl}>
-                      {billingForm.billingType === 'flat_rate' ? 'Rate Fee (PHP / cycle)' : 'Fee per Booking (PHP)'}
-                    </label>
-                    <input
-                      type="number"
+                    <label style={S.lbl}>Maintenance Plan</label>
+                    <select
+                      value={billingForm.maintenancePlan || 'none'}
+                      onChange={e => handlePlanChange(e.target.value, false)}
                       style={S.inp}
-                      value={billingForm.billingRate}
-                      onChange={e => setBillingForm(f => ({ ...f, billingRate: e.target.value }))}
-                      placeholder="e.g. 15000"
-                      required={billingSetup}
-                    />
+                    >
+                      <option value="none">None (No Maintenance Plan)</option>
+                      <option value="custom">Custom / Negotiated Rate</option>
+                      {maintenancePlans.map(plan => (
+                        <option key={plan.name} value={plan.name}>
+                          {plan.name} ({plan.price || '₱0'})
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
+                  {(billingForm.maintenancePlan && billingForm.maintenancePlan !== 'none') && (
+                    <div>
+                      <label style={S.lbl}>
+                        Maintenance Plan Rate (PHP / mo)
+                      </label>
+                      <input
+                        type="number"
+                        style={S.inp}
+                        value={billingForm.maintenanceRate}
+                        onChange={e => setBillingForm(f => ({ ...f, maintenanceRate: e.target.value }))}
+                        placeholder="e.g. 3500"
+                        required={billingSetup && billingForm.maintenancePlan !== 'none'}
+                      />
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    <div>
+                      <label style={S.lbl}>Billing Currency</label>
+                      <select
+                        value={billingForm.billingCurrency || 'PHP'}
+                        onChange={e => setBillingForm(f => ({ ...f, billingCurrency: e.target.value }))}
+                        style={S.inp}
+                      >
+                        <option value="PHP">PHP (₱)</option>
+                        <option value="USD">USD ($)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={S.lbl}>
+                        {billingForm.billingType === 'flat_rate' 
+                          ? `Rate Fee (${billingForm.billingCurrency || 'PHP'})` 
+                          : `Fee per Booking (${billingForm.billingCurrency || 'PHP'})`}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        style={S.inp}
+                        value={billingForm.billingRate}
+                        onChange={e => setBillingForm(f => ({ ...f, billingRate: e.target.value }))}
+                        placeholder={billingForm.billingCurrency === 'USD' ? "e.g. 300" : "e.g. 15000"}
+                        required={billingSetup}
+                      />
+                    </div>
+                  </div>
+
+                  {(billingForm.billingCurrency || 'PHP') === 'USD' && (
+                    <div>
+                      <label style={S.lbl}>Exchange Rate (1 USD = ? PHP)</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        style={S.inp}
+                        value={billingForm.exchangeRate}
+                        onChange={e => setBillingForm(f => ({ ...f, exchangeRate: e.target.value }))}
+                        placeholder="e.g. 58.00"
+                        required={billingSetup && billingForm.billingCurrency === 'USD'}
+                      />
+                    </div>
+                  )}
 
                   {billingForm.billingType === 'flat_rate' && (
                     <div>
@@ -1087,18 +1294,83 @@ export default function AdminClients({ firebaseUser }) {
               </div>
 
               <div>
-                <label style={S.lbl}>
-                  {editBillingForm.billingType === 'flat_rate' ? 'Rate Fee (PHP)' : 'Fee per Booking (PHP)'}
-                </label>
-                <input
-                  type="number"
+                <label style={S.lbl}>Maintenance Plan</label>
+                <select
+                  value={editBillingForm.maintenancePlan || 'none'}
+                  onChange={e => handlePlanChange(e.target.value, true)}
                   style={S.inp}
-                  value={editBillingForm.billingRate}
-                  onChange={e => setEditBillingForm(f => ({ ...f, billingRate: e.target.value }))}
-                  placeholder="e.g. 15000"
-                  required
-                />
+                >
+                  <option value="none">None (No Maintenance Plan)</option>
+                  <option value="custom">Custom / Negotiated Rate</option>
+                  {maintenancePlans.map(plan => (
+                    <option key={plan.name} value={plan.name}>
+                      {plan.name} ({plan.price || '₱0'})
+                    </option>
+                  ))}
+                </select>
               </div>
+
+              {(editBillingForm.maintenancePlan && editBillingForm.maintenancePlan !== 'none') && (
+                <div>
+                  <label style={S.lbl}>
+                    Maintenance Plan Rate (PHP / mo)
+                  </label>
+                  <input
+                    type="number"
+                    style={S.inp}
+                    value={editBillingForm.maintenanceRate}
+                    onChange={e => setEditBillingForm(f => ({ ...f, maintenanceRate: e.target.value }))}
+                    placeholder="e.g. 3500"
+                    required={editBillingForm.maintenancePlan !== 'none'}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <div>
+                  <label style={S.lbl}>Billing Currency</label>
+                  <select
+                    value={editBillingForm.billingCurrency || 'PHP'}
+                    onChange={e => setEditBillingForm(f => ({ ...f, billingCurrency: e.target.value }))}
+                    style={S.inp}
+                  >
+                    <option value="PHP">PHP (₱)</option>
+                    <option value="USD">USD ($)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={S.lbl}>
+                    {editBillingForm.billingType === 'flat_rate' 
+                      ? `Rate Fee (${editBillingForm.billingCurrency || 'PHP'})` 
+                      : `Fee per Booking (${editBillingForm.billingCurrency || 'PHP'})`}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    style={S.inp}
+                    value={editBillingForm.billingRate}
+                    onChange={e => setEditBillingForm(f => ({ ...f, billingRate: e.target.value }))}
+                    placeholder={editBillingForm.billingCurrency === 'USD' ? "e.g. 300" : "e.g. 15000"}
+                    required
+                  />
+                </div>
+              </div>
+
+              {(editBillingForm.billingCurrency || 'PHP') === 'USD' && (
+                <div>
+                  <label style={S.lbl}>Exchange Rate (1 USD = ? PHP)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    style={S.inp}
+                    value={editBillingForm.exchangeRate}
+                    onChange={e => setEditBillingForm(f => ({ ...f, exchangeRate: e.target.value }))}
+                    placeholder="e.g. 58.00"
+                    required={editBillingForm.billingCurrency === 'USD'}
+                  />
+                </div>
+              )}
 
               {editBillingForm.billingType === 'flat_rate' && (
                 <div>
