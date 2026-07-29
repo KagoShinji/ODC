@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import {
     ArrowRight,
@@ -29,21 +30,23 @@ const sectionMotion = {
 };
 
 const businessMarqueeLogos = [
-    { name: 'The Pickle Point Cebu', src: '/logos/picklepointnewlogo.jpg' },
-    { name: 'Firsel Tattoo', src: '/logos/firseltattoologo.jpg' },
-    { name: 'IMS-US', src: '/logos/ims-uslogo.png' },
-    { name: 'MediQuick', src: '/logos/mediquicklogo.jpg' },
-    { name: 'Ngosiok Marketing', src: '/logos/ngosiokmarketinglogo.jpg' },
-    { name: 'PDRRMO-Surigao del Norte', src: '/logos/pdrrmo.jpg' },
-    { name: 'Surigao del Norte', src: '/logos/surigaodelnorte.jpg' },
+    { name: 'Dr. Humba', src: '/logos/drhumbalogonew.png' },
+    { name: 'Chibs N Dink', src: '/logos/chibsndinknew.png' },
+    { name: 'Sosyal Dinkers', src: '/logos/sosyaldinkers.png' },
+    { name: 'Man and Paddle', src: '/logos/manandpaddle.png' },
+    { name: 'KennyDink', src: '/logos/kennydinklogo.png' },
+    { name: 'Talisay Chamber', src: '/logos/talisaychamber.png' },
+    { name: 'Jump Serve Mandaue', src: '/logos/jumpservemandaue.png' },
     { name: 'CPRMED', src: '/logos/cprmedlogo.png' },
-    { name: 'SPEC', src: '/logos/speclogo.jpg' },
-    { name: 'The Knee Arthritis', src: '/thekneearthritis&orthopaedicinstitute.png' },
-    { name: 'Jump Serve Sports Center Mandaue', src: '/logos/jumpservemandauelogo.png' },
-    { name: 'KennyDink Moalboal Cebu', src: '/logos/kennydinklogo.jpg' },
-    { name: 'SupportTeach', src: '/logos/supportteachlogo.svg' },
-    { name: 'Jump Serve Mactan', src: '/logos/jumpservemactanlogo.jpg' },
-    { name: 'Nickleball Avenue', src: '/logos/nickleballavenuelogo.jpg' },
+    
+    { name: 'Jump Serve Mactan', src: '/logos/jumpservemactan.png' },
+    { name: 'Pickleball Avenue', src: '/logos/nickleballavenue.png' },
+    { name: 'The Pickle Point Cebu', src: '/logos/thepicklepoint.png' },
+    { name: 'Firsel Tattoo', src: '/logos/firseltattoonew.png' },
+    { name: 'IMS-US', src: '/logos/ims-us.png' },
+    { name: 'PDRRMO', src: '/logos/pdrrmo.jpg' },
+    { name: 'Surigao del Norte', src: '/logos/surigaodelnorte.jpg' },
+    { name: 'Slide Two', src: '/logos/slidetwo.png' },
 ];
 
 const businessSystemShowcases = [
@@ -252,16 +255,19 @@ function SectionHeader({ eyebrow, title, copy, align = 'left' }) {
     );
 }
 
-function LogoMarquee({ items }) {
+function LogoMarquee({ items, speed = 40, direction = 'left', className = '' }) {
     return (
-        <div className="logo-marquee is-compact" aria-label="Featured businesses">
+        <div 
+            className={`logo-marquee ${className} ${direction === 'right' ? 'is-reverse' : ''}`} 
+            style={{ '--marquee-duration': `${speed}s` }}
+            aria-label="Featured businesses"
+        >
             <div className="logo-marquee-track">
                 {[...items, ...items].map((item, index) => (
                     <div className="logo-marquee-item business-logo-item" key={`${item.name}-${index}`}>
                         <span className="logo-mark">
                             <img src={item.src} alt={`${item.name} logo`} loading="lazy" />
                         </span>
-                        <span className="logo-name">{item.name}</span>
                     </div>
                 ))}
             </div>
@@ -347,210 +353,109 @@ function HeroSection() {
                     <HeroShowcase />
                 </Motion.div>
 
-                <Motion.div {...sectionMotion} className="trust-strip premium-trust-strip premium-business-marquee-strip">
-                    <p className="trusted-label">Trusted by Our Clients</p>
-                    <LogoMarquee items={businessMarqueeLogos} />
-                </Motion.div>
+                
             </div>
         </section>
     );
 }
 
-function BusinessSystemCard({ item, index }) {
+
+function BrowserStack({ title, projects }) {
+    const [activeIndex, setActiveIndex] = useState(null);
+
     return (
-        <Motion.a
-            href={item.href}
-            target="_blank"
-            rel="noreferrer"
-            {...sectionMotion}
-            transition={{ duration: 0.82, delay: index * 0.07, ease: easeOut }}
-            className={`business-system-card ${item.featured ? 'is-featured' : ''} ${item.tablet ? 'is-tablet' : ''} ${item.theme}`}
-            aria-label={`Open ${item.title}`}
-        >
-            <div className="business-system-preview">
-                <img src={item.preview} alt={`${item.title} interface preview`} loading="lazy" />
-            </div>
-            <div className="business-system-content">
-                <div className="business-logo-stage">
-                    <img src={item.logo} alt={`${item.title} logo`} loading="lazy" />
-                </div>
-                <div className="business-system-copy">
-                    <span>{item.type}</span>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                </div>
-                <span className="business-open-link">
-                    {item.href.startsWith('http') ? 'Open website' : 'Open preview'}
-                    <ArrowSquareOut size={14} weight="bold" />
-                </span>
-            </div>
-        </Motion.a>
-    );
-}
-
-function SystemsShowcase() {
-    return (
-        <section id="systems" className="landing-section docs-section systems-showcase-section">
-            <div className="landing-shell">
-                <div className="premium-section-intro">
-                    <SectionHeader
-                        eyebrow="Selected systems"
-                        title="Fewer slides. Stronger proof."
-                        copy="A focused set of real builds across booking, portfolio, medicine, service, and operations workflows. The page now lets the work carry the story instead of repeating the same pitch."
-                    />
-                    <div className="section-side-note">
-                        <Buildings size={22} weight="duotone" />
-                        <p>Built for businesses that need usable software, not decorative mockups.</p>
-                    </div>
-                </div>
-
-                <div className="business-system-grid premium-system-grid">
-                    {businessSystemShowcases.map((item, index) => (
-                        <BusinessSystemCard key={item.title} item={item} index={index} />
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function PickleballCard({ item, index }) {
-    return (
-        <Motion.a
-            href={item.href}
-            target="_blank"
-            rel="noreferrer"
-            {...sectionMotion}
-            transition={{ duration: 0.82, delay: index * 0.1, ease: easeOut }}
-            className={`pickleball-card ${item.featured ? 'is-featured' : ''} ${item.theme}`}
-            aria-label={`Open ${item.title}`}
-        >
-            {item.highlight && (
-                <div className="pickleball-highlight-badge">
-                    <span>{item.highlight}</span>
-                </div>
-            )}
-            <div className="pickleball-card-preview">
-                <img src={item.preview} alt={`${item.title} preview`} loading="lazy" />
-            </div>
-            <div className="pickleball-card-content">
-                <div className="pickleball-logo-wrap">
-                    <img src={item.logo} alt={`${item.title} logo`} loading="lazy" />
-                </div>
-                <div className="pickleball-card-copy">
-                    <div className="pickleball-card-meta">
-                        <span className="pickleball-type">{item.type}</span>
-                        {item.location && (
-                            <span className="pickleball-location">{item.location}</span>
-                        )}
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.description}</p>
-                </div>
-                {item.stats && (
-                    <div className="pickleball-stats">
-                        {item.stats.map((stat) => (
-                            <div className="pickleball-stat" key={stat.label}>
-                                <strong>{stat.value}</strong>
-                                <span>{stat.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-                <span className="pickleball-open-link">
-                    Open website
-                    <ArrowSquareOut size={14} weight="bold" />
-                </span>
-            </div>
-        </Motion.a>
-    );
-}
-
-function PickleballShowcase() {
-    return (
-        <section id="pickleball" className="landing-section pickleball-section">
-            <div className="pickleball-section-bg" aria-hidden="true" />
-            <div className="landing-shell">
-                <div className="pickleball-section-header">
-                    <SectionHeader
-                        eyebrow="Court & sports systems"
-                        title="Powering Cebu's court culture."
-                        copy="Dedicated platforms for sports centers and court venues — built to handle bookings, schedules, and on-court experiences with precision and clarity."
-                    />
-                    <div className="pickleball-badge">
-                        <Trophy size={18} weight="fill" />
-                        <span>5 Live Venues</span>
-                    </div>
-                </div>
-
-                <div className="pickleball-grid">
-                    {pickleballShowcases.map((item, index) => (
-                        <PickleballCard key={item.title} item={item} index={index} />
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
-
-function GovernmentShowcase() {
-    return (
-        <section id="civic" className="landing-section government-showcase-section premium-government-section">
-            <div className="landing-shell">
-                <div className="government-showcase-header">
-                    <SectionHeader
-                        eyebrow="Civic work"
-                        title="Government systems with matched identity."
-                        copy="Agency pages and operational displays are treated as one visual system: formal, readable, and immediately tied to the office they represent."
-                    />
-                    <a href="/government/pacco.jpg" target="_blank" rel="noreferrer" className="tiny-link showcase-header-link">
-                        Open sample
-                        <ArrowSquareOut size={13} weight="bold" />
-                    </a>
-                </div>
-
-                <div className="government-showcase-grid">
-                    {governmentShowcases.map((item, index) => (
-                        <Motion.a
-                            key={item.title}
-                            href={item.href}
-                            target="_blank"
-                            rel="noreferrer"
-                            {...sectionMotion}
-                            transition={{ duration: 0.8, delay: index * 0.08, ease: easeOut }}
-                            className={`government-showcase-card ${item.theme} ${item.tablet ? 'is-tablet' : ''}`}
-                            aria-label={`Open ${item.title} preview`}
+        <div className="browser-stack-column">
+            <h3 className="stack-category-title">{title}</h3>
+            <div className="browser-stack-container" style={{ height: '550px', marginTop: '200px', perspective: '1000px' }}>
+                {projects.map((project, i) => {
+                    const isActive = activeIndex === i;
+                    // Front item is index 0. Subsequent items have lower z-index.
+                    const zIndex = isActive ? 100 : projects.length - i;
+                    
+                    return (
+                        <Motion.div
+                            key={project.title}
+                            className={`stacked-browser ${project.tablet ? 'tablet-mockup' : ''} ${isActive ? 'is-expanded' : ''}`}
+                            initial={false}
+                            animate={{
+                                y: isActive ? 50 : -(i * 45), // items stack upwards and backwards
+                                x: 0,
+                                scale: isActive ? 1.05 : 1 - (i * 0.05), // get smaller as they go back
+                                opacity: isActive ? 1 : 1 - (i * 0.08), // fade slightly as they go back
+                                zIndex: zIndex
+                            }}
+                            whileHover={!isActive ? { 
+                                y: -(i * 45) - 20, // pop up slightly when hovered
+                                scale: 1 - (i * 0.05) + 0.02,
+                                transition: { duration: 0.2 } 
+                            } : {}}
+                            onClick={() => setActiveIndex(isActive ? null : i)}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
                         >
-                            <div className="showcase-copy-block">
-                                <div className="showcase-logo-lockup">
-                                    <img src={item.logo} alt={`${item.title} logo`} loading="lazy" />
-                                    <div>
-                                        <span>{item.agency}</span>
-                                        <h3>{item.title}</h3>
+                            {!project.tablet ? (
+                                <div className="browser-top-bar">
+                                    <div className="browser-dots">
+                                        <span className="dot red"></span>
+                                        <span className="dot yellow"></span>
+                                        <span className="dot green"></span>
+                                    </div>
+                                    <div className="browser-tab-title">
+                                        {project.title}
                                     </div>
                                 </div>
-                                <p>{item.description}</p>
-                                <span className="showcase-open-link">
-                                    View preview
-                                    <ArrowSquareOut size={14} weight="bold" />
-                                </span>
+                            ) : (
+                                <div className="tablet-top-bar">
+                                    <div className="tablet-camera"></div>
+                                </div>
+                            )}
+                            
+                            <div className="browser-viewport">
+                                <div className="viewport-image-wrapper">
+                                    <img src={project.preview} alt={project.title} className={project.tablet ? 'is-tablet' : ''} />
+                                </div>
+                                <div className="viewport-details">
+                                    <p>{project.description}</p>
+                                    <a href={project.href} target="_blank" rel="noreferrer" className="view-project-btn">
+                                        View Live Site <ArrowSquareOut size={16} />
+                                    </a>
+                                </div>
                             </div>
-                            <div className="showcase-preview-frame">
-                                <img src={item.preview} alt={`${item.title} page preview`} loading="lazy" />
-                            </div>
-                        </Motion.a>
-                    ))}
+                        </Motion.div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+}
+
+function UnifiedPortfolioSection() {
+    return (
+        <section id="portfolio" className="landing-section unified-portfolio-section">
+            <div className="landing-shell">
+                <SectionHeader
+                    eyebrow="Selected Systems"
+                    title="Fewer slides. Stronger proof."
+                    copy="Explore our portfolio of commercial, civic, and operational platforms."
+                    align="center"
+                />
+                
+                <div className="portfolio-stacks-grid">
+                    <BrowserStack title="Commercial Systems" projects={businessSystemShowcases} />
+                    <BrowserStack title="Civic & Government" projects={governmentShowcases} />
+                    <BrowserStack title="Sports Platforms" projects={pickleballShowcases} />
                 </div>
             </div>
         </section>
     );
 }
 
-function FinalCta() {
+
+function PartnershipValueSection() {
     return (
-        <section id="contact" className="landing-section ready-section premium-ready-section">
+        <section id="partnership" className="landing-section ready-section premium-ready-section" style={{ paddingBottom: '4rem' }}>
             <div className="landing-shell">
-                <div className="ready-grid premium-ready-grid">
+                <SectionHeader eyebrow="Partnership" title="Built for speed without losing polish." align="center" />
+                <div className="ready-grid premium-ready-grid" style={{ marginTop: '4rem' }}>
                     {deliveryPillars.map((card, index) => {
                         const Icon = card.icon;
                         return (
@@ -566,7 +471,35 @@ function FinalCta() {
                         );
                     })}
                 </div>
+            </div>
+        </section>
+    );
+}
 
+function TrustedClientsSection() {
+    const half = Math.ceil(businessMarqueeLogos.length / 2);
+    const row1 = businessMarqueeLogos.slice(0, half);
+    const row2 = businessMarqueeLogos.slice(half);
+
+    return (
+        <section className="landing-section trusted-clients-section" style={{ paddingBottom: '6rem', paddingTop: '4rem' }}>
+            <div className="landing-shell">
+                <p className="trusted-label" style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
+                    Trusted by Our Clients
+                </p>
+            </div>
+            <div className="trusted-clients-marquees">
+                <LogoMarquee items={row1} speed={50} direction="left" className="is-compact" />
+                <LogoMarquee items={row2} speed={50} direction="right" className="is-compact" />
+            </div>
+        </section>
+    );
+}
+
+function FinalCta() {
+    return (
+        <section id="contact" className="landing-section ready-section premium-ready-section">
+            <div className="landing-shell">
                 <Motion.div {...sectionMotion} className="final-cta premium-final-cta">
                     <div>
                         <span className="reference-eyebrow">Build with ODC</span>
@@ -602,9 +535,9 @@ export function Home() {
     return (
         <div className="reference-landing premium-landing">
             <HeroSection />
-            <SystemsShowcase />
-            <PickleballShowcase />
-            <GovernmentShowcase />
+            <UnifiedPortfolioSection />
+            <TrustedClientsSection />
+            <PartnershipValueSection />
             <FinalCta />
         </div>
     );
