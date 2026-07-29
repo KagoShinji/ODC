@@ -52,8 +52,8 @@ export function Navbar() {
 
     const navLinks = [
         { name: 'Home', sectionId: 'home' },
-        { name: 'Systems', sectionId: 'systems' },
-        { name: 'Civic', sectionId: 'civic' },
+        { name: 'Systems', sectionId: 'portfolio' },
+        { name: 'Partnership', sectionId: 'clients' },
     ];
 
     return (
@@ -77,7 +77,7 @@ export function Navbar() {
                         onClick={() => scrollToSection('home')}
                         className="inline-flex items-center gap-2 text-sm font-display font-black tracking-[-0.04em] text-white transition-colors hover:opacity-80"
                     >
-                        <img src="/logos/odcnewlogo.png" alt="ODC Logo" className="h-6 w-auto" />
+                        <img src="/images/odc.jpg" alt="ODC Logo" className="h-6 w-6 rounded-full object-cover" />
                         Odyssey
                     </button>
 

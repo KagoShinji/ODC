@@ -38,15 +38,17 @@ const businessMarqueeLogos = [
     { name: 'Talisay Chamber', src: '/logos/talisaychamber.png' },
     { name: 'Jump Serve Mandaue', src: '/logos/jumpservemandaue.png' },
     { name: 'CPRMED', src: '/logos/cprmedlogo.png' },
-    
+
     { name: 'Jump Serve Mactan', src: '/logos/jumpservemactan.png' },
     { name: 'Pickleball Avenue', src: '/logos/nickleballavenue.png' },
     { name: 'The Pickle Point Cebu', src: '/logos/thepicklepoint.png' },
     { name: 'Firsel Tattoo', src: '/logos/firseltattoonew.png' },
+    { name: 'Pater ni CJ', src: '/logos/paternicj.png' },
     { name: 'IMS-US', src: '/logos/ims-us.png' },
     { name: 'PDRRMO', src: '/logos/pdrrmo.jpg' },
     { name: 'Surigao del Norte', src: '/logos/surigaodelnorte.jpg' },
     { name: 'Slide Two', src: '/logos/slidetwo.png' },
+    { name: 'The Halo Hub', src: '/logos/thehalohub.jpg' },
 ];
 
 const businessSystemShowcases = [
@@ -127,6 +129,24 @@ const businessSystemShowcases = [
 
 const pickleballShowcases = [
     {
+        title: 'ODC-Courts',
+        type: 'Network Booking System',
+        logo: '/odccourts/odc-courts.png',
+        preview: '/odccourts/odc-courts.png',
+        href: 'https://odc-courts.com/',
+        description: 'An Airbnb-style booking system designed specifically for pickleball courts within the Odyssey Network. It offers a seamless, centralized platform for players to discover and reserve courts across multiple locations.',
+        featured: true,
+        theme: 'pickle',
+        location: 'Odyssey Network',
+        highlight: '🌐 Global Court Booking System',
+        isCoreSystem: true,
+        stats: [
+            { value: 'Airbnb Style', label: 'Platform' },
+            { value: 'Odyssey Network', label: 'Network' },
+            { value: 'Multi-Location', label: 'Scale' },
+        ],
+    },
+    {
         title: 'The Pickle Point Cebu',
         type: 'Court booking platform',
         logo: '/logos/picklepointnewlogo.jpg',
@@ -183,6 +203,35 @@ const pickleballShowcases = [
         theme: 'pickle',
         location: 'Talisay Cebu',
     },
+    {
+        title: 'Chibs N Dink',
+        type: 'Pickleball platform',
+        logo: '/logos/chibsndinknew.png',
+        preview: '/pickleball/chibsndink.png',
+        href: 'https://chibsndink.com/',
+        description: 'A dynamic pickleball platform designed to streamline court bookings, connect players, and foster a growing local sports community.',
+        theme: 'pickle',
+    },
+    {
+        title: 'The Halo Hub',
+        type: 'Court booking platform',
+        logo: '/logos/thehalohub.jpg',
+        preview: '/pickleball/thehalohub.png',
+        href: 'https://thehalohubcebu.com/',
+        description: 'A specialized platform for The Halo Hub in Cebu, offering seamless court reservations and a central hub for pickleball enthusiasts.',
+        theme: 'pickle',
+        location: 'Cebu',
+    },
+    {
+        title: 'Sosyal Dinkers',
+        type: 'Pickleball community platform',
+        logo: '/logos/sosyaldinkers.png',
+        preview: '/pickleball/sosyaldinkers.png',
+        href: 'https://sosyaldinkersdavao.com/',
+        description: 'An engaging sports platform for the Sosyal Dinkers in Davao, bringing together court booking, community events, and player connections.',
+        theme: 'pickle',
+        location: 'Davao',
+    },
 ];
 
 const governmentShowcases = [
@@ -230,7 +279,7 @@ const deliveryPillars = [
     {
         icon: Code,
         title: 'Ship lean systems',
-        copy: 'React, Vite, Supabase, Firebase, SQLite, and mobile-ready patterns where they make sense.',
+        copy: 'We build fast, lightweight, and scalable architectures utilizing mobile-ready patterns where they make sense.',
     },
 ];
 
@@ -255,46 +304,28 @@ function SectionHeader({ eyebrow, title, copy, align = 'left' }) {
     );
 }
 
-function LogoMarquee({ items, speed = 40, direction = 'left', className = '' }) {
-    return (
-        <div 
-            className={`logo-marquee ${className} ${direction === 'right' ? 'is-reverse' : ''}`} 
-            style={{ '--marquee-duration': `${speed}s` }}
-            aria-label="Featured businesses"
-        >
-            <div className="logo-marquee-track">
-                {[...items, ...items].map((item, index) => (
-                    <div className="logo-marquee-item business-logo-item" key={`${item.name}-${index}`}>
-                        <span className="logo-mark">
-                            <img src={item.src} alt={`${item.name} logo`} loading="lazy" />
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
+
 
 function HeroShowcase() {
     return (
         <div className="hero-showcase">
             <Motion.a
-                href="https://thepicklepointcebu.com"
+                href="https://odc-courts.com/"
                 target="_blank"
                 rel="noreferrer"
                 initial={{ opacity: 0, y: 42, rotate: -1.6 }}
                 animate={{ opacity: 1, y: 0, rotate: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: easeOut }}
                 className="hero-device hero-laptop"
-                aria-label="Open The Pickle Point Cebu"
+                aria-label="Open ODC-Courts"
             >
                 <div className="device-topbar">
                     <span className="device-dots" />
-                    <span>The Pickle Point Cebu</span>
-                    <span>Live system</span>
+                    <span>ODC-Courts</span>
+                    <span>Core System</span>
                 </div>
                 <div className="device-screen">
-                    <img src="/thepicklepointcebu.jpg" alt="The Pickle Point Cebu website preview" />
+                    <img src="/odccourts/odc-courts.png" alt="ODC-Courts website preview" />
                 </div>
                 <div className="laptop-base" />
             </Motion.a>
@@ -353,7 +384,7 @@ function HeroSection() {
                     <HeroShowcase />
                 </Motion.div>
 
-                
+
             </div>
         </section>
     );
@@ -371,7 +402,7 @@ function BrowserStack({ title, projects }) {
                     const isActive = activeIndex === i;
                     // Front item is index 0. Subsequent items have lower z-index.
                     const zIndex = isActive ? 100 : projects.length - i;
-                    
+
                     return (
                         <Motion.div
                             key={project.title}
@@ -384,13 +415,21 @@ function BrowserStack({ title, projects }) {
                                 opacity: isActive ? 1 : 1 - (i * 0.08), // fade slightly as they go back
                                 zIndex: zIndex
                             }}
-                            whileHover={!isActive ? { 
+                            whileHover={!isActive ? {
                                 y: -(i * 45) - 20, // pop up slightly when hovered
                                 scale: 1 - (i * 0.05) + 0.02,
-                                transition: { duration: 0.2 } 
+                                transition: { duration: 0.2 }
                             } : {}}
                             onClick={() => setActiveIndex(isActive ? null : i)}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            style={
+                                project.isCoreSystem 
+                                ? { 
+                                    border: '1px solid rgba(255, 215, 0, 0.5)', 
+                                    boxShadow: '0 0 40px rgba(255, 215, 0, 0.15), 0 0 15px rgba(255, 215, 0, 0.1) inset' 
+                                } 
+                                : {}
+                            }
                         >
                             {!project.tablet ? (
                                 <div className="browser-top-bar">
@@ -408,12 +447,32 @@ function BrowserStack({ title, projects }) {
                                     <div className="tablet-camera"></div>
                                 </div>
                             )}
-                            
+
                             <div className="browser-viewport">
                                 <div className="viewport-image-wrapper">
                                     <img src={project.preview} alt={project.title} className={project.tablet ? 'is-tablet' : ''} />
                                 </div>
                                 <div className="viewport-details">
+                                    {project.isCoreSystem && (
+                                        <div style={{ marginBottom: '12px' }}>
+                                            <span style={{ 
+                                                display: 'inline-flex', 
+                                                alignItems: 'center', 
+                                                gap: '6px', 
+                                                background: 'rgba(255, 255, 255, 0.1)', 
+                                                padding: '4px 10px', 
+                                                borderRadius: '100px', 
+                                                fontSize: '0.75rem', 
+                                                fontWeight: '600', 
+                                                letterSpacing: '0.05em', 
+                                                color: '#fff', 
+                                                border: '1px solid rgba(255,255,255,0.2)' 
+                                            }}>
+                                                <Sparkle size={12} weight="fill" color="#ffd700" />
+                                                Core ODC System
+                                            </span>
+                                        </div>
+                                    )}
                                     <p>{project.description}</p>
                                     <a href={project.href} target="_blank" rel="noreferrer" className="view-project-btn">
                                         View Live Site <ArrowSquareOut size={16} />
@@ -438,7 +497,7 @@ function UnifiedPortfolioSection() {
                     copy="Explore our portfolio of commercial, civic, and operational platforms."
                     align="center"
                 />
-                
+
                 <div className="portfolio-stacks-grid">
                     <BrowserStack title="Commercial Systems" projects={businessSystemShowcases} />
                     <BrowserStack title="Civic & Government" projects={governmentShowcases} />
@@ -477,20 +536,27 @@ function PartnershipValueSection() {
 }
 
 function TrustedClientsSection() {
-    const half = Math.ceil(businessMarqueeLogos.length / 2);
-    const row1 = businessMarqueeLogos.slice(0, half);
-    const row2 = businessMarqueeLogos.slice(half);
-
     return (
-        <section className="landing-section trusted-clients-section" style={{ paddingBottom: '6rem', paddingTop: '4rem' }}>
+        <section id="clients" className="landing-section trusted-clients-section" style={{ paddingBottom: '6rem', paddingTop: '4rem' }}>
             <div className="landing-shell">
                 <p className="trusted-label" style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
                     Trusted by Our Clients
                 </p>
             </div>
-            <div className="trusted-clients-marquees">
-                <LogoMarquee items={row1} speed={50} direction="left" className="is-compact" />
-                <LogoMarquee items={row2} speed={50} direction="right" className="is-compact" />
+            <div className="flex flex-wrap justify-center items-center w-full max-w-[1800px] mx-auto px-4 md:px-[4vw] gap-x-8 gap-y-10 md:gap-x-24 md:gap-y-16">
+                {businessMarqueeLogos.map((item, index) => (
+                    <div 
+                        key={`${item.name}-${index}`} 
+                        className="flex justify-center items-center w-24 h-12 sm:w-32 sm:h-16 md:w-48 md:h-24 lg:w-[240px] lg:h-[120px] transition-all duration-300 opacity-50 grayscale hover:opacity-100 hover:grayscale-0"
+                    >
+                        <img 
+                            src={item.src} 
+                            alt={`${item.name} logo`} 
+                            loading="lazy" 
+                            className="max-w-full max-h-full object-contain"
+                        />
+                    </div>
+                ))}
             </div>
         </section>
     );
