@@ -49,6 +49,7 @@ const businessMarqueeLogos = [
     { name: 'Surigao del Norte', src: '/logos/surigaodelnorte.jpg' },
     { name: 'Slide Two', src: '/logos/slidetwo.png' },
     { name: 'The Halo Hub', src: '/logos/thehalohub.jpg' },
+    { name: 'KBDF Luxury', src: '/logos/kbdflogotext.jpg' },
 ];
 
 const businessSystemShowcases = [
@@ -71,14 +72,22 @@ const businessSystemShowcases = [
         theme: 'blue',
     },
     {
-        title: 'MediQuick',
-        type: 'Medicine commerce UI',
-        logo: '/logos/mediquicklogo.jpg',
-        preview: '/MediQuick.png',
-        href: 'https://mediquick.space',
-        description: 'A tablet-ready medicine browsing and inventory interface for quick decisions and cleaner stock workflows.',
+        title: 'CPRMed',
+        type: 'Medical clinic website',
+        logo: '/logos/cprmedlogo.png',
+        preview: '/cprmed.jpg',
+        href: 'https://cprmedph.com',
+        description: 'A professional medical clinic website built for patient trust, clear service navigation, and appointment readiness.',
         theme: 'medical',
-        tablet: true,
+    },
+    {
+        title: 'KBDF Luxury',
+        type: 'Luxury e-commerce',
+        logo: '/logos/kbdflogotext.jpg',
+        preview: '/kbdf.png',
+        href: 'https://kbdfluxury.com/',
+        description: 'A premium luxury e-commerce platform designed for high-end product discovery, refined branding, and an elegant shopping experience.',
+        theme: 'commerce',
     },
     {
         title: 'Ngosiok Marketing',
@@ -88,15 +97,6 @@ const businessSystemShowcases = [
         href: 'https://ngosiokmarketing.netlify.app',
         description: 'A direct company presentation for credibility, services, and brand presence without unnecessary friction.',
         theme: 'commerce',
-    },
-    {
-        title: 'CPRMed',
-        type: 'Medical clinic website',
-        logo: '/logos/cprmedlogo.png',
-        preview: '/cprmed.jpg',
-        href: 'https://cprmedph.com',
-        description: 'A professional medical clinic website built for patient trust, clear service navigation, and appointment readiness.',
-        theme: 'medical',
     },
     {
         title: 'SPEC',
@@ -515,9 +515,11 @@ function BrowserStack({ title, projects }) {
                                         </div>
                                     )}
                                     <p>{project.description}</p>
-                                    <a href={project.href} target="_blank" rel="noreferrer" className="view-project-btn">
-                                        View Live Site <ArrowSquareOut size={16} />
-                                    </a>
+                                    {project.href.startsWith('http') && (
+                                        <a href={project.href} target="_blank" rel="noreferrer" className="view-project-btn">
+                                            View Live Site <ArrowSquareOut size={16} />
+                                        </a>
+                                    )}
                                 </div>
                             </div>
                         </Motion.div>
