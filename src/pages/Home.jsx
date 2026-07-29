@@ -150,7 +150,7 @@ const pickleballShowcases = [
         title: 'The Pickle Point Cebu',
         type: 'Court booking platform',
         logo: '/logos/picklepointnewlogo.jpg',
-        preview: '/thepicklepointcebu.jpg',
+        preview: '/thepicklepointcebu.png',
         href: 'https://thepicklepointcebu.com',
         description: 'The go-to pickleball destination in Mandaue City — offering premium court access, fast reservations, and a community-first experience that keeps players coming back week after week.',
         featured: true,
@@ -263,6 +263,15 @@ const governmentShowcases = [
         description: 'A tablet-optimized operations display for monitoring dispatch activity and response status.',
         tablet: true,
     },
+    {
+        title: 'Talisay Chamber of Commerce',
+        agency: 'Talisay City Chamber of Commerce & Trade',
+        logo: '/talisaychamber.png',
+        preview: '/talisaychamber.png',
+        href: 'https://talisaychamber.netlify.app/',
+        theme: 'civic-gold',
+        description: 'A dedicated web platform for the Talisay Chamber of Commerce, built to foster local business connections, showcase members, and streamline civic engagement.',
+    },
 ];
 
 const deliveryPillars = [
@@ -309,46 +318,58 @@ function SectionHeader({ eyebrow, title, copy, align = 'left' }) {
 function HeroShowcase() {
     return (
         <div className="hero-showcase">
-            <Motion.a
-                href="https://odc-courts.com/"
-                target="_blank"
-                rel="noreferrer"
+            <Motion.div
                 initial={{ opacity: 0, y: 42, rotate: -1.6 }}
                 animate={{ opacity: 1, y: 0, rotate: 0 }}
                 transition={{ duration: 0.9, delay: 0.28, ease: easeOut }}
-                className="hero-device hero-laptop"
-                aria-label="Open ODC-Courts"
+                style={{ position: 'absolute', inset: 0, zIndex: 1 }}
             >
-                <div className="device-topbar">
-                    <span className="device-dots" />
-                    <span>ODC-Courts</span>
-                    <span>Core System</span>
-                </div>
-                <div className="device-screen">
-                    <img src="/odccourts/odc-courts.png" alt="ODC-Courts website preview" />
-                </div>
-                <div className="laptop-base" />
-            </Motion.a>
+                <Motion.a
+                    href="https://odc-courts.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hero-device hero-laptop"
+                    aria-label="Open ODC-Courts"
+                    animate={{ y: [0, -12, 0] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                    <div className="device-topbar">
+                        <span className="device-dots" />
+                        <span>ODC-Courts</span>
+                        <span>Core System</span>
+                    </div>
+                    <div className="device-screen">
+                        <img src="/odccourts/odc-courts.png" alt="ODC-Courts website preview" />
+                    </div>
+                    <div className="laptop-base" />
+                </Motion.a>
+            </Motion.div>
 
-            <Motion.a
-                href="/government/dispatchtracker.jpg"
-                target="_blank"
-                rel="noreferrer"
+            <Motion.div
                 initial={{ opacity: 0, y: 42, x: 24, rotate: 5 }}
                 animate={{ opacity: 1, y: 0, x: 0, rotate: 0 }}
                 transition={{ duration: 0.95, delay: 0.42, ease: easeOut }}
-                className="hero-device hero-tablet"
-                aria-label="Open PDRRMO Dispatch Tracker preview"
+                style={{ position: 'absolute', inset: 0, zIndex: 2 }}
             >
-                <div className="tablet-camera" />
-                <div className="device-screen">
-                    <img src="/government/dispatchtracker.jpg" alt="PDRRMO dispatch tracker tablet preview" />
-                </div>
-                <div className="device-caption">
-                    <span>Operations display</span>
-                    <strong>PDRRMO tracker</strong>
-                </div>
-            </Motion.a>
+                <Motion.a
+                    href="/government/dispatchtracker.jpg"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hero-device hero-tablet"
+                    aria-label="Open PDRRMO Dispatch Tracker preview"
+                    animate={{ y: [0, -18, 0] }}
+                    transition={{ duration: 5, delay: 1, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                    <div className="tablet-camera" />
+                    <div className="device-screen">
+                        <img src="/government/dispatchtracker.jpg" alt="PDRRMO dispatch tracker tablet preview" />
+                    </div>
+                    <div className="device-caption">
+                        <span>Operations display</span>
+                        <strong>PDRRMO tracker</strong>
+                    </div>
+                </Motion.a>
+            </Motion.div>
         </div>
     );
 }
@@ -357,7 +378,11 @@ function HeroSection() {
     return (
         <section id="home" className="reference-hero premium-hero">
             <div className="reference-grid-lines" />
-            <div className="ambient ambient-hero" />
+            <Motion.div
+                className="ambient ambient-hero"
+                animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.1, 1] }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            />
             <div className="landing-shell">
                 <Motion.div
                     initial="hidden"
@@ -370,7 +395,23 @@ function HeroSection() {
                             <Sparkle size={16} weight="fill" />
                             <span>ODC IT Solutions</span>
                         </Motion.div>
-                        <Motion.h1 variants={fadeUp}>Automated systems for teams buried in manual work.</Motion.h1>
+                        <Motion.h1 variants={fadeUp}>
+                            <Motion.span
+                                style={{
+                                    display: 'inline-block',
+                                    backgroundImage: 'linear-gradient(90deg, #ffffff 0%, #71717a 25%, #ffffff 50%, #71717a 75%, #ffffff 100%)',
+                                    backgroundSize: '200% auto',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    backgroundClip: 'text',
+                                    color: 'transparent'
+                                }}
+                                animate={{ backgroundPosition: ['0% center', '200% center'] }}
+                                transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
+                            >
+                                Automated systems for teams buried in manual work.
+                            </Motion.span>
+                        </Motion.h1>
                         <Motion.p variants={fadeUp}>
                             We design and build workflow-first websites, dashboards, booking tools, and operational systems for businesses and public offices that need speed without losing polish.
                         </Motion.p>
@@ -423,12 +464,12 @@ function BrowserStack({ title, projects }) {
                             onClick={() => setActiveIndex(isActive ? null : i)}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
                             style={
-                                project.isCoreSystem 
-                                ? { 
-                                    border: '1px solid rgba(255, 215, 0, 0.5)', 
-                                    boxShadow: '0 0 40px rgba(255, 215, 0, 0.15), 0 0 15px rgba(255, 215, 0, 0.1) inset' 
-                                } 
-                                : {}
+                                project.isCoreSystem
+                                    ? {
+                                        border: '1px solid rgba(255, 215, 0, 0.5)',
+                                        boxShadow: '0 0 40px rgba(255, 215, 0, 0.15), 0 0 15px rgba(255, 215, 0, 0.1) inset'
+                                    }
+                                    : {}
                             }
                         >
                             {!project.tablet ? (
@@ -455,18 +496,18 @@ function BrowserStack({ title, projects }) {
                                 <div className="viewport-details">
                                     {project.isCoreSystem && (
                                         <div style={{ marginBottom: '12px' }}>
-                                            <span style={{ 
-                                                display: 'inline-flex', 
-                                                alignItems: 'center', 
-                                                gap: '6px', 
-                                                background: 'rgba(255, 255, 255, 0.1)', 
-                                                padding: '4px 10px', 
-                                                borderRadius: '100px', 
-                                                fontSize: '0.75rem', 
-                                                fontWeight: '600', 
-                                                letterSpacing: '0.05em', 
-                                                color: '#fff', 
-                                                border: '1px solid rgba(255,255,255,0.2)' 
+                                            <span style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                background: 'rgba(255, 255, 255, 0.1)',
+                                                padding: '4px 10px',
+                                                borderRadius: '100px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: '600',
+                                                letterSpacing: '0.05em',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255,255,255,0.2)'
                                             }}>
                                                 <Sparkle size={12} weight="fill" color="#ffd700" />
                                                 Core ODC System
@@ -545,14 +586,14 @@ function TrustedClientsSection() {
             </div>
             <div className="flex flex-wrap justify-center items-center w-full max-w-[1800px] mx-auto px-4 md:px-[4vw] gap-x-8 gap-y-10 md:gap-x-24 md:gap-y-16">
                 {businessMarqueeLogos.map((item, index) => (
-                    <div 
-                        key={`${item.name}-${index}`} 
+                    <div
+                        key={`${item.name}-${index}`}
                         className="flex justify-center items-center w-24 h-12 sm:w-32 sm:h-16 md:w-48 md:h-24 lg:w-[240px] lg:h-[120px] transition-all duration-300 opacity-50 grayscale hover:opacity-100 hover:grayscale-0"
                     >
-                        <img 
-                            src={item.src} 
-                            alt={`${item.name} logo`} 
-                            loading="lazy" 
+                        <img
+                            src={item.src}
+                            alt={`${item.name} logo`}
+                            loading="lazy"
                             className="max-w-full max-h-full object-contain"
                         />
                     </div>
