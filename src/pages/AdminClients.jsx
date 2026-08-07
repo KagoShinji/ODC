@@ -6,7 +6,8 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { 
   Plus, X, Trash2, RefreshCw, Users, Mail, Building2, 
   CreditCard, Edit2, Calendar, Check, Minus, Search, 
-  FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, Settings
+  FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, Settings,
+  MessageSquare, Star, Copy, Link
 } from 'lucide-react';
 
 const CO = {
@@ -118,7 +119,11 @@ export default function AdminClients({ firebaseUser }) {
   const [maintenancePlans, setMaintenancePlans] = useState([]);
   
   // Sub-tabs navigation
-  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'billing'
+  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'billing' | 'feedback'
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkModalClientId, setLinkModalClientId] = useState('');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // Registration form
   const [form, setForm] = useState({ name: '', business: '', email: '', password: '' });
@@ -185,10 +190,24 @@ export default function AdminClients({ firebaseUser }) {
     try {
       const snap = await getDocs(query(collection(db, 'clients'), orderBy('createdAt', 'desc')));
       setClients(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+
+      const snapFeedback = await getDocs(query(collection(db, 'clientFeedback'), orderBy('submittedAt', 'desc')));
+      setFeedbacks(snapFeedback.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (e) { console.error(e); }
     setLoading(false);
     setRefreshing(false);
   }, []);
+
+  const handleDeleteFeedback = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this feedback submission? This cannot be undone.")) return;
+    try {
+      await deleteDoc(doc(db, 'clientFeedback', id));
+      setFeedbacks(prev => prev.filter(f => f.id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete feedback.");
+    }
+  };
 
   useEffect(() => { load(false); }, [load]);
 
@@ -517,6 +536,7 @@ export default function AdminClients({ firebaseUser }) {
 
   // Compute metrics for Billing Tracker tab
   const activeBillingClients = clients.filter(c => c.billingType);
+  const totalFeedbacks = feedbacks.length;
   const overdueClients = clients.filter(c => c.billingType && c.nextDueDate && getDueDateStatus(c.nextDueDate) === 'overdue');
   
   const currentYearMonth = new Date().toISOString().substring(0, 7); // "YYYY-MM"
@@ -652,9 +672,15 @@ export default function AdminClients({ firebaseUser }) {
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          <button onClick={() => { setForm({ name: '', business: '', email: '', password: '' }); setCreatePortalAccount(false); setBillingSetup(false); setErrorMsg(''); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
-            <Plus size={16} /> New Client
-          </button>
+          {activeSubTab === 'feedback' ? (
+            <button onClick={() => { setLinkModalClientId(clients[0]?.id || ''); setCopiedLink(false); setShowLinkModal(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
+              <Link size={16} /> Get Feedback Link
+            </button>
+          ) : (
+            <button onClick={() => { setForm({ name: '', business: '', email: '', password: '' }); setCreatePortalAccount(false); setBillingSetup(false); setErrorMsg(''); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
+              <Plus size={16} /> New Client
+            </button>
+          )}
         </div>
       </div>
 
@@ -662,7 +688,8 @@ export default function AdminClients({ firebaseUser }) {
       <div className="admin-tabs-wrapper" style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
         {[
           { id: 'directory', label: 'Client Directory', count: clients.length, Icon: Users },
-          { id: 'billing', label: 'Billing Tracker', count: activeBillingClients.length, Icon: CreditCard }
+          { id: 'billing', label: 'Billing Tracker', count: activeBillingClients.length, Icon: CreditCard },
+          { id: 'feedback', label: 'Client Feedback', count: feedbacks.length, Icon: MessageSquare }
         ].map(subTab => {
           const Icon = subTab.Icon;
           return (
@@ -1025,6 +1052,165 @@ export default function AdminClients({ firebaseUser }) {
             </div>
           )}
         </>
+      )}
+
+      {/* TAB 3: CLIENT FEEDBACK */}
+      {activeSubTab === 'feedback' && (
+        <>
+          {/* Feedback Metrics */}
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 14, marginBottom: 28 }}>
+            {[
+              { l: 'Total Reviews', v: feedbacks.length, c: '#fff' },
+              { l: 'Avg Quality Rating', v: `${totalFeedbacks > 0 ? (feedbacks.reduce((sum, f) => sum + (f.ratingOverall || 0), 0) / totalFeedbacks).toFixed(1) : '0.0'} ★`, c: '#ff9a4a' },
+              { l: 'Avg Communication', v: `${totalFeedbacks > 0 ? (feedbacks.reduce((sum, f) => sum + (f.ratingCommunication || 0), 0) / totalFeedbacks).toFixed(1) : '0.0'} ★`, c: '#60a5fa' },
+              { l: 'Avg Timeliness', v: `${totalFeedbacks > 0 ? (feedbacks.reduce((sum, f) => sum + (f.ratingTimeliness || 0), 0) / totalFeedbacks).toFixed(1) : '0.0'} ★`, c: '#34d399' },
+              { l: 'Testimonials Authorized', v: `${totalFeedbacks > 0 ? Math.round((feedbacks.filter(f => f.allowReference).length / totalFeedbacks) * 100) : 0}%`, c: '#a78bfa' }
+            ].map(({ l, v, c }) => (
+              <div key={l} style={{ ...S.card }}>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{l}</div>
+                <div style={{ color: c, fontSize: 24, fontWeight: 700 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Feedback list */}
+          {feedbacks.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.06)' }}>
+              <MessageSquare size={40} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 12px' }} />
+              <p style={{ color: 'rgba(255,255,255,0.4)', margin: 0 }}>No client feedback received yet.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {feedbacks.map(f => (
+                <div key={f.id} style={{ ...S.card, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                    <div>
+                      <h4 style={{ color: '#fff', fontSize: 16, fontWeight: 600, margin: '0 0 4px 0' }}>{f.clientName}</h4>
+                      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, margin: 0 }}>
+                        Company / Project: <strong style={{ color: '#ff9a4a' }}>{f.businessName}</strong>
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                        {fmtDate(f.submittedAt)}
+                      </span>
+                      <span style={{
+                        fontSize: 10,
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        background: f.allowReference ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.08)',
+                        color: f.allowReference ? '#34d399' : 'rgba(255,255,255,0.4)'
+                      }}>
+                        {f.allowReference ? 'Reference Allowed' : 'Internal Only'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Ratings breakdown */}
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div style={{ fontSize: 13 }}><span style={{ color: 'rgba(255,255,255,0.4)' }}>Overall: </span><span style={{ color: '#ff9a4a', fontWeight: 600 }}>{f.ratingOverall} ★</span></div>
+                    <div style={{ fontSize: 13 }}><span style={{ color: 'rgba(255,255,255,0.4)' }}>Communication: </span><span style={{ color: '#60a5fa', fontWeight: 600 }}>{f.ratingCommunication} ★</span></div>
+                    <div style={{ fontSize: 13 }}><span style={{ color: 'rgba(255,255,255,0.4)' }}>Timeliness: </span><span style={{ color: '#34d399', fontWeight: 600 }}>{f.ratingTimeliness} ★</span></div>
+                  </div>
+
+                  {/* Testimonial Quote */}
+                  {f.testimonial && (
+                    <div style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.85)', paddingLeft: 12, borderLeft: '2px solid #ff6a1a', fontSize: 14 }}>
+                      "{f.testimonial}"
+                    </div>
+                  )}
+
+                  {/* Positive/Negatives */}
+                  {(f.whatWentWell || f.whatToImprove) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, fontSize: 13 }}>
+                      {f.whatWentWell && (
+                        <div>
+                          <strong style={{ color: '#34d399', display: 'block', marginBottom: 4 }}>What went well:</strong>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{f.whatWentWell}</span>
+                        </div>
+                      )}
+                      {f.whatToImprove && (
+                        <div>
+                          <strong style={{ color: '#f87171', display: 'block', marginBottom: 4 }}>What could be improved:</strong>
+                          <span style={{ color: 'rgba(255,255,255,0.6)' }}>{f.whatToImprove}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                    <button onClick={() => handleDeleteFeedback(f.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '6px 12px' }}>
+                      <Trash2 size={13} /> Delete Review
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* MODAL 3: SHARE FEEDBACK LINK */}
+      {showLinkModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#10141f', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, width: '90%', maxWidth: 480, padding: 32, boxSizing: 'border-box' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Get Feedback Sharing Link</h3>
+              <button onClick={() => setShowLinkModal(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div>
+                <label style={S.lbl}>Select Client / Project</label>
+                <select
+                  value={linkModalClientId}
+                  onChange={(e) => setLinkModalClientId(e.target.value)}
+                  style={S.inp}
+                >
+                  <option value="">General (No Prefill)</option>
+                  {clients.map(c => (
+                    <option key={c.id} value={c.id} style={{ background: '#121620' }}>
+                      {c.business ? `${c.business} (${c.name})` : c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={S.lbl}>Copyable Feedback URL</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    type="text"
+                    value={linkModalClientId ? `${window.location.origin}/feedback/${linkModalClientId}` : `${window.location.origin}/feedback`}
+                    style={{ ...S.inp, background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.7)' }}
+                    readOnly
+                  />
+                  <button
+                    onClick={() => {
+                      const link = linkModalClientId ? `${window.location.origin}/feedback/${linkModalClientId}` : `${window.location.origin}/feedback`;
+                      navigator.clipboard.writeText(link);
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                    style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', flexShrink: 0 }}
+                  >
+                    {copiedLink ? <CheckCircle2 size={15} color="#34d399" /> : <Copy size={15} />}
+                    {copiedLink ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              <p style={{ margin: '8px 0 0 0', color: 'rgba(255,255,255,0.4)', fontSize: 12, lineHeight: 1.4 }}>
+                Send this link to your client. When they visit it, their company name and representative contact name will be locked and prefilled automatically.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* MODAL 1: REGISTER CLIENT */}

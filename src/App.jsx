@@ -16,6 +16,7 @@ import Pricing from './pages/Pricing';
 import AcceptancePage from './pages/AcceptancePage';
 import ClientMOAPage from './pages/ClientMOAPage';
 import ClientInvoicePage from './pages/ClientInvoicePage';
+import FeedbackForm from './pages/FeedbackForm';
 
 function PublicSite() {
   const [isLoading, setIsLoading] = useState(true);
@@ -58,6 +59,8 @@ function AppRoutes() {
       <Route path="/acceptance/:id" element={<AcceptancePage />} />
       <Route path="/moa/:id" element={<ClientMOAPage />} />
       <Route path="/invoice/:id" element={<ClientInvoicePage />} />
+      <Route path="/feedback" element={<FeedbackForm />} />
+      <Route path="/feedback/:id" element={<FeedbackForm />} />
       {/* All other routes go to the Public Site which handles its own 404s */}
       <Route path="*" element={<PublicSite />} />
     </Routes>

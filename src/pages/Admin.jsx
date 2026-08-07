@@ -9,6 +9,8 @@ import AdminClients from './AdminClients';
 import AdminMaintenance from './AdminMaintenance';
 import AdminInquiries from './AdminInquiries';
 import AdminInventory from './AdminInventory';
+import AdminSalaries from './AdminSalaries';
+import AdminDomains from './AdminDomains';
 import { PortalLogin } from '../components/ui/PortalLogin';
 import {
     signInWithEmailAndPassword,
@@ -48,6 +50,7 @@ import {
     TrendingUp,
     Package,
     Award,
+    Wallet,
 } from 'lucide-react';
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
@@ -390,6 +393,8 @@ function AdminDashboard({ firebaseUser }) {
                         { id: 'acceptance', label: 'Acceptance', Icon: Award }, 
                         { id: 'tickets', label: 'Tickets', Icon: MessageSquare }, 
                         { id: 'clients', label: 'Clients', Icon: Users },
+                        { id: 'salaries', label: 'Salary Tracker', Icon: Wallet },
+                        { id: 'domains', label: 'Domain Tracker', Icon: Globe },
                         { id: 'maintenance', label: 'Maintenance', Icon: Hammer },
                         { id: 'inquiries', label: 'Inquiries', Icon: MailSearch }
                       ] : [])
@@ -546,6 +551,14 @@ function AdminDashboard({ firebaseUser }) {
 
                 {activeTab === 'inquiries' && superAdmin && (
                     <AdminInquiries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                )}
+
+                {activeTab === 'salaries' && superAdmin && (
+                    <AdminSalaries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                )}
+
+                {activeTab === 'domains' && superAdmin && (
+                    <AdminDomains firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
                 )}
             </main>
 
