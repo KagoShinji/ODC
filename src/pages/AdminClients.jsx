@@ -452,7 +452,7 @@ export default function AdminClients({ firebaseUser }) {
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
-      const invoiceNumber = `INV-${year}-${month}-${String(invoiceCount + 1).padStart(3, '0')}`;
+      const invoiceNumber = `SOA-${year}-${month}-${String(invoiceCount + 1).padStart(3, '0')}`;
       
       // 2. Add Invoice document to Firestore
       const invoicePayload = {

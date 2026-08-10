@@ -142,6 +142,7 @@ const S = {
     marginTop: '28px',
     paddingTop: '28px',
     borderTop: '1px solid rgba(255,255,255,0.06)',
+    touchAction: 'pan-y',
   },
   qrCard: {
     background: '#fff',
@@ -150,12 +151,16 @@ const S = {
     textAlign: 'center',
     width: '180px',
     boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+    touchAction: 'pan-y',
   },
   qrImage: {
     width: '100%',
     height: 'auto',
     borderRadius: '8px',
     imageRendering: 'crisp-edges',
+    touchAction: 'pan-y',
+    userSelect: 'none',
+    WebkitUserDrag: 'none',
   },
   qrText: {
     color: '#333',
@@ -163,6 +168,7 @@ const S = {
     fontWeight: 700,
     marginTop: '8px',
     letterSpacing: '0.5px',
+    userSelect: 'none',
   },
   btn: {
     cursor: 'pointer',
@@ -265,6 +271,7 @@ export default function ClientInvoicePage() {
   }, [id]);
 
   const triggerPrint = () => {
+    const displayNum = (inv.invoiceNumber || '').replace(/^INV-/, 'SOA-');
     // Redefine printInvoice locally for public access consistency
     const total = (inv.items || []).reduce((s, item) => s + Number(item.amount || 0), 0);
     const logoUrl = window.location.origin + '/images/odcclearlogo.png';
@@ -296,7 +303,7 @@ export default function ClientInvoicePage() {
       <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
     `;
 
-    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${inv.invoiceNumber}</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${displayNum}</title>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -329,10 +336,10 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     <div class="logo"><img src="${logoUrl}" alt="ODC" /></div>
     <div class="ci">${CO.address}<br><a href="mailto:${CO.email}">${CO.email}</a><br>${CO.phone}</div>
   </div>
-  <div class="ttl">INVOICE</div>
+  <div class="ttl">BILLING STATEMENT</div>
   <div class="det">
-    <div><b>Invoice #:</b> ${inv.invoiceNumber || ''}</div>
-    <div><b>Date:</b> ${inv.date ? new Date(inv.date + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</div>
+    <div><b>Statement #:</b> ${displayNum}</div>
+    <div><b>Statement Date:</b> ${inv.date ? new Date(inv.date + 'T00:00:00').toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</div>
     <div><b>Bill To:</b> ${inv.billTo || ''}</div>
     <div><b>Project:</b> ${inv.project || ''}</div>
     <div><b>Payment Terms:</b> ${inv.paymentTerms || ''}</div>
@@ -356,6 +363,9 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     ${(inv.qrCodes || []).includes('gotyme') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchgotyme.png" alt="GoTyme QR" /><div class="qr-label">GoTyme — Scan to Pay</div></div>` : ''}
     ${(inv.qrCodes || []).includes('maribank') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchmaribank.png" alt="MariBank QR" /><div class="qr-label">MariBank — Scan to Pay</div></div>` : ''}
   </div>` : ''}
+  <div style="font-size: 8px; color: #777; text-align: center; margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 8px; font-style: italic; line-height: 1.3;">
+    This document is a Statement of Account / Billing Statement and is not valid for claiming input VAT. An Official Receipt will be issued upon payment.
+  </div>
 </div>
 <script>
   document.fonts.ready.then(function() {
@@ -399,6 +409,7 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
 
   const isPaid = inv.status === 'paid';
   const totalDue = (inv.items || []).reduce((s, i) => s + Number(i.amount || 0), 0);
+  const displayNum = (inv.invoiceNumber || '').replace(/^INV-/, 'SOA-');
 
   return (
     <div style={S.container}>
@@ -415,39 +426,32 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
         }}>
           <ShieldCheck size={20} color="#fff" />
         </div>
-        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odyssey Development Center</span>
+        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         style={S.card}
+        className="invoice-card"
       >
-        {isPaid ? (
-          <div style={{
-            position: 'absolute', top: 24, right: 24,
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)',
-            borderRadius: '24px', padding: '6px 16px', color: '#34d399', fontSize: '12px', fontWeight: 700
-          }}>
-            <CheckCircle2 size={13} /> PAID INVOICE
-          </div>
-        ) : (
-          <div style={{
-            position: 'absolute', top: 24, right: 24,
-            display: 'flex', alignItems: 'center', gap: 6,
-            background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)',
-            borderRadius: '24px', padding: '6px 16px', color: '#fbbf24', fontSize: '12px', fontWeight: 700
-          }}>
-            <Sparkles size={13} /> OUTSTANDING PAYMENT
-          </div>
-        )}
+        <div className="invoice-status-badge-container">
+          {isPaid ? (
+            <div className="invoice-status-badge paid">
+              <CheckCircle2 size={13} /> PAID STATEMENT
+            </div>
+          ) : (
+            <div className="invoice-status-badge outstanding">
+              <Sparkles size={13} /> OUTSTANDING PAYMENT
+            </div>
+          )}
+        </div>
 
-        <h1 style={S.heading}>Odyssey Invoice</h1>
-        <p style={S.subheading}>{inv.invoiceNumber}</p>
+        <h1 style={S.heading}>Odyssey Billing Statement</h1>
+        <p style={S.subheading}>Statement #: {displayNum}</p>
 
         {/* Info Grid */}
-        <div style={S.infoGrid}>
+        <div className="invoice-info-grid" style={S.infoGrid}>
           <div style={S.infoItem}>
             <span style={S.infoLabel}>Bill To</span>
             <span style={S.infoValue}>{inv.billTo}</span>
@@ -457,7 +461,7 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
             <span style={S.infoValue}>{inv.project}</span>
           </div>
           <div style={S.infoItem}>
-            <span style={S.infoLabel}>Invoice Date</span>
+            <span style={S.infoLabel}>Statement Date</span>
             <span style={S.infoValue}>{fmtDate(inv.date)}</span>
           </div>
           <div style={S.infoItem}>
@@ -467,30 +471,33 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
         </div>
 
         {/* Items Table */}
-        <table style={S.table}>
-          <thead>
-            <tr>
-              <th style={S.th}>Service / Deliverable Description</th>
-              <th style={{ ...S.th, textAlign: 'right', width: '30%' }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(inv.items || []).map((item, idx) => (
-              <tr key={item.id || idx}>
-                <td style={S.td}>{item.service}</td>
-                <td style={{ ...S.td, textAlign: 'right', fontWeight: 600 }}>₱{fmtCurrency(item.amount)}</td>
+        {/* Items Table */}
+        <div className="invoice-table-wrapper">
+          <table className="invoice-table" style={S.table}>
+            <thead>
+              <tr>
+                <th style={S.th}>Service / Deliverable Description</th>
+                <th style={{ ...S.th, textAlign: 'right', width: '30%' }}>Amount</th>
               </tr>
-            ))}
-            <tr style={S.totRow}>
-              <td style={{ ...S.td, borderBottom: 'none', textAlign: 'right', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Total Due:</td>
-              <td style={{ ...S.td, borderBottom: 'none', textAlign: 'right' }}>₱{fmtCurrency(totalDue)}</td>
-            </tr>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(inv.items || []).map((item, idx) => (
+                <tr key={item.id || idx}>
+                  <td style={S.td}>{item.service}</td>
+                  <td style={{ ...S.td, textAlign: 'right', fontWeight: 600 }}>₱{fmtCurrency(item.amount)}</td>
+                </tr>
+              ))}
+              <tr style={S.totRow}>
+                <td style={{ ...S.td, borderBottom: 'none', textAlign: 'right', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>Total Due:</td>
+                <td style={{ ...S.td, borderBottom: 'none', textAlign: 'right' }}>₱{fmtCurrency(totalDue)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {/* Signatures & Bank Details */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '24px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '28px' }}>
-          
+
           {/* Bank Payment Information */}
           <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '20px', borderRadius: '16px' }}>
             <h4 style={{ color: '#60a5fa', fontSize: '13px', fontWeight: 700, margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: 6 }}><CreditCard size={14} /> Bank Details</h4>
@@ -556,6 +563,11 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
           </div>
         )}
 
+        {/* BIR Disclaimer */}
+        <div style={{ marginTop: '28px', padding: '12px 16px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', lineHeight: '1.4', fontStyle: 'italic' }}>
+          This document is a Statement of Account / Billing Statement and is not valid for claiming input VAT. An Official Receipt will be issued upon payment.
+        </div>
+
         {/* Action Button for printing */}
         <div style={{ marginTop: '32px' }}>
           <button
@@ -567,7 +579,7 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
               boxShadow: '0 4px 14px rgba(59,130,246,0.3)',
             }}
           >
-            <Printer size={16} /> Print / Save PDF Invoice
+            <Printer size={16} /> Print / Save PDF Statement
           </button>
         </div>
       </motion.div>
@@ -582,6 +594,58 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .invoice-status-badge-container {
+          position: absolute;
+          top: 24px;
+          right: 24px;
+        }
+        .invoice-status-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          border-radius: 24px;
+          padding: 6px 16px;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+        }
+        .invoice-status-badge.paid {
+          background: rgba(52,211,153,0.1);
+          border: 1px solid rgba(52,211,153,0.2);
+          color: #34d399;
+        }
+        .invoice-status-badge.outstanding {
+          background: rgba(251,191,36,0.1);
+          border: 1px solid rgba(251,191,36,0.2);
+          color: #fbbf24;
+        }
+
+        @media (max-width: 680px) {
+          .invoice-status-badge-container {
+            position: static !important;
+            display: flex !important;
+            justify-content: center !important;
+            margin-bottom: 24px !important;
+          }
+          .invoice-card {
+            padding: 24px 16px !important;
+            border-radius: 16px !important;
+          }
+          .invoice-info-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+            padding: 16px !important;
+          }
+          .invoice-table-wrapper {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            margin-bottom: 20px;
+          }
+          .invoice-table {
+            min-width: 500px !important;
+          }
+        }
       `}</style>
     </div>
   );

@@ -203,7 +203,7 @@ export default function AcceptancePage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Signature Form State
   const [signeeName, setSigneeName] = useState('');
   const [signeeTitle, setSigneeTitle] = useState('');
@@ -279,7 +279,7 @@ export default function AcceptancePage() {
         userAgent: navigator.userAgent,
       };
       await updateDoc(docRef, updateData);
-      
+
       // Update local state
       setCoa(prev => ({
         ...prev,
@@ -337,7 +337,7 @@ export default function AcceptancePage() {
         }}>
           <ShieldCheck size={20} color="#fff" />
         </div>
-        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odyssey Development Center</span>
+        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 
       <motion.div

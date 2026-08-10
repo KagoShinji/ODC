@@ -194,7 +194,7 @@ export default function ClientMOAPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Client signature form
   const [signeeName, setSigneeName] = useState('');
   const [signeeTitle, setSigneeTitle] = useState('');
@@ -605,7 +605,7 @@ li { margin-bottom: 5px; }
         }}>
           <ShieldCheck size={20} color="#fff" />
         </div>
-        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odyssey Development Center</span>
+        <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 
       <motion.div

@@ -121,10 +121,10 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     <div class="logo"><img src="${logoUrl}" alt="ODC" /></div>
     <div class="ci">${CO.address}<br><a href="mailto:${CO.email}">${CO.email}</a><br>${CO.phone}</div>
   </div>
-  <div class="ttl">INVOICE</div>
+  <div class="ttl">BILLING STATEMENT</div>
   <div class="det">
-    <div><b>Invoice #:</b> ${inv.invoiceNumber || ''}</div>
-    <div><b>Date:</b> ${fmtDate(inv.date)}</div>
+    <div><b>Statement #:</b> ${inv.invoiceNumber || ''}</div>
+    <div><b>Statement Date:</b> ${fmtDate(inv.date)}</div>
     <div><b>Bill To:</b> ${inv.billTo || ''}</div>
     <div><b>Project:</b> ${inv.project || ''}</div>
     <div><b>Payment Terms:</b> ${inv.paymentTerms || ''}</div>
@@ -148,6 +148,9 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
     ${(inv.qrCodes || []).includes('gotyme') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchgotyme.png" alt="GoTyme QR" /><div class="qr-label">GoTyme — Scan to Pay</div></div>` : ''}
     ${(inv.qrCodes || []).includes('maribank') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchmaribank.png" alt="MariBank QR" /><div class="qr-label">MariBank — Scan to Pay</div></div>` : ''}
   </div>` : ''}
+  <div style="font-size: 8px; color: #777; text-align: center; margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 8px; font-style: italic; line-height: 1.3;">
+    This document is a Statement of Account / Billing Statement and is not valid for claiming input VAT. An Official Receipt will be issued upon payment.
+  </div>
 </div>
 <script>
   document.fonts.ready.then(function() {
@@ -639,7 +642,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin }) {
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
-        const num = `INV-${year}-${month}-${String(invoices.length + 1).padStart(3, '0')}`;
+        const num = `SOA-${year}-${month}-${String(invoices.length + 1).padStart(3, '0')}`;
         await addDoc(collection(db, 'invoices'), { ...payload, invoiceNumber: num, status: 'unpaid', createdAt: serverTimestamp(), createdBy: firebaseUser.email });
       }
       setShowSidebar(false);
