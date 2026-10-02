@@ -111,7 +111,12 @@ const DEFAULT_PLANS = [
   { name: 'Premium Continuous Improvement', price: '₱7,500' }
 ];
 
-export default function AdminClients({ firebaseUser }) {
+export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
+  const canCreateClient = can ? can('clients:create') : isSuperAdmin !== false;
+  const canBillingClient = can ? can('clients:billing') : isSuperAdmin !== false;
+  const canInvoiceClient = can ? can('clients:invoice') : isSuperAdmin !== false;
+  const canDeleteClient = can ? can('clients:delete') : isSuperAdmin !== false;
+
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -677,9 +682,11 @@ export default function AdminClients({ firebaseUser }) {
               <Link size={16} /> Get Feedback Link
             </button>
           ) : (
-            <button onClick={() => { setForm({ name: '', business: '', email: '', password: '' }); setCreatePortalAccount(false); setBillingSetup(false); setErrorMsg(''); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
-              <Plus size={16} /> New Client
-            </button>
+            canCreateClient && (
+              <button onClick={() => { setForm({ name: '', business: '', email: '', password: '' }); setCreatePortalAccount(false); setBillingSetup(false); setErrorMsg(''); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
+                <Plus size={16} /> New Client
+              </button>
+            )
           )}
         </div>
       </div>
@@ -793,12 +800,16 @@ export default function AdminClients({ firebaseUser }) {
                       </td>
                       <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                          <button onClick={() => openEditBilling(client)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Configure Billing">
-                            <Settings size={14} /> Configure Billing
-                          </button>
-                          <button onClick={() => handleDelete(client)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete Record">
-                            <Trash2 size={14} />
-                          </button>
+                          {canBillingClient && (
+                            <button onClick={() => openEditBilling(client)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Configure Billing">
+                              <Settings size={14} /> Configure Billing
+                            </button>
+                          )}
+                          {canDeleteClient && (
+                            <button onClick={() => handleDelete(client)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete Record">
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -990,15 +1001,19 @@ export default function AdminClients({ firebaseUser }) {
                         <td style={{ padding: '18px 24px', verticalAlign: 'middle', textAlign: 'center' }}>
                           {accumulates ? (
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '4px 8px' }}>
-                              <button onClick={() => handleAdjustBookings(client, -1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
-                                <Minus size={12} />
-                              </button>
+                              {canInvoiceClient && (
+                                <button onClick={() => handleAdjustBookings(client, -1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
+                                  <Minus size={12} />
+                                </button>
+                              )}
                               <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
                                 {client.currentBookingsCount || 0}
                               </span>
-                              <button onClick={() => handleAdjustBookings(client, 1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
-                                <Plus size={12} />
-                              </button>
+                              {canInvoiceClient && (
+                                <button onClick={() => handleAdjustBookings(client, 1)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
+                                  <Plus size={12} />
+                                </button>
+                              )}
                             </div>
                           ) : (
                             <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 13 }}>—</span>
@@ -1026,10 +1041,12 @@ export default function AdminClients({ firebaseUser }) {
                         {/* Quick Actions */}
                         <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                            <button onClick={() => openEditBilling(client)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', padding: 8 }} title="Billing Configurations">
-                              <Settings size={14} />
-                            </button>
-                            {client.billingType && (
+                            {canBillingClient && (
+                              <button onClick={() => openEditBilling(client)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', padding: 8 }} title="Billing Configurations">
+                                <Settings size={14} />
+                              </button>
+                            )}
+                            {client.billingType && canInvoiceClient && (
                               <button 
                                 onClick={() => handleOpenGenerateInvoice(client)} 
                                 style={{ 
@@ -1141,11 +1158,13 @@ export default function AdminClients({ firebaseUser }) {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
-                    <button onClick={() => handleDeleteFeedback(f.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '6px 12px' }}>
-                      <Trash2 size={13} /> Delete Review
-                    </button>
-                  </div>
+                  {canDeleteClient && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
+                      <button onClick={() => handleDeleteFeedback(f.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '6px 12px' }}>
+                        <Trash2 size={13} /> Delete Review
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -62,7 +62,11 @@ const MONTHS_LIST = (() => {
   return list;
 })();
 
-export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
+export default function AdminSalaries({ firebaseUser, isSuperAdmin, can }) {
+  const canManageStaff = can ? can('salaries:manage_staff') : isSuperAdmin;
+  const canPayout = can ? can('salaries:payout') : isSuperAdmin;
+  const canDeleteSalary = can ? can('salaries:delete') : isSuperAdmin;
+
   const [activeSubTab, setActiveSubTab] = useState('payroll'); // 'payroll' | 'roster' | 'history'
   
   // Data State
@@ -446,14 +450,14 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Salary Tracker</h2>
           <span style={{ fontSize: 11, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', padding: '3px 8px', borderRadius: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            Superadmin Only
+            Payroll & Compensation
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={() => loadData()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          {activeSubTab === 'roster' && isSuperAdmin && (
+          {activeSubTab === 'roster' && canManageStaff && (
             <button onClick={handleOpenCreateStaff} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Add Staff
             </button>
@@ -640,27 +644,31 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
                                 >
                                   <Info size={13} /> View Receipt
                                 </button>
-                                <button
-                                  onClick={() => handleDeletePayout(member.payout)}
-                                  style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
-                                >
-                                  <Trash2 size={13} /> Delete
-                                </button>
+                                {canDeleteSalary && (
+                                  <button
+                                    onClick={() => handleDeletePayout(member.payout)}
+                                    style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                                  >
+                                    <Trash2 size={13} /> Delete
+                                  </button>
+                                )}
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleOpenPayModal(member)}
-                                style={{
-                                  ...S.btn,
-                                  background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)',
-                                  color: '#fff',
-                                  padding: '7px 14px',
-                                  fontSize: 12,
-                                  marginLeft: 'auto'
-                                }}
-                              >
-                                <DollarSign size={13} /> Pay Salary
-                              </button>
+                              canPayout && (
+                                <button
+                                  onClick={() => handleOpenPayModal(member)}
+                                  style={{
+                                    ...S.btn,
+                                    background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)',
+                                    color: '#fff',
+                                    padding: '7px 14px',
+                                    fontSize: 12,
+                                    marginLeft: 'auto'
+                                  }}
+                                >
+                                  <DollarSign size={13} /> Pay Salary
+                                </button>
+                              )
                             )}
                           </td>
                         </tr>
@@ -728,14 +736,20 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 'auto' }}>
-                        <button onClick={() => handleOpenEditStaff(member)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', flex: 1, justifyContent: 'center' }}>
-                          <Edit2 size={13} /> Edit Profile
-                        </button>
-                        <button onClick={() => handleDeleteStaff(member)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', flexShrink: 0 }}>
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      {(canManageStaff || canDeleteSalary) && (
+                        <div style={{ display: 'flex', gap: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: 'auto' }}>
+                          {canManageStaff && (
+                            <button onClick={() => handleOpenEditStaff(member)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)', flex: 1, justifyContent: 'center' }}>
+                              <Edit2 size={13} /> Edit Profile
+                            </button>
+                          )}
+                          {canDeleteSalary && (
+                            <button onClick={() => handleDeleteStaff(member)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', flexShrink: 0 }}>
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -755,13 +769,15 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Payroll Month</th>
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Method</th>
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Net Amount</th>
-                      <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Action</th>
+                      {canDeleteSalary && (
+                        <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Action</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {payouts.length === 0 ? (
                       <tr>
-                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                        <td colSpan={canDeleteSalary ? "6" : "5"} style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
                           No salary payments recorded yet.
                         </td>
                       </tr>
@@ -783,14 +799,16 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin }) {
                               )}
                             </td>
                             <td style={{ padding: '18px 24px', color: '#34d399', textAlign: 'right', fontWeight: 600 }}>₱{fmt(p.netPaid)}</td>
-                            <td style={{ padding: '18px 24px', textAlign: 'right' }}>
-                              <button
-                                onClick={() => handleDeletePayout(p)}
-                                style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', marginLeft: 'auto' }}
-                              >
-                                <Trash2 size={13} /> Delete Payout
-                              </button>
-                            </td>
+                            {canDeleteSalary && (
+                              <td style={{ padding: '18px 24px', textAlign: 'right' }}>
+                                <button
+                                  onClick={() => handleDeletePayout(p)}
+                                  style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', marginLeft: 'auto' }}
+                                >
+                                  <Trash2 size={13} /> Delete Payout
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })

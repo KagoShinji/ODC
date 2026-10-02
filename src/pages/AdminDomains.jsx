@@ -45,7 +45,11 @@ const today = () => {
   return `${y}-${m}-${day}`;
 };
 
-export default function AdminDomains({ firebaseUser, isSuperAdmin }) {
+export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
+  const canCreateDomain = can ? can('domains:create') : isSuperAdmin;
+  const canEditDomain = can ? can('domains:edit') : isSuperAdmin;
+  const canDeleteDomain = can ? can('domains:delete') : isSuperAdmin;
+
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -307,7 +311,7 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin }) {
           <button onClick={() => loadDomains()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          {isSuperAdmin && (
+          {canCreateDomain && (
             <button onClick={handleOpenCreate} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Add Domain
             </button>
@@ -451,7 +455,7 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin }) {
                       {/* Actions */}
                       <td style={{ padding: '18px 24px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                          {isSuperAdmin && (
+                          {canEditDomain && (
                             <button
                               onClick={() => handleOpenRenew(d)}
                               style={{ ...S.btn, background: 'linear-gradient(135deg,rgba(255,106,26,0.1),rgba(255,154,74,0.15))', color: '#ff9a4a', border: '1px solid rgba(255,106,26,0.25)' }}
@@ -459,10 +463,12 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin }) {
                               <RefreshCw size={13} /> Renew
                             </button>
                           )}
-                          <button onClick={() => handleOpenEdit(d)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
-                            <Edit2 size={13} /> Edit
-                          </button>
-                          {isSuperAdmin && (
+                          {canEditDomain && (
+                            <button onClick={() => handleOpenEdit(d)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
+                              <Edit2 size={13} /> Edit
+                            </button>
+                          )}
+                          {canDeleteDomain && (
                             <button onClick={() => handleDeleteDomain(d)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
                               <Trash2 size={13} />
                             </button>

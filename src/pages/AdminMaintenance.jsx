@@ -56,7 +56,9 @@ const DEFAULT_CONFIG = {
   paymentTerms: 'Monthly payments due as agreed. Non-refundable once service month begins.'
 };
 
-export default function AdminMaintenance() {
+export default function AdminMaintenance({ isSuperAdmin, can }) {
+  const canSaveMaintenance = can ? can('maintenance:save') : isSuperAdmin !== false;
+
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -106,9 +108,11 @@ export default function AdminMaintenance() {
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Maintenance Plans Management</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>Modify the pricing, features, and content of the maintenance plans page.</p>
         </div>
-        <button onClick={handleSave} disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)', color: '#fff', padding: '10px 24px', fontWeight: 600 }}>
-          {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} Save Changes
-        </button>
+        {canSaveMaintenance && (
+          <button onClick={handleSave} disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)', color: '#fff', padding: '10px 24px', fontWeight: 600 }}>
+            {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} Save Changes
+          </button>
+        )}
       </div>
 
       {status && (

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import '../admin-responsive.css';
 import { db, auth } from '../lib/firebase';
+import { ALL_ADMIN_NAVIGATIONS, getAllActionIds, getActionsForTabs } from '../utils/navigationConfig';
+import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authHelpers';
 import AdminInvoices from './AdminInvoices';
 import AdminMOA from './AdminMOA';
 import AdminAcceptance from './AdminAcceptance';
@@ -11,17 +13,22 @@ import AdminInquiries from './AdminInquiries';
 import AdminInventory from './AdminInventory';
 import AdminSalaries from './AdminSalaries';
 import AdminDomains from './AdminDomains';
+import AdminStaff from './AdminStaff';
 import { PortalLogin } from '../components/ui/PortalLogin';
 import {
     signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    updateProfile,
     signOut,
     onAuthStateChanged,
+    sendPasswordResetEmail,
 } from 'firebase/auth';
 import {
     collection,
     getDocs,
     query,
     orderBy,
+    where,
     deleteDoc,
     doc,
     Timestamp,
@@ -36,31 +43,25 @@ import {
     RefreshCw,
     Search,
     ShieldCheck,
+    ShieldAlert,
     Calendar,
     Globe,
     ChevronDown,
     ChevronUp,
     Download,
-    FileText,
-    LayoutList,
-    FileSignature,
-    Hammer,
-    Settings,
-    MailSearch,
-    TrendingUp,
-    Package,
-    Award,
-    Wallet,
 } from 'lucide-react';
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
     .split(',')
-    .map((e) => e.trim().toLowerCase())
+    .map((e) => normalizeAuthIdentifier(e.trim()))
     .filter(Boolean);
 
-const isSuperAdminEmail = (email) =>
-    SUPERADMIN_EMAILS.includes((email || '').toLowerCase());
+const isSuperAdminEmail = (email) => {
+    if (!email) return false;
+    const normalized = normalizeAuthIdentifier(email);
+    return SUPERADMIN_EMAILS.includes(normalized) || SUPERADMIN_EMAILS.includes(email.trim().toLowerCase());
+};
 
 /* ─── Helpers ─── */
 function formatDate(ts) {
@@ -87,7 +88,7 @@ function exportCSV(rows) {
     URL.revokeObjectURL(url);
 }
 
-/* ─── Shared input style (inline, no Tailwind needed) ─── */
+/* ─── Shared input style ─── */
 const inputStyle = {
     width: '100%',
     boxSizing: 'border-box',
@@ -108,51 +109,137 @@ function LoginScreen() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [resetNotice, setResetNotice] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setResetNotice('');
         setLoading(true);
+        const normalizedIdentifier = normalizeAuthIdentifier(email);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // onAuthStateChanged in the parent will handle the transition
+            await signInWithEmailAndPassword(auth, normalizedIdentifier, password);
         } catch (err) {
-            const msgs = {
-                'auth/user-not-found': 'No account found with that email.',
-                'auth/wrong-password': 'Incorrect password.',
-                'auth/invalid-email': 'Please enter a valid email address.',
-                'auth/invalid-credential': 'Incorrect email or password.',
-                'auth/too-many-requests': 'Too many attempts. Try again later.',
-            };
-            setError(msgs[err.code] || 'Login failed. Please try again.');
+            let autoLoggedIn = false;
+            // Auto-heal / sync: If user was saved in staff database with this password
+            try {
+                const q = query(
+                    collection(db, 'staff'),
+                    where('email', 'in', [normalizedIdentifier, (email || '').toLowerCase().trim()])
+                );
+                const snap = await getDocs(q);
+                if (!snap.empty) {
+                    const staffData = snap.docs[0].data();
+                    if (staffData.status === 'active' && staffData.password && staffData.password === password) {
+                        try {
+                            const cred = await createUserWithEmailAndPassword(auth, normalizedIdentifier, password);
+                            await updateProfile(cred.user, { displayName: staffData.name || '' });
+                            autoLoggedIn = true;
+                        } catch (createErr) {
+                            console.warn('Auto provision notice:', createErr);
+                        }
+                    }
+                }
+            } catch (queryErr) {
+                console.warn('Fallback auth check:', queryErr);
+            }
+
+            if (!autoLoggedIn) {
+                const msgs = {
+                    'auth/user-not-found': `No account found for "${formatDisplayIdentifier(normalizedIdentifier)}".`,
+                    'auth/wrong-password': 'Incorrect password.',
+                    'auth/invalid-email': 'Invalid username or email format.',
+                    'auth/invalid-credential': 'Incorrect username/email or password.',
+                    'auth/too-many-requests': 'Too many attempts. Try again later.',
+                };
+                setError(msgs[err.code] || 'Login failed. Please check your credentials.');
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const handleSendReset = async () => {
+        const normalizedIdentifier = normalizeAuthIdentifier(email);
+        if (!normalizedIdentifier) {
+            setError('Please enter your username or email address first.');
+            return;
+        }
+        try {
+            await sendPasswordResetEmail(auth, normalizedIdentifier);
+            setResetNotice(`Password reset email sent for ${formatDisplayIdentifier(normalizedIdentifier)}! Please check your inbox or spam folder.`);
+            setError('');
+        } catch (err) {
+            setError(err.message || 'Failed to send password reset email.');
+        }
+    };
+
     return (
-        <PortalLogin
-            variant="admin"
-            eyebrow="ODC admin"
-            title="Operations access for the team behind the builds."
-            subtitle="Review inquiries, manage client work, and keep support moving inside a calmer console."
-            sideTitle="Admin portal"
-            sideCopy="Protected Firebase sign-in for ODC internal workflows."
-            email={email}
-            password={password}
-            onEmailChange={setEmail}
-            onPasswordChange={setPassword}
-            onSubmit={handleSubmit}
-            error={error}
-            loading={loading}
-            submitLabel="Sign in"
-            loadingLabel="Signing in"
-            emailPlaceholder="admin@odc.com"
-        />
+        <div style={{ position: 'relative' }}>
+            <PortalLogin
+                variant="admin"
+                eyebrow="ODC admin"
+                title="Operations access for the team behind the builds."
+                subtitle="Review inquiries, manage client work, and keep support moving inside a calmer console."
+                sideTitle="Admin portal"
+                sideCopy="Protected sign-in for ODC internal workflows. Use your username or email."
+                email={email}
+                password={password}
+                onEmailChange={setEmail}
+                onPasswordChange={setPassword}
+                onSubmit={handleSubmit}
+                error={error}
+                loading={loading}
+                submitLabel="Sign in"
+                loadingLabel="Signing in"
+                emailPlaceholder="username or email@odc.com"
+            />
+            {/* Quick Password Reset Link / Notice */}
+            <div style={{
+                position: 'fixed',
+                bottom: 24,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 60,
+                textAlign: 'center',
+                maxWidth: 420,
+                padding: '0 16px'
+            }}>
+                {resetNotice ? (
+                    <div style={{
+                        background: 'rgba(52,211,153,0.15)',
+                        border: '1px solid rgba(52,211,153,0.4)',
+                        color: '#34d399',
+                        padding: '10px 16px',
+                        borderRadius: 10,
+                        fontSize: 13,
+                        backdropFilter: 'blur(8px)',
+                    }}>
+                        {resetNotice}
+                    </div>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={handleSendReset}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'rgba(255,255,255,0.45)',
+                            fontSize: 13,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                            fontFamily: 'inherit',
+                        }}
+                    >
+                        Forgot password or need to reset? Send reset email
+                    </button>
+                )}
+            </div>
+        </div>
     );
 }
 
-function SubmissionRow({ sub, isSuperAdmin, onDelete }) {
+function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
     const [expanded, setExpanded] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
@@ -196,7 +283,7 @@ function SubmissionRow({ sub, isSuperAdmin, onDelete }) {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <Mail size={12} color="rgba(255,255,255,0.4)" />
-                        <span style={{ color: '#ff6a1a', fontSize: 13 }}>{sub.email}</span>
+                        <span style={{ color: '#ff6a1a', fontSize: 13 }}>{formatDisplayIdentifier(sub.email)}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
                         <Calendar size={12} color="rgba(255,255,255,0.4)" />
@@ -218,7 +305,7 @@ function SubmissionRow({ sub, isSuperAdmin, onDelete }) {
                         {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         {expanded ? 'Less' : 'More'}
                     </button>
-                    {isSuperAdmin && (
+                    {canDelete && (
                         <button
                             onClick={handleDelete}
                             disabled={deleting}
@@ -280,12 +367,120 @@ function SubmissionRow({ sub, isSuperAdmin, onDelete }) {
 /* ─── Main Admin Dashboard ─── */
 function AdminDashboard({ firebaseUser }) {
     const superAdmin = isSuperAdminEmail(firebaseUser.email);
+    const [staffProfile, setStaffProfile] = useState(null);
+    const [staffLoading, setStaffLoading] = useState(true);
+    const [userAllowedTabs, setUserAllowedTabs] = useState([]);
+    const [userAllowedActions, setUserAllowedActions] = useState([]);
     const [activeTab, setActiveTab] = useState('contacts');
+
+    // Contacts data state
     const [submissions, setSubmissions] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadingSubmissions, setLoadingSubmissions] = useState(true);
     const [search, setSearch] = useState('');
     const [refreshing, setRefreshing] = useState(false);
 
+    // 1. Resolve Staff Permissions from Firestore
+    useEffect(() => {
+        let isMounted = true;
+        const resolvePermissions = async () => {
+            if (superAdmin) {
+                if (isMounted) {
+                    setStaffProfile({ role: 'Superadmin', name: 'Superadmin', status: 'active' });
+                    setUserAllowedTabs(ALL_ADMIN_NAVIGATIONS.map(t => t.id));
+                    setUserAllowedActions(getAllActionIds());
+                    setStaffLoading(false);
+                }
+                return;
+            }
+
+            try {
+                const normalized = normalizeAuthIdentifier(firebaseUser.email);
+                const rawEmail = (firebaseUser.email || '').toLowerCase();
+                const displayUser = formatDisplayIdentifier(normalized).toLowerCase();
+
+                // Check staff matching email or username
+                const q = query(collection(db, 'staff'), where('email', 'in', [normalized, rawEmail]));
+                const snap = await getDocs(q);
+
+                if (!snap.empty) {
+                    const data = snap.docs[0].data();
+                    if (isMounted) {
+                        setStaffProfile(data);
+                        if (data.status === 'active') {
+                            const tabs = Array.isArray(data.allowedTabs) ? data.allowedTabs : ['contacts'];
+                            const actions = Array.isArray(data.allowedActions)
+                                ? data.allowedActions
+                                : getActionsForTabs(tabs);
+                            setUserAllowedTabs(tabs);
+                            setUserAllowedActions(actions);
+                        } else {
+                            setUserAllowedTabs([]);
+                            setUserAllowedActions([]);
+                        }
+                    }
+                } else {
+                    // Fallback search by name/displayUsername
+                    const qAll = query(collection(db, 'staff'));
+                    const snapAll = await getDocs(qAll);
+                    const match = snapAll.docs.find(d => {
+                        const dat = d.data();
+                        return (
+                            (dat.email && (dat.email.toLowerCase() === normalized || dat.email.toLowerCase() === rawEmail)) ||
+                            (dat.displayUsername && dat.displayUsername.toLowerCase() === displayUser)
+                        );
+                    });
+
+                    if (match && isMounted) {
+                        const data = match.data();
+                        setStaffProfile(data);
+                        if (data.status === 'active') {
+                            const tabs = Array.isArray(data.allowedTabs) ? data.allowedTabs : ['contacts'];
+                            const actions = Array.isArray(data.allowedActions)
+                                ? data.allowedActions
+                                : getActionsForTabs(tabs);
+                            setUserAllowedTabs(tabs);
+                            setUserAllowedActions(actions);
+                        } else {
+                            setUserAllowedTabs([]);
+                            setUserAllowedActions([]);
+                        }
+                    } else if (isMounted) {
+                        setStaffProfile(null);
+                        setUserAllowedTabs(['contacts']);
+                        setUserAllowedActions(getActionsForTabs(['contacts']));
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching staff profile:', err);
+                if (isMounted) {
+                    setUserAllowedTabs(['contacts']);
+                    setUserAllowedActions(getActionsForTabs(['contacts']));
+                }
+            } finally {
+                if (isMounted) setStaffLoading(false);
+            }
+        };
+
+        resolvePermissions();
+        return () => { isMounted = false; };
+    }, [firebaseUser.email, superAdmin]);
+
+    // Calculate visible navigation tabs for current user
+    const visibleTabs = superAdmin
+        ? ALL_ADMIN_NAVIGATIONS
+        : ALL_ADMIN_NAVIGATIONS.filter(tab => userAllowedTabs.includes(tab.id));
+
+    // Ensure activeTab is always one of the permitted tabs
+    useEffect(() => {
+        if (!staffLoading && visibleTabs.length > 0) {
+            const hasActiveTab = visibleTabs.some(t => t.id === activeTab);
+            if (!hasActiveTab) {
+                setActiveTab(visibleTabs[0].id);
+            }
+        }
+    }, [visibleTabs, activeTab, staffLoading]);
+
+    // Fetch Contact Submissions
     const fetchSubmissions = useCallback(async (showSpinner = true) => {
         if (showSpinner) setRefreshing(true);
         try {
@@ -295,12 +490,16 @@ function AdminDashboard({ firebaseUser }) {
         } catch (err) {
             console.error('Firestore read error:', err);
         } finally {
-            setLoading(false);
+            setLoadingSubmissions(false);
             setRefreshing(false);
         }
     }, []);
 
-    useEffect(() => { fetchSubmissions(false); }, [fetchSubmissions]);
+    useEffect(() => {
+        if (superAdmin || userAllowedTabs.includes('contacts')) {
+            fetchSubmissions(false);
+        }
+    }, [fetchSubmissions, superAdmin, userAllowedTabs]);
 
     const handleDelete = async (id) => {
         await deleteDoc(doc(db, 'contactSubmissions', id));
@@ -318,6 +517,94 @@ function AdminDashboard({ firebaseUser }) {
             s.goal?.toLowerCase().includes(q)
         );
     });
+
+    const hasPermission = (tabId) => superAdmin || userAllowedTabs.includes(tabId);
+
+    // Permission checker function passed down to child components
+    const can = useCallback((actionId) => {
+        if (superAdmin) return true;
+        if (!actionId) return false;
+        const [tabId] = actionId.split(':');
+        if (!userAllowedTabs.includes(tabId)) return false;
+        if (Array.isArray(userAllowedActions) && userAllowedActions.length > 0) {
+            return userAllowedActions.includes(actionId);
+        }
+        return true;
+    }, [superAdmin, userAllowedTabs, userAllowedActions]);
+
+    // If still resolving staff permissions
+    if (staffLoading) {
+        return (
+            <div style={{
+                minHeight: '100vh', background: '#0a0d14',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                color: '#fff'
+            }}>
+                <RefreshCw size={32} color="rgba(255,255,255,0.3)" style={{ animation: 'spin 1s linear infinite' }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
+
+    // If inactive account or no permissions granted
+    if (!superAdmin && visibleTabs.length === 0) {
+        return (
+            <div style={{
+                minHeight: '100vh', background: '#0a0d14',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                padding: 24,
+                color: '#fff'
+            }}>
+                <div style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    borderRadius: 20,
+                    padding: '40px 32px',
+                    maxWidth: 460,
+                    textAlign: 'center',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+                }}>
+                    <div style={{
+                        width: 56, height: 56, borderRadius: 16,
+                        background: 'rgba(239,68,68,0.15)',
+                        border: '1px solid rgba(239,68,68,0.3)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#f87171', margin: '0 auto 20px'
+                    }}>
+                        <ShieldAlert size={28} />
+                    </div>
+                    <h2 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>
+                        {staffProfile?.status === 'inactive' ? 'Account Suspended' : 'Access Restricted'}
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, lineHeight: 1.5, margin: '0 0 24px' }}>
+                        {staffProfile?.status === 'inactive'
+                            ? 'Your staff account is currently marked as inactive. Please reach out to an administrator to reactivate your access.'
+                            : `The account (${formatDisplayIdentifier(firebaseUser.email)}) does not currently have permissions for any system navigations. Please contact a superadmin to configure your access.`}
+                    </p>
+                    <button
+                        onClick={handleLogout}
+                        style={{
+                            background: 'rgba(255,255,255,0.08)',
+                            border: '1px solid rgba(255,255,255,0.15)',
+                            borderRadius: 12,
+                            padding: '12px 24px',
+                            color: '#fff',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            fontFamily: 'inherit',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8
+                        }}
+                    >
+                        <LogOut size={16} /> Sign out
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div style={{
@@ -356,14 +643,14 @@ function AdminDashboard({ firebaseUser }) {
                                 color: superAdmin ? '#ff9a4a' : 'rgba(255,255,255,0.5)',
                                 textTransform: 'uppercase', letterSpacing: '0.06em',
                             }}>
-                                {superAdmin ? '⚡ Superadmin' : 'Admin'}
+                                {superAdmin ? '⚡ Superadmin' : (staffProfile?.role || 'Staff')}
                             </span>
                         </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
-                            {firebaseUser.email}
+                            {formatDisplayIdentifier(firebaseUser.email)}
                         </span>
                         <button
                             id="admin-logout-btn"
@@ -381,27 +668,25 @@ function AdminDashboard({ firebaseUser }) {
                 </div>
             </header>
 
-            {/* Tab bar */}
+            {/* Dynamic Tab bar (Displays only permitted tabs) */}
             <div className="admin-tabs-wrapper" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,13,20,0.6)', backdropFilter: 'blur(10px)' }}>
-                <div className="admin-tabs-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4 }}>
-                    {[
-                      { id: 'contacts', label: 'Contacts', Icon: LayoutList }, 
-                      ...(superAdmin ? [
-                        { id: 'inventory', label: 'Inventory', Icon: Package },
-                        { id: 'invoices', label: 'Invoices & Finance', Icon: TrendingUp }, 
-                        { id: 'moa', label: 'MOA', Icon: FileSignature }, 
-                        { id: 'acceptance', label: 'Acceptance', Icon: Award }, 
-                        { id: 'tickets', label: 'Tickets', Icon: MessageSquare }, 
-                        { id: 'clients', label: 'Clients', Icon: Users },
-                        { id: 'salaries', label: 'Salary Tracker', Icon: Wallet },
-                        { id: 'domains', label: 'Domain Tracker', Icon: Globe },
-                        { id: 'maintenance', label: 'Maintenance', Icon: Hammer },
-                        { id: 'inquiries', label: 'Inquiries', Icon: MailSearch }
-                      ] : [])
-                    // eslint-disable-next-line no-unused-vars
-                    ].map(({ id, label, Icon }) => (
-                        <button key={id} onClick={() => setActiveTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '14px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${activeTab === id ? '#ff6a1a' : 'transparent'}`, color: activeTab === id ? '#ff9a4a' : 'rgba(255,255,255,0.45)', fontWeight: activeTab === id ? 600 : 400, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', marginBottom: -1 }}>
-                            <Icon size={15} />{label}
+                <div className="admin-tabs-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4, overflowX: 'auto' }}>
+                    {/* eslint-disable-next-line no-unused-vars */}
+                    {visibleTabs.map(({ id, label, icon: TabIcon }) => (
+                        <button
+                            key={id}
+                            onClick={() => setActiveTab(id)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 7, padding: '14px 16px',
+                                background: 'none', border: 'none',
+                                borderBottom: `2px solid ${activeTab === id ? '#ff6a1a' : 'transparent'}`,
+                                color: activeTab === id ? '#ff9a4a' : 'rgba(255,255,255,0.45)',
+                                fontWeight: activeTab === id ? 600 : 400, fontSize: 14,
+                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
+                                marginBottom: -1, whiteSpace: 'nowrap'
+                            }}
+                        >
+                            <TabIcon size={15} />{label}
                         </button>
                     ))}
                 </div>
@@ -410,155 +695,162 @@ function AdminDashboard({ firebaseUser }) {
             {/* Main content */}
             <main className="admin-main" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
 
-                {activeTab === 'contacts' && <>
-                {/* Stats */}
-                <div className="admin-metrics-grid" style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: 16, marginBottom: 32,
-                }}>
-                    {[
-                        { label: 'Total Submissions', value: submissions.length, Icon: Users, color: '#ff6a1a' },
-                        { label: 'Search Results', value: filtered.length, Icon: Search, color: '#60a5fa' },
-                        {
-                            label: 'Unique Companies',
-                            value: new Set(submissions.map((s) => s.company).filter(Boolean)).size,
-                            Icon: Building2, color: '#34d399',
-                        },
-                    // eslint-disable-next-line no-unused-vars
-                    ].map(({ label, value, Icon, color }) => (
-                        <div key={label} style={{
-                            background: 'rgba(255,255,255,0.04)',
-                            border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: 16, padding: '20px 24px',
+                {activeTab === 'contacts' && hasPermission('contacts') && (
+                    <>
+                        {/* Stats */}
+                        <div className="admin-metrics-grid" style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                            gap: 16, marginBottom: 32,
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                <Icon size={16} color={color} />
-                                <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 500 }}>{label}</span>
-                            </div>
-                            <span style={{ color: '#fff', fontSize: 32, fontWeight: 700 }}>{value}</span>
+                            {[
+                                { label: 'Total Submissions', value: submissions.length, icon: Users, color: '#ff6a1a' },
+                                { label: 'Search Results', value: filtered.length, icon: Search, color: '#60a5fa' },
+                                {
+                                    label: 'Unique Companies',
+                                    value: new Set(submissions.map((s) => s.company).filter(Boolean)).size,
+                                    icon: Building2, color: '#34d399',
+                                },
+                            // eslint-disable-next-line no-unused-vars
+                            ].map(({ label, value, icon: StatIcon, color }) => (
+                                <div key={label} style={{
+                                    background: 'rgba(255,255,255,0.04)',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: 16, padding: '20px 24px',
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                        <StatIcon size={16} color={color} />
+                                        <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 500 }}>{label}</span>
+                                    </div>
+                                    <span style={{ color: '#fff', fontSize: 32, fontWeight: 700 }}>{value}</span>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
 
-                {/* Toolbar */}
-                <div className="admin-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-                    <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
-                        <Search size={15} color="rgba(255,255,255,0.3)" style={{
-                            position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-                        }} />
-                        <input
-                            id="admin-search"
-                            type="text"
-                            placeholder="Search by name, email, company, or goal…"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            style={{
-                                ...inputStyle,
-                                padding: '11px 14px 11px 40px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: 12,
-                            }}
-                        />
-                    </div>
+                        {/* Toolbar */}
+                        <div className="admin-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+                            <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+                                <Search size={15} color="rgba(255,255,255,0.3)" style={{
+                                    position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                                }} />
+                                <input
+                                    id="admin-search"
+                                    type="text"
+                                    placeholder="Search by name, email, company, or goal…"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    style={{
+                                        ...inputStyle,
+                                        padding: '11px 14px 11px 40px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        borderRadius: 12,
+                                    }}
+                                />
+                            </div>
 
-                    <button
-                        id="admin-refresh-btn"
-                        onClick={() => fetchSubmissions()}
-                        disabled={refreshing}
-                        style={{
-                            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: 12, padding: '10px 16px', color: 'rgba(255,255,255,0.7)',
-                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                            fontSize: 13, fontFamily: 'inherit',
-                        }}
-                    >
-                        <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-                        Refresh
-                    </button>
+                            <button
+                                id="admin-refresh-btn"
+                                onClick={() => fetchSubmissions()}
+                                disabled={refreshing}
+                                style={{
+                                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                                    borderRadius: 12, padding: '10px 16px', color: 'rgba(255,255,255,0.7)',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                                    fontSize: 13, fontFamily: 'inherit',
+                                }}
+                            >
+                                <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+                                Refresh
+                            </button>
 
-                    {superAdmin && submissions.length > 0 && (
-                        <button
-                            id="admin-export-btn"
-                            onClick={() => exportCSV(filtered.length > 0 ? filtered : submissions)}
-                            style={{
-                                background: 'rgba(255,106,26,0.1)', border: '1px solid rgba(255,106,26,0.3)',
-                                borderRadius: 12, padding: '10px 16px', color: '#ff9a4a',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                                fontSize: 13, fontFamily: 'inherit',
-                            }}
-                        >
-                            <Download size={14} /> Export CSV
-                        </button>
-                    )}
-                </div>
+                            {can('contacts:export') && submissions.length > 0 && (
+                                <button
+                                    id="admin-export-btn"
+                                    onClick={() => exportCSV(filtered.length > 0 ? filtered : submissions)}
+                                    style={{
+                                        background: 'rgba(255,106,26,0.1)', border: '1px solid rgba(255,106,26,0.3)',
+                                        borderRadius: 12, padding: '10px 16px', color: '#ff9a4a',
+                                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                                        fontSize: 13, fontFamily: 'inherit',
+                                    }}
+                                >
+                                    <Download size={14} /> Export CSV
+                                </button>
+                            )}
+                        </div>
 
-                {/* Submissions list */}
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.3)' }}>
-                        <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-                        <p>Loading submissions…</p>
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '80px 0' }}>
-                        <MessageSquare size={48} color="rgba(255,255,255,0.1)" style={{ margin: '0 auto 16px' }} />
-                        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15 }}>
-                            {search ? 'No results match your search.' : 'No contact submissions yet.'}
-                        </p>
-                    </div>
-                ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {filtered.map((sub) => (
-                            <SubmissionRow
-                                key={sub.id}
-                                sub={sub}
-                                isSuperAdmin={superAdmin}
-                                onDelete={handleDelete}
-                            />
-                        ))}
-                    </div>
-                )}
-                </> }
-
-                {activeTab === 'inventory' && superAdmin && (
-                    <AdminInventory firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                        {/* Submissions list */}
+                        {loadingSubmissions ? (
+                            <div style={{ textAlign: 'center', padding: '80px 0', color: 'rgba(255,255,255,0.3)' }}>
+                                <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+                                <p>Loading submissions…</p>
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div style={{ textAlign: 'center', padding: '80px 0' }}>
+                                <MessageSquare size={48} color="rgba(255,255,255,0.1)" style={{ margin: '0 auto 16px' }} />
+                                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 15 }}>
+                                    {search ? 'No results match your search.' : 'No contact submissions yet.'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                {filtered.map((sub) => (
+                                    <SubmissionRow
+                                        key={sub.id}
+                                        sub={sub}
+                                        isSuperAdmin={superAdmin}
+                                        canDelete={can('contacts:delete')}
+                                        onDelete={handleDelete}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
 
-                {activeTab === 'invoices' && superAdmin && (
-                    <AdminInvoices firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'inventory' && hasPermission('inventory') && (
+                    <AdminInventory firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'moa' && superAdmin && (
-                    <AdminMOA firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'invoices' && hasPermission('invoices') && (
+                    <AdminInvoices firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'acceptance' && superAdmin && (
-                    <AdminAcceptance firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'moa' && hasPermission('moa') && (
+                    <AdminMOA firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'tickets' && superAdmin && (
-                    <AdminTickets firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'acceptance' && hasPermission('acceptance') && (
+                    <AdminAcceptance firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'clients' && superAdmin && (
-                    <AdminClients firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'tickets' && hasPermission('tickets') && (
+                    <AdminTickets firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'maintenance' && superAdmin && (
-                    <AdminMaintenance firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'clients' && hasPermission('clients') && (
+                    <AdminClients firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'inquiries' && superAdmin && (
-                    <AdminInquiries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'maintenance' && hasPermission('maintenance') && (
+                    <AdminMaintenance firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'salaries' && superAdmin && (
-                    <AdminSalaries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'inquiries' && hasPermission('inquiries') && (
+                    <AdminInquiries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
 
-                {activeTab === 'domains' && superAdmin && (
-                    <AdminDomains firebaseUser={firebaseUser} isSuperAdmin={superAdmin} />
+                {activeTab === 'salaries' && hasPermission('salaries') && (
+                    <AdminSalaries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                )}
+
+                {activeTab === 'domains' && hasPermission('domains') && (
+                    <AdminDomains firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                )}
+
+                {activeTab === 'staff' && hasPermission('staff') && (
+                    <AdminStaff firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
                 )}
             </main>
 

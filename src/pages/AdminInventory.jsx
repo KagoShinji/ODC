@@ -101,7 +101,11 @@ const getActionColor = (action) => {
   }
 };
 
-export default function AdminInventory({ firebaseUser }) {
+export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
+  const canCreateInventory = can ? can('inventory:create') : isSuperAdmin !== false;
+  const canActionInventory = can ? can('inventory:action') : isSuperAdmin !== false;
+  const canDeleteInventory = can ? can('inventory:delete') : isSuperAdmin !== false;
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -798,9 +802,11 @@ export default function AdminInventory({ firebaseUser }) {
           <button onClick={() => loadInventory()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          <button onClick={() => { setErrorMsg(''); setShowAddDrawer(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
-            <Plus size={16} /> Add Item
-          </button>
+          {canCreateInventory && (
+            <button onClick={() => { setErrorMsg(''); setShowAddDrawer(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
+              <Plus size={16} /> Add Item
+            </button>
+          )}
         </div>
       </div>
 
@@ -950,19 +956,21 @@ export default function AdminInventory({ firebaseUser }) {
                         >
                           <Info size={13} /> View Details
                         </button>
-                        <button
-                          onClick={() => handleDeleteItem(item)}
-                          style={{
-                            ...S.btn,
-                            background: 'rgba(239,68,68,0.1)',
-                            border: '1px solid rgba(239,68,68,0.15)',
-                            color: '#f87171',
-                            padding: 6
-                          }}
-                          title="Delete Catalog Item"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canDeleteInventory && (
+                          <button
+                            onClick={() => handleDeleteItem(item)}
+                            style={{
+                              ...S.btn,
+                              background: 'rgba(239,68,68,0.1)',
+                              border: '1px solid rgba(239,68,68,0.15)',
+                              color: '#f87171',
+                              padding: 6
+                            }}
+                            title="Delete Catalog Item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1088,23 +1096,25 @@ export default function AdminInventory({ firebaseUser }) {
             </div>
 
             {/* General Warehouse Custody Management Panel */}
-            <div style={{ ...S.card, marginBottom: 28, background: 'rgba(255, 255, 255, 0.02)', padding: '16px 20px' }}>
-              <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 0, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.7)' }}>Warehouse Actions</h4>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => openActionForm('issue')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
-                  <UserCheck size={14} /> Issue Stock
-                </button>
-                <button onClick={() => openActionForm('restock')} style={{ ...S.btn, background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)', color: '#34d399', fontSize: 12 }}>
-                  <PlusCircle size={14} /> Restock
-                </button>
-                <button onClick={() => openActionForm('waste')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
-                  <Trash size={14} /> Waste Stock
-                </button>
-                <button onClick={() => openActionForm('sold')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
-                  <ShoppingBag size={14} /> Mark as Sold
-                </button>
+            {canActionInventory && (
+              <div style={{ ...S.card, marginBottom: 28, background: 'rgba(255, 255, 255, 0.02)', padding: '16px 20px' }}>
+                <h4 style={{ fontSize: 13, fontWeight: 600, marginTop: 0, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.7)' }}>Warehouse Actions</h4>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => openActionForm('issue')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)', color: '#60a5fa', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
+                    <UserCheck size={14} /> Issue Stock
+                  </button>
+                  <button onClick={() => openActionForm('restock')} style={{ ...S.btn, background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.25)', color: '#34d399', fontSize: 12 }}>
+                    <PlusCircle size={14} /> Restock
+                  </button>
+                  <button onClick={() => openActionForm('waste')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
+                    <Trash size={14} /> Waste Stock
+                  </button>
+                  <button onClick={() => openActionForm('sold')} disabled={selectedItem.totalQuantity <= 0} style={{ ...S.btn, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', color: '#fbbf24', fontSize: 12, opacity: selectedItem.totalQuantity <= 0 ? 0.5 : 1 }}>
+                    <ShoppingBag size={14} /> Mark as Sold
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Active Custodians Section */}
             <div style={{ marginBottom: 28 }}>
@@ -1152,15 +1162,19 @@ export default function AdminInventory({ firebaseUser }) {
                           <button onClick={() => handlePrintSticker(selectedItem, iss)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.8)', padding: '5px 10px', fontSize: 11 }}>
                             <Printer size={11} /> Print Tag
                           </button>
-                          <button onClick={() => openActionForm('transfer', iss)} style={{ ...S.btn, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#c084fc', padding: '5px 10px', fontSize: 11 }}>
-                            <ArrowRightLeft size={11} /> Transfer
-                          </button>
-                          <button onClick={() => openActionForm('waste', iss)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '5px 10px', fontSize: 11 }}>
-                            <Trash size={11} /> Waste
-                          </button>
-                          <button onClick={() => openActionForm('sold', iss)} style={{ ...S.btn, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: '#fbbbf24', padding: '5px 10px', fontSize: 11 }}>
-                            <ShoppingBag size={11} /> Sold
-                          </button>
+                          {canActionInventory && (
+                            <>
+                              <button onClick={() => openActionForm('transfer', iss)} style={{ ...S.btn, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', color: '#c084fc', padding: '5px 10px', fontSize: 11 }}>
+                                <ArrowRightLeft size={11} /> Transfer
+                              </button>
+                              <button onClick={() => openActionForm('waste', iss)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', padding: '5px 10px', fontSize: 11 }}>
+                                <Trash size={11} /> Waste
+                              </button>
+                              <button onClick={() => openActionForm('sold', iss)} style={{ ...S.btn, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', color: '#fbbbf24', padding: '5px 10px', fontSize: 11 }}>
+                                <ShoppingBag size={11} /> Sold
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

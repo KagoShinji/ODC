@@ -360,7 +360,13 @@ const emptyForm = () => ({
   hideFooter: false,
 });
 
-export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
+export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
+  // Permission flags
+  const canCreateMOA = can ? can('moa:create') : isSuperAdmin;
+  const canEditMOA = can ? can('moa:edit') : isSuperAdmin;
+  const canSignMOA = can ? can('moa:sign') : isSuperAdmin;
+  const canDeleteMOA = can ? can('moa:delete') : isSuperAdmin;
+
   const [moas, setMoas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -679,7 +685,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          {isSuperAdmin && (
+          {canCreateMOA && (
             <>
               <button onClick={() => { setEditingId(null); setShowFreeformModal(true); setFreeformText(''); }} style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', padding: '10px 18px', border: '1px solid rgba(96,165,250,0.3)' }}>
                 ⚡ Quick AI Paste
@@ -746,7 +752,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
                         {copiedId === moa.id ? 'Copied Link!' : 'Copy Link'}
                       </button>
 
-                      {isSuperAdmin && !moa.providerSigned && (
+                      {canSignMOA && !moa.providerSigned && (
                         <button
                           onClick={() => handleProviderSign(moa)}
                           style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', border: '1px solid rgba(255,106,26,0.3)' }}
@@ -757,10 +763,10 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin }) {
                       )}
 
                       <button onClick={() => printMOA(moa)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print MOA"><Printer size={14} /> Print</button>
-                      {isSuperAdmin && (
+                      {canEditMOA && (
                         <button onClick={() => moa.isFreeform ? openFreeformEdit(moa) : openEdit(moa)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit Form"><Edit2 size={14} /></button>
                       )}
-                      {isSuperAdmin && (
+                      {canDeleteMOA && (
                         <button onClick={() => handleDelete(moa)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></button>
                       )}
                     </div>

@@ -36,7 +36,13 @@ const STATUS_COLORS = {
   'Closed': { bg: 'rgba(255,255,255,0.05)', text: 'rgba(255,255,255,0.5)', border: 'rgba(255,255,255,0.1)' },
 };
 
-export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
+export default function AdminTickets({ firebaseUser, isSuperAdmin, can }) {
+  // Permission flags
+  const canCreateTicket = can ? can('tickets:create') : isSuperAdmin;
+  const canReplyTicket = can ? can('tickets:reply') : isSuperAdmin;
+  const canAssignTicket = can ? can('tickets:assign') : isSuperAdmin;
+  const canUpdateStatus = can ? can('tickets:status') : isSuperAdmin;
+
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -193,9 +199,11 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          <button onClick={() => { setForm(emptyForm()); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
-            <Plus size={16} /> New Ticket
-          </button>
+          {canCreateTicket && (
+            <button onClick={() => { setForm(emptyForm()); setShowSidebar(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
+              <Plus size={16} /> New Ticket
+            </button>
+          )}
         </div>
       </div>
 
@@ -282,7 +290,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
                     </td>
                     <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        {isSuperAdmin && (
+                        {canAssignTicket && (
                            <button onClick={() => setAssignModal(ticket)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Assign">
                              <UserPlus size={14} /> Assign
                            </button>
@@ -420,7 +428,7 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
                     </div>
                   </div>
 
-                  {isSuperAdmin && (
+                  {canUpdateStatus && (
                     <div style={{ marginTop: 'auto', paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                       <label style={S.lbl}>Update Status</label>
                       <select 
@@ -486,21 +494,27 @@ export default function AdminTickets({ firebaseUser, isSuperAdmin }) {
                 </div>
 
                 <div style={{ padding: 24, borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.2)' }}>
-                  <form onSubmit={sendMessage} style={{ display: 'flex', gap: 12 }}>
-                    <input 
-                      style={{ ...S.inp, flex: 1, padding: '14px 16px', borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} 
-                      value={newMessage} 
-                      onChange={e => setNewMessage(e.target.value)} 
-                      placeholder="Type a message..." 
-                    />
-                    <button 
-                      type="submit" 
-                      disabled={!newMessage.trim() || sendingMsg} 
-                      style={{ ...S.btn, borderRadius: 24, width: 48, height: 48, padding: 0, justifyContent: 'center', background: (!newMessage.trim() || sendingMsg) ? 'rgba(255,255,255,0.05)' : '#ff6a1a', color: (!newMessage.trim() || sendingMsg) ? 'rgba(255,255,255,0.3)' : '#fff' }}
-                    >
-                      <Send size={18} style={{ marginLeft: -2, marginTop: 2 }} />
-                    </button>
-                  </form>
+                  {canReplyTicket ? (
+                    <form onSubmit={sendMessage} style={{ display: 'flex', gap: 12 }}>
+                      <input 
+                        style={{ ...S.inp, flex: 1, padding: '14px 16px', borderRadius: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }} 
+                        value={newMessage} 
+                        onChange={e => setNewMessage(e.target.value)} 
+                        placeholder="Type a message..." 
+                      />
+                      <button 
+                        type="submit" 
+                        disabled={!newMessage.trim() || sendingMsg} 
+                        style={{ ...S.btn, borderRadius: 24, width: 48, height: 48, padding: 0, justifyContent: 'center', background: (!newMessage.trim() || sendingMsg) ? 'rgba(255,255,255,0.05)' : '#ff6a1a', color: (!newMessage.trim() || sendingMsg) ? 'rgba(255,255,255,0.3)' : '#fff' }}
+                      >
+                        <Send size={18} style={{ marginLeft: -2, marginTop: 2 }} />
+                      </button>
+                    </form>
+                  ) : (
+                    <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 13, fontStyle: 'italic' }}>
+                      Viewing in read-only mode (Message sending restricted).
+                    </div>
+                  )}
                 </div>
               </div>
 

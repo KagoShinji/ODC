@@ -23,7 +23,10 @@ function formatDate(ts) {
   });
 }
 
-export default function AdminInquiries() {
+export default function AdminInquiries({ isSuperAdmin, can }) {
+  const canStatusInquiry = can ? can('inquiries:status') : isSuperAdmin !== false;
+  const canDeleteInquiry = can ? can('inquiries:delete') : isSuperAdmin !== false;
+
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,17 +126,25 @@ export default function AdminInquiries() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <select 
-                    value={item.status || 'New'} 
-                    onChange={e => handleStatusUpdate(item.id, e.target.value)}
-                    style={{ ...S.inp, width: 'auto', fontSize: 12, padding: '4px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
-                  >
-                    <option value="New">New</option>
-                    <option value="Contacted">Contacted</option>
-                    <option value="Closed">Closed</option>
-                  </select>
-                  <button onClick={() => handleDelete(item.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}><Trash2 size={14} /></button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {canStatusInquiry ? (
+                    <select 
+                      value={item.status || 'New'} 
+                      onChange={e => handleStatusUpdate(item.id, e.target.value)}
+                      style={{ ...S.inp, width: 'auto', fontSize: 12, padding: '4px 8px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+                    >
+                      <option value="New">New</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  ) : (
+                    <span style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                      {item.status || 'New'}
+                    </span>
+                  )}
+                  {canDeleteInquiry && (
+                    <button onClick={() => handleDelete(item.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}><Trash2 size={14} /></button>
+                  )}
                 </div>
               </div>
 

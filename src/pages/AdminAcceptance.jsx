@@ -234,7 +234,12 @@ const emptyForm = () => ({
   scope: [],
 });
 
-export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
+export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
+  // Permission flags
+  const canCreateCert = can ? can('acceptance:create') : isSuperAdmin;
+  const canEditCert = can ? can('acceptance:edit') : isSuperAdmin;
+  const canDeleteCert = can ? can('acceptance:delete') : isSuperAdmin;
+
   const [coas, setCoas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -352,7 +357,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
           <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
             <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
           </button>
-          {isSuperAdmin && (
+          {canCreateCert && (
             <button onClick={openCreate} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Create Certificate
             </button>
@@ -439,10 +444,10 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin }) {
                           {copiedId === coa.id ? 'Copied Link!' : 'Copy Link'}
                         </button>
                         <button onClick={() => printCertificate(coa)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print / PDF"><Printer size={14} /> Print</button>
-                        {isSuperAdmin && (
+                        {canEditCert && (
                           <button onClick={() => openEdit(coa)} disabled={isAccepted} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: isAccepted ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', padding: 8, cursor: isAccepted ? 'not-allowed' : 'pointer' }} title="Edit"><Edit2 size={14} /></button>
                         )}
-                        {isSuperAdmin && (
+                        {canDeleteCert && (
                           <button onClick={() => handleDelete(coa)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></button>
                         )}
                       </div>
