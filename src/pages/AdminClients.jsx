@@ -202,6 +202,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   // Masterlist states
   const [mastSearch, setMastSearch] = useState('');
   const [mastStatusFilter, setMastStatusFilter] = useState('all');
+  const [mastTypeFilter, setMastTypeFilter] = useState('all');
   const [mastPayFilter, setMastPayFilter] = useState('all');
   const [mastSort, setMastSort] = useState('newest');
   
@@ -209,6 +210,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   const [detailClient, setDetailClient] = useState(null);
   
   const [showMastEdit, setShowMastEdit] = useState(false);
+  const [mastCustomTypeOpen, setMastCustomTypeOpen] = useState(false);
   const [mastEditForm, setMastEditForm] = useState({
     projectStatus: 'ongoing',
     projectType: '',
@@ -439,6 +441,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
       downpaymentPaid: client.downpaymentPaid || false,
       installments: client.installments || []
     });
+    setMastCustomTypeOpen(false);
     setShowMastEdit(true);
   };
 
@@ -697,7 +700,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   // Masterlist calculations
   const getClientCollected = (c) => {
     let sum = 0;
-    if (c.paymentScheme !== 'full' && c.downpaymentPaid) {
+    if (c.downpaymentPaid) {
       sum += Number(c.downpaymentAmount || 0);
     }
     (c.installments || []).forEach(inst => {
@@ -750,6 +753,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
       (c.projectTags || []).some(t => t.toLowerCase().includes(mastSearch.toLowerCase()));
       
     const matchStatus = mastStatusFilter === 'all' || s === mastStatusFilter;
+    const matchType = mastTypeFilter === 'all' || (c.projectType || '') === mastTypeFilter;
     
     let matchPay = true;
     if (mastPayFilter === 'fully_paid') {
@@ -760,7 +764,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
       matchPay = (c.installments || []).some(i => i.status === 'overdue');
     }
 
-    return matchSearch && matchStatus && matchPay;
+    return matchSearch && matchStatus && matchType && matchPay;
   }).sort((a, b) => {
     if (mastSort === 'newest') return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
     if (mastSort === 'oldest') return (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0);
@@ -871,6 +875,16 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
 
   // Helper list of days 1-31
   const daysArray = Array.from({ length: 31 }, (_, i) => String(i + 1));
+
+  // Dynamic dropdown lists for Masterlist (merged with defaults so the dropdown arrow always appears)
+  const uniqueProjectTypes = Array.from(new Set([
+    'Pickleball Court Booking System', 'Inventory Management System', 'Barbershop Booking System', 'Web App', 'Mobile App', 'Landing Page', 'E-commerce', 'Custom System', 'Maintenance',
+    ...clients.map(c => c.projectType).filter(Boolean)
+  ]));
+  const uniqueProjectTags = Array.from(new Set([
+    'React', 'Node.js', 'Firebase', 'Shopify', 'WordPress', 'React Native', 'Flutter', 'UI/UX Design',
+    ...clients.map(c => (c.projectTags || []).join(', ')).filter(Boolean)
+  ]));
 
   return (
     <div style={{ position: 'relative' }}>
@@ -1025,6 +1039,12 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
               <option value="on_hold" style={{ background: '#0f1218' }}>🟠 On Hold ({clients.filter(c => (c.projectStatus||'ongoing') === 'on_hold').length})</option>
               <option value="cancelled" style={{ background: '#0f1218' }}>🔴 Cancelled ({clients.filter(c => (c.projectStatus||'ongoing') === 'cancelled').length})</option>
             </select>
+            <select style={{ ...S.inp, width: 'auto', minWidth: 150, cursor: 'pointer', fontSize: 13 }} value={mastTypeFilter} onChange={e => { setMastTypeFilter(e.target.value); setMastPage(1); }}>
+              <option value="all" style={{ background: '#0f1218' }}>All Types</option>
+              {uniqueProjectTypes.map(t => (
+                <option key={t} value={t} style={{ background: '#0f1218' }}>{t}</option>
+              ))}
+            </select>
             <select style={{ ...S.inp, width: 'auto', minWidth: 150, cursor: 'pointer', fontSize: 13 }} value={mastPayFilter} onChange={e => { setMastPayFilter(e.target.value); setMastPage(1); }}>
               <option value="all" style={{ background: '#0f1218' }}>All Payments</option>
               <option value="fully_paid" style={{ background: '#0f1218' }}>✅ Fully Paid</option>
@@ -1120,8 +1140,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
                       {/* Card Body */}
                       <div style={{ padding: '12px 16px', flex: 1 }}>
                         {/* Tags row */}
-                        {(c.projectType || (c.projectTags || []).length > 0) && (
+                        {(c.projectType || (c.projectTags || []).length > 0 || c.paymentScheme === 'full' || c.paymentScheme === 'partnership') && (
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                            {(!c.paymentScheme || c.paymentScheme === 'full') && <span style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.2)', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 600 }}>One-Time Payment</span>}
+                            {c.paymentScheme === 'partnership' && <span style={{ background: 'rgba(236,72,153,0.1)', color: '#ec4899', border: '1px solid rgba(236,72,153,0.2)', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 600 }}>Partnership</span>}
                             {c.projectType && <span style={{ background: 'rgba(255,255,255,0.07)', padding: '2px 7px', borderRadius: 5, fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>{c.projectType}</span>}
                             {(c.projectTags || []).slice(0, 3).map(tag => (
                               <span key={tag} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 7px', borderRadius: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>{tag}</span>
@@ -2545,23 +2567,51 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
                 <div>
                   <label style={S.lbl}>Project Status</label>
                   <select style={{ ...S.inp, cursor: 'pointer' }} value={mastEditForm.projectStatus} onChange={e => setMastEditForm(f => ({ ...f, projectStatus: e.target.value }))}>
-                    <option value="ongoing">🟢 Ongoing</option>
-                    <option value="completed">🔵 Completed</option>
-                    <option value="pending_launch">🟣 Pending Launch</option>
-                    <option value="pending_contract">🟡 Pending Contract</option>
-                    <option value="on_hold">🟠 On Hold</option>
-                    <option value="cancelled">🔴 Cancelled</option>
+                    <option value="ongoing" style={{ background: '#0f1218' }}>🟢 Ongoing</option>
+                    <option value="completed" style={{ background: '#0f1218' }}>🔵 Completed</option>
+                    <option value="pending_launch" style={{ background: '#0f1218' }}>🟣 Pending Launch</option>
+                    <option value="pending_contract" style={{ background: '#0f1218' }}>🟡 Pending Contract</option>
+                    <option value="on_hold" style={{ background: '#0f1218' }}>🟠 On Hold</option>
+                    <option value="cancelled" style={{ background: '#0f1218' }}>🔴 Cancelled</option>
                   </select>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={S.lbl}>Project Type</label>
-                    <input style={S.inp} placeholder="e.g. Web App" value={mastEditForm.projectType} onChange={e => setMastEditForm(f => ({ ...f, projectType: e.target.value }))} />
+                    <select 
+                      style={{ ...S.inp, cursor: 'pointer', marginBottom: mastCustomTypeOpen ? 8 : 0 }} 
+                      value={mastCustomTypeOpen ? '__custom__' : (mastEditForm.projectType || '')} 
+                      onChange={e => {
+                        if (e.target.value === '__custom__') {
+                          setMastCustomTypeOpen(true);
+                          setMastEditForm(f => ({ ...f, projectType: '' }));
+                        } else {
+                          setMastCustomTypeOpen(false);
+                          setMastEditForm(f => ({ ...f, projectType: e.target.value }));
+                        }
+                      }}
+                    >
+                      <option value="" style={{ background: '#0f1218' }}>Select Type</option>
+                      {uniqueProjectTypes.map(t => <option key={t} value={t} style={{ background: '#0f1218' }}>{t}</option>)}
+                      <option value="__custom__" style={{ background: '#0f1218' }}>+ Other (Custom Type)...</option>
+                    </select>
+                    {mastCustomTypeOpen && (
+                      <input 
+                        style={S.inp} 
+                        placeholder="Type custom project type..." 
+                        value={mastEditForm.projectType} 
+                        onChange={e => setMastEditForm(f => ({ ...f, projectType: e.target.value }))} 
+                        autoFocus
+                      />
+                    )}
                   </div>
                   <div>
                     <label style={S.lbl}>Project Tags</label>
-                    <input style={S.inp} placeholder="e.g. React, E-commerce" value={mastEditForm.projectTags} onChange={e => setMastEditForm(f => ({ ...f, projectTags: e.target.value }))} />
+                    <input list="dynamic-project-tags" style={S.inp} placeholder="e.g. React, E-commerce" value={mastEditForm.projectTags} onChange={e => setMastEditForm(f => ({ ...f, projectTags: e.target.value }))} />
+                    <datalist id="dynamic-project-tags">
+                      {uniqueProjectTags.map(t => <option key={t} value={t} />)}
+                    </datalist>
                   </div>
                 </div>
 
@@ -2598,35 +2648,34 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
                   <div>
                     <label style={S.lbl}>Payment Scheme</label>
                     <select style={{ ...S.inp, cursor: 'pointer' }} value={mastEditForm.paymentScheme} onChange={e => setMastEditForm(f => ({ ...f, paymentScheme: e.target.value }))}>
-                      <option value="full">Full Payment</option>
-                      <option value="installment">Installment Schedule</option>
-                      <option value="downpayment_balance">Downpayment + Balance</option>
+                      <option value="full" style={{ background: '#0f1218' }}>One-Time Payment</option>
+                      <option value="installment" style={{ background: '#0f1218' }}>Installment Schedule</option>
+                      <option value="downpayment_balance" style={{ background: '#0f1218' }}>Downpayment + Balance</option>
+                      <option value="partnership" style={{ background: '#0f1218' }}>Partnership</option>
                     </select>
                   </div>
                 </div>
 
-                {mastEditForm.paymentScheme !== 'full' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 14, alignItems: 'end' }}>
-                    <div>
-                      <label style={S.lbl}>Downpayment (₱)</label>
-                      <input type="number" style={S.inp} placeholder="0.00" value={mastEditForm.downpaymentAmount} onChange={e => setMastEditForm(f => ({ ...f, downpaymentAmount: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label style={S.lbl}>DP Due Date</label>
-                      <input type="date" style={S.inp} value={mastEditForm.downpaymentDate} onChange={e => setMastEditForm(f => ({ ...f, downpaymentDate: e.target.value }))} />
-                    </div>
-                    <div style={{ paddingBottom: 8 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 13, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={mastEditForm.downpaymentPaid} onChange={e => setMastEditForm(f => ({ ...f, downpaymentPaid: e.target.checked }))} style={{ width: 16, height: 16 }} />
-                        Paid
-                      </label>
-                    </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 14, alignItems: 'end' }}>
+                  <div>
+                    <label style={S.lbl}>{(mastEditForm.paymentScheme === 'full' || mastEditForm.paymentScheme === 'partnership') ? 'Payment Amount (₱)' : 'Downpayment (₱)'}</label>
+                    <input type="number" style={S.inp} placeholder="0.00" value={mastEditForm.downpaymentAmount} onChange={e => setMastEditForm(f => ({ ...f, downpaymentAmount: e.target.value }))} />
                   </div>
-                )}
+                  <div>
+                    <label style={S.lbl}>{(mastEditForm.paymentScheme === 'full' || mastEditForm.paymentScheme === 'partnership') ? 'Payment Date' : 'DP Due Date'}</label>
+                    <input type="date" style={S.inp} value={mastEditForm.downpaymentDate} onChange={e => setMastEditForm(f => ({ ...f, downpaymentDate: e.target.value }))} />
+                  </div>
+                  <div style={{ paddingBottom: 8 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                      <input type="checkbox" checked={mastEditForm.downpaymentPaid} onChange={e => setMastEditForm(f => ({ ...f, downpaymentPaid: e.target.checked }))} style={{ width: 16, height: 16 }} />
+                      Paid
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Section 3: Installments */}
-              {mastEditForm.paymentScheme !== 'full' && (
+              {mastEditForm.paymentScheme !== 'full' && mastEditForm.paymentScheme !== 'partnership' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
                     <h4 style={{ color: '#fff', fontSize: 15, margin: 0 }}>3. Installments / Milestones</h4>
