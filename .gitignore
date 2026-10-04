@@ -27,3 +27,5 @@ dist-ssr
 
 # Local downloads folder — do not commit
 public/images/Download/
+.tmp/
+*-debug.log

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+import { getNextMonthDueDate } from '../utils/billingDates';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { secondaryAuth } from '../lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
@@ -94,16 +95,7 @@ const shiftDueDate = (currentDueDateStr, cycle) => {
   return toLocalDateString(date);
 };
 
-const getNextMonthDueDate = (currentDueDateStr, billingDay) => {
-  const current = new Date(currentDueDateStr + 'T00:00:00');
-  let nextYear = current.getFullYear();
-  let nextMonth = current.getMonth() + 1;
-  if (nextMonth > 11) {
-    nextMonth = 0;
-    nextYear += 1;
-  }
-  const maxDays = new Date(nextYear, nextMonth + 1, 0).getDate();
-};
+// Shared with regression tests for month-end billing.
 
 const DEFAULT_PLANS = [
   { name: 'Basic Care Plan', price: '₱1,500' },
@@ -744,7 +736,6 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
 
   const filteredMasterlist = clients.filter(c => {
     const s = (c.projectStatus || 'ongoing');
-    const p = (c.paymentScheme || 'full');
     
     const matchSearch = 
       c.name?.toLowerCase().includes(mastSearch.toLowerCase()) ||

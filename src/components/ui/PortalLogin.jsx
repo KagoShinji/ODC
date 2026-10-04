@@ -79,12 +79,12 @@ export function PortalLogin({
 
                     <form className="portal-login-form" onSubmit={onSubmit}>
                         <label>
-                            <span>Email address</span>
+                            <span>{variant === 'admin' ? 'Username or email' : 'Email address'}</span>
                             <div className="portal-input-shell">
                                 <EnvelopeSimple size={17} weight="duotone" />
                                 <input
-                                    type="email"
-                                    autoComplete="email"
+                                    type={variant === 'admin' ? 'text' : 'email'}
+                                    autoComplete={variant === 'admin' ? 'username' : 'email'}
                                     value={email}
                                     onChange={(event) => onEmailChange(event.target.value)}
                                     required

@@ -1,19 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import '../admin-responsive.css';
 import { db, auth } from '../lib/firebase';
 import { ALL_ADMIN_NAVIGATIONS, getAllActionIds, getActionsForTabs } from '../utils/navigationConfig';
 import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authHelpers';
-import AdminInvoices from './AdminInvoices';
-import AdminMOA from './AdminMOA';
-import AdminAcceptance from './AdminAcceptance';
-import AdminTickets from './AdminTickets';
-import AdminClients from './AdminClients';
-import AdminMaintenance from './AdminMaintenance';
-import AdminInquiries from './AdminInquiries';
-import AdminInventory from './AdminInventory';
-import AdminSalaries from './AdminSalaries';
-import AdminDomains from './AdminDomains';
-import AdminStaff from './AdminStaff';
+import { useAllowanceContext } from '../hooks/useAllowanceContext';
 import { PortalLogin } from '../components/ui/PortalLogin';
 import {
     signInWithEmailAndPassword,
@@ -50,6 +40,19 @@ import {
     ChevronUp,
     Download,
 } from 'lucide-react';
+
+const AdminInvoices = lazy(() => import('./AdminInvoices'));
+const AdminMOA = lazy(() => import('./AdminMOA'));
+const AdminAcceptance = lazy(() => import('./AdminAcceptance'));
+const AdminTickets = lazy(() => import('./AdminTickets'));
+const AdminClients = lazy(() => import('./AdminClients'));
+const AdminMaintenance = lazy(() => import('./AdminMaintenance'));
+const AdminInquiries = lazy(() => import('./AdminInquiries'));
+const AdminInventory = lazy(() => import('./AdminInventory'));
+const AdminSalaries = lazy(() => import('./AdminSalaries'));
+const AdminDomains = lazy(() => import('./AdminDomains'));
+const AdminStaff = lazy(() => import('./AdminStaff'));
+const AdminAllowances = lazy(() => import('./AdminAllowances'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -366,6 +369,7 @@ function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
 
 /* ─── Main Admin Dashboard ─── */
 function AdminDashboard({ firebaseUser }) {
+    const allowanceState = useAllowanceContext(firebaseUser.uid);
     const superAdmin = isSuperAdminEmail(firebaseUser.email);
     const [staffProfile, setStaffProfile] = useState(null);
     const [staffLoading, setStaffLoading] = useState(true);
@@ -466,9 +470,9 @@ function AdminDashboard({ firebaseUser }) {
     }, [firebaseUser.email, superAdmin]);
 
     // Calculate visible navigation tabs for current user
-    const visibleTabs = superAdmin
-        ? ALL_ADMIN_NAVIGATIONS
-        : ALL_ADMIN_NAVIGATIONS.filter(tab => userAllowedTabs.includes(tab.id));
+    const visibleTabs = ALL_ADMIN_NAVIGATIONS.filter(tab => tab.id === 'allowances'
+        ? superAdmin || allowanceState.context?.access?.active
+        : superAdmin || userAllowedTabs.includes(tab.id));
 
     // Ensure activeTab is always one of the permitted tabs
     useEffect(() => {
@@ -518,10 +522,11 @@ function AdminDashboard({ firebaseUser }) {
         );
     });
 
-    const hasPermission = (tabId) => superAdmin || userAllowedTabs.includes(tabId);
+    const hasPermission = (tabId) => tabId === 'allowances' ? superAdmin || allowanceState.context?.access?.active : superAdmin || userAllowedTabs.includes(tabId);
 
     // Permission checker function passed down to child components
     const can = useCallback((actionId) => {
+        if (actionId?.startsWith('allowances:')) return allowanceState.context?.access?.active === true && allowanceState.context.access.actions?.includes(actionId);
         if (superAdmin) return true;
         if (!actionId) return false;
         const [tabId] = actionId.split(':');
@@ -530,7 +535,7 @@ function AdminDashboard({ firebaseUser }) {
             return userAllowedActions.includes(actionId);
         }
         return true;
-    }, [superAdmin, userAllowedTabs, userAllowedActions]);
+    }, [superAdmin, userAllowedTabs, userAllowedActions, allowanceState.context]);
 
     // If still resolving staff permissions
     if (staffLoading) {
@@ -694,6 +699,7 @@ function AdminDashboard({ firebaseUser }) {
 
             {/* Main content */}
             <main className="admin-main" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+                <Suspense key={activeTab} fallback={<p role="status">Loading module…</p>}>
 
                 {activeTab === 'contacts' && hasPermission('contacts') && (
                     <>
@@ -850,8 +856,12 @@ function AdminDashboard({ firebaseUser }) {
                 )}
 
                 {activeTab === 'staff' && hasPermission('staff') && (
-                    <AdminStaff firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                    <AdminStaff firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} onOpenAllowances={hasPermission('allowances') ? () => setActiveTab('allowances') : undefined} />
                 )}
+                {activeTab === 'allowances' && hasPermission('allowances') && (
+                    <AdminAllowances firebaseUser={firebaseUser} allowanceState={allowanceState} isSuperAdmin={superAdmin} />
+                )}
+                </Suspense>
             </main>
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

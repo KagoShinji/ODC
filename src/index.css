@@ -154,7 +154,7 @@ section {
 }
 
 .ambient-process {
-  --ambient-image: url('/grit.jpg');
+  --ambient-image: url('/images/process-delivery.jpg');
   --ambient-accent: rgba(20, 93, 75, 0.13);
 }
 

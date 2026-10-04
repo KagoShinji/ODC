@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Layout } from './components/layout/Layout';
@@ -8,15 +8,15 @@ import { Services } from './pages/Services';
 import { Portfolio } from './pages/Portfolio';
 import { Contact } from './pages/Contact';
 import { NotFound } from './pages/NotFound';
-import AdminPage from './pages/Admin';
-import ClientPortal from './pages/ClientPortal';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { Chatbot } from './components/ui/Chatbot';
-import Pricing from './pages/Pricing';
-import AcceptancePage from './pages/AcceptancePage';
-import ClientMOAPage from './pages/ClientMOAPage';
-import ClientInvoicePage from './pages/ClientInvoicePage';
-import FeedbackForm from './pages/FeedbackForm';
+const AdminPage = lazy(() => import('./pages/Admin'));
+const ClientPortal = lazy(() => import('./pages/ClientPortal'));
+const Pricing = lazy(() => import('./pages/Pricing'));
+const AcceptancePage = lazy(() => import('./pages/AcceptancePage'));
+const ClientMOAPage = lazy(() => import('./pages/ClientMOAPage'));
+const ClientInvoicePage = lazy(() => import('./pages/ClientInvoicePage'));
+const FeedbackForm = lazy(() => import('./pages/FeedbackForm'));
 
 function PublicSite() {
   const [isLoading, setIsLoading] = useState(true);
@@ -70,9 +70,11 @@ function AppRoutes() {
 function App() {
   return (
     <Router>
-      <AppRoutes />
+      <Suspense fallback={<div role="status" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>Loading page…</div>}>
+        <AppRoutes />
+      </Suspense>
     </Router>
   );
 }
 
-export default App;
+export default App;

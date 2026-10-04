@@ -631,7 +631,6 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line
     setLoading(true);
     setExpensesLoading(true);
     
@@ -729,6 +728,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
   // Expenses CRUD handlers
   const openCreateExpense = () => { setExpenseEditingId(null); setExpenseForm(emptyExpenseForm()); setShowExpenseSidebar(true); };
   const openEditExpense = (exp) => {
+    if (exp.source === 'allowance_liquidation') { showAlert('Allowance expense', 'Use Allowances & Requisitions to correct this expense. Its history and balance must remain linked.', 'info'); return; }
     setExpenseEditingId(exp.id);
     setExpenseForm({
       title: exp.title || '',
@@ -793,6 +793,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
   };
 
   const handleDeleteExpense = (exp) => {
+    if (exp.source === 'allowance_liquidation') { showAlert('Allowance expense', 'Use Allowances & Requisitions to record an audited correction.', 'info'); return; }
     setModal({
       isOpen: true,
       title: 'Delete Expense',
@@ -1733,7 +1734,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
                                     <Clock size={11} /> Pending
                                   </span>
                                 )}
-                                {exp.status !== 'paid' && canManageExpenses && (
+                                {exp.status !== 'paid' && canManageExpenses && exp.source !== 'allowance_liquidation' && (
                                   <button onClick={() => handleQuickPayExpense(exp)} style={{ fontSize: 10, background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.3)', color: '#34d399', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><CreditCard size={10} /> Mark Paid</button>
                                 )}
                               </div>
@@ -1741,10 +1742,10 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
                             <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                                 {canManageExpenses && (
-                                  <button onClick={() => openEditExpense(exp)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit"><Edit2 size={14} /></button>
+                                  exp.source === 'allowance_liquidation' ? <span style={{ color: '#d9a66a', fontSize: 11 }}>Managed in Allowances</span> : <button onClick={() => openEditExpense(exp)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit"><Edit2 size={14} /></button>
                                 )}
                                 {canDeleteInvoice && (
-                                  <button onClick={() => handleDeleteExpense(exp)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></button>
+                                  exp.source !== 'allowance_liquidation' && <button onClick={() => handleDeleteExpense(exp)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></button>
                                 )}
                               </div>
                             </td>

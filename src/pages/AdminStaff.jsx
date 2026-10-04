@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db, auth, secondaryAuth } from '../lib/firebase';
 import {
-  ALL_ADMIN_NAVIGATIONS,
-  getAllActionIds,
+  ALL_ADMIN_NAVIGATIONS as NAVIGATION_REGISTRY,
   getActionsForTabs,
 } from '../utils/navigationConfig';
 import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authHelpers';
+// Allowance authority is managed by the verified backend, not legacy staff fields.
+const ALL_ADMIN_NAVIGATIONS = NAVIGATION_REGISTRY.filter(nav => nav.id !== 'allowances');
+const getAllActionIds = () => ALL_ADMIN_NAVIGATIONS.flatMap(nav => nav.actions.map(action => action.id));
 import {
   collection,
   getDocs,
@@ -149,7 +151,7 @@ const S = {
   },
 };
 
-export default function AdminStaff({ firebaseUser, isSuperAdmin, can }) {
+export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllowances }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -593,6 +595,10 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can }) {
 
   return (
     <div>
+      {onOpenAllowances && <div style={{ marginBottom: 16, color: '#aaa', fontSize: 13 }}>
+        Allowance access uses verified staff permissions.{' '}
+        <button type="button" onClick={onOpenAllowances} style={{ ...S.btn, display: 'inline-flex', color: '#d9a66a', background: 'rgba(217,166,106,0.08)' }}>Open Allowances & Requisitions</button>
+      </div>}
       {/* ─── Toast Notification Banner ─── */}
       {toast && (
         <div
@@ -859,7 +865,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can }) {
             const isExpanded = expandedDetailsId === member.id;
 
             return (
-              <div
+    <div
                 key={member.id}
                 style={{
                   ...S.card,

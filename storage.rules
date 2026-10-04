@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function access() { return firestore.get(/databases/(default)/documents/allowanceAccess/$(request.auth.uid)).data; }
+    // Storage permits at most two Firestore document reads per evaluation.
+    function active() { return request.auth != null && access().active == true; }
+    function reviewer() { return active() && access().actions.hasAny(['allowances:manage', 'allowances:review', 'allowances:approve', 'allowances:release', 'allowances:reports', 'allowances:reverse']); }
+    match /allowances/{ownerUid}/{liquidationId}/{revision}/{fileId} {
+      function file() { return firestore.get(/databases/(default)/documents/allowanceAttachments/$(fileId)).data; }
+      allow read: if active() && (request.auth.uid == ownerUid || reviewer());
+      allow create: if active() && request.auth.uid == ownerUid && access().actions.hasAny(['allowances:liquidate'])
+        && file().ownerUid == ownerUid && file().liquidationId == liquidationId && file().finalized == false
+        && file().uploadAllowed == true
+        && file().get('deleting', false) == false
+        && file().objectPath == 'allowances/' + ownerUid + '/' + liquidationId + '/' + revision + '/' + fileId
+        && request.resource.size == file().size && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == file().contentType
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+      allow update, delete: if false;
+    }
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

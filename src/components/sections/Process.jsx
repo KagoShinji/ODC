@@ -15,7 +15,7 @@ const steps = [
     {
         title: 'Delivery',
         description: 'We ship in focused iterations with transparent updates, QA checkpoints, and post-launch support for your team.',
-        image: '/grit.jpg',
+        image: '/images/process-delivery.jpg',
     },
 ];
 

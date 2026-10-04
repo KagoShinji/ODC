@@ -23,7 +23,11 @@ service cloud.firestore {
     }
 
     match /expenses/{docId} {
-      allow read, create, update, delete: if request.auth != null;
+      function linked(data) { return data.get('source', '') == 'allowance_liquidation' || data.keys().hasAny(['liquidationId', 'allowanceAccountId']); }
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && !linked(request.resource.data) && !docId.matches('allowance_liquidation_.*');
+      allow update: if request.auth != null && !linked(resource.data) && !linked(request.resource.data) && !docId.matches('allowance_liquidation_.*');
+      allow delete: if request.auth != null && !linked(resource.data) && !docId.matches('allowance_liquidation_.*');
     }
 
     match /moas/{docId} {
@@ -94,6 +98,33 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
+    function allowanceActive() {
+      return request.auth != null && exists(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid))
+        && get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.active == true
+        && (get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.get('staffId', '') == ''
+          || get(/databases/$(database)/documents/staff/$(get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.staffId)).data.status == 'active');
+    }
+    function allowanceReviewer() {
+      return allowanceActive() && get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.actions.hasAny([
+        'allowances:manage', 'allowances:review', 'allowances:approve', 'allowances:release', 'allowances:reports', 'allowances:reverse'
+      ]);
+    }
+    function allowanceRead() { return allowanceActive() && (resource.data.ownerUid == request.auth.uid || allowanceReviewer()); }
+    match /allowanceAccess/{uid} {
+      allow get: if request.auth != null && (request.auth.uid == uid || allowanceReviewer());
+      allow list: if allowanceReviewer();
+      allow write: if false;
+    }
+    match /allowanceSettings/{id} { allow read: if allowanceActive(); allow write: if false; }
+    match /allowancePolicies/{id} { allow read: if allowanceActive(); allow write: if false; }
+    match /{collection}/{id} {
+      allow read: if collection in ['allowanceAccounts', 'allowanceMeetings', 'allowanceLiquidations', 'allowanceRequisitions', 'allowanceLedger', 'allowanceAuditEvents', 'allowanceDailyFuel', 'allowanceAttachments', 'allowanceReleases'] && allowanceRead();
+      allow write: if false;
+    }
+    match /allowanceLiquidations/{id}/revisions/{revision} {
+      allow read: if allowanceActive() && (resource.data.ownerUid == request.auth.uid || allowanceReviewer());
+      allow write: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }

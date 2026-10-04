@@ -15,6 +15,20 @@ import {
 
 export const ALL_ADMIN_NAVIGATIONS = [
   {
+    id: 'allowances', label: 'Allowances & Requisitions', desc: 'Meeting expenses, liquidation & replenishment', icon: Wallet, color: '#d9a66a',
+    actions: [
+      { id: 'allowances:manage', label: 'Manage Allowances', desc: 'Configure policy, staff grants and accounts' },
+      { id: 'allowances:meeting', label: 'Record Meetings', desc: 'Record your demos and client meetings' },
+      { id: 'allowances:liquidate', label: 'Submit Liquidation', desc: 'Submit your receipts and vouchers' },
+      { id: 'allowances:review', label: 'Review Liquidations', desc: 'Check receipts for other staff' },
+      { id: 'allowances:request', label: 'Request Replenishment', desc: 'Submit your replenishment requisitions' },
+      { id: 'allowances:approve', label: 'Approve Requisitions', desc: 'Approve requests from other staff' },
+      { id: 'allowances:release', label: 'Record Releases', desc: 'Record actual funding and cash returns' },
+      { id: 'allowances:reports', label: 'Allowance Reports', desc: 'View staff ledgers and export history' },
+      { id: 'allowances:reverse', label: 'Correct Expenses', desc: 'Record audited reductions and recovered cash' },
+    ],
+  },
+  {
     id: 'contacts',
     label: 'Contacts',
     desc: 'Form leads & submissions',

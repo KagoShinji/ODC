@@ -59,7 +59,7 @@ const projects = [
         id: 7,
         title: 'GRIT',
         category: 'Systems',
-        image: '/grit.jpg',
+        image: '/images/project-preview.svg',
         description: 'Comprehensive gym management system for operations, member workflows, and admin oversight.',
         impact: 'Gym management system'
     },
