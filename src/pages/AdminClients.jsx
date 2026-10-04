@@ -7,7 +7,7 @@ import {
   Plus, X, Trash2, RefreshCw, Users, Mail, Building2, 
   CreditCard, Edit2, Calendar, Check, Minus, Search, 
   FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, Settings,
-  MessageSquare, Star, Copy, Link
+  MessageSquare, Star, Copy, Link, LayoutList, DollarSign, Target, Layers, Tag, ChevronDown, Rocket, Banknote
 } from 'lucide-react';
 
 const CO = {
@@ -111,6 +111,15 @@ const DEFAULT_PLANS = [
   { name: 'Premium Continuous Improvement', price: '₱7,500' }
 ];
 
+const MAST_STATUS_COLORS = {
+  ongoing: { color: '#34d399', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.2)', label: 'Ongoing' },
+  completed: { color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.2)', label: 'Completed' },
+  pending_launch: { color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.2)', label: 'Pending Launch' },
+  pending_contract: { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.2)', label: 'Pending Contract' },
+  on_hold: { color: '#fb923c', bg: 'rgba(251,146,60,0.1)', border: 'rgba(251,146,60,0.2)', label: 'On Hold' },
+  cancelled: { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
+};
+
 export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   const canCreateClient = can ? can('clients:create') : isSuperAdmin !== false;
   const canBillingClient = can ? can('clients:billing') : isSuperAdmin !== false;
@@ -124,7 +133,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   const [maintenancePlans, setMaintenancePlans] = useState([]);
   
   // Sub-tabs navigation
-  const [activeSubTab, setActiveSubTab] = useState('directory'); // 'directory' | 'billing' | 'feedback'
+  const [activeSubTab, setActiveSubTab] = useState('masterlist'); // 'masterlist' | 'directory' | 'billing' | 'feedback'
   const [feedbacks, setFeedbacks] = useState([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkModalClientId, setLinkModalClientId] = useState('');
@@ -189,6 +198,37 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   const [billingSearch, setBillingSearch] = useState('');
   const [billingTypeFilter, setBillingTypeFilter] = useState('all'); // 'all' | 'flat_rate' | 'per_booking'
   const [billingStatusFilter, setBillingStatusFilter] = useState('all'); // 'all' | 'overdue' | 'due_soon' | 'billed' | 'not_configured'
+
+  // Masterlist states
+  const [mastSearch, setMastSearch] = useState('');
+  const [mastStatusFilter, setMastStatusFilter] = useState('all');
+  const [mastPayFilter, setMastPayFilter] = useState('all');
+  const [mastSort, setMastSort] = useState('newest');
+  
+  const [showMastDetail, setShowMastDetail] = useState(false);
+  const [detailClient, setDetailClient] = useState(null);
+  
+  const [showMastEdit, setShowMastEdit] = useState(false);
+  const [mastEditForm, setMastEditForm] = useState({
+    projectStatus: 'ongoing',
+    projectType: '',
+    projectTags: '', // comma separated string for ease of editing
+    projectStartDate: '',
+    projectEndDate: '',
+    launchDate: '',
+    projectNotes: '',
+    contractTotal: '',
+    paymentScheme: 'full', // 'full' | 'installment' | 'downpayment_balance'
+    downpaymentAmount: '',
+    downpaymentDate: '',
+    downpaymentPaid: false,
+    installments: []
+  });
+  const [savingMast, setSavingMast] = useState(false);
+  const [mastView, setMastView] = useState('grid'); // 'grid' | 'table'
+  const [mastPage, setMastPage] = useState(1);
+  const mastPageSize = 12;
+  const [mastQuickStatusId, setMastQuickStatusId] = useState(null); // client id for inline status dropdown
 
   const load = useCallback(async (spin = true) => {
     if (spin) setRefreshing(true);
@@ -381,6 +421,91 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
     }
   };
 
+  // MASTERLIST FUNCTIONS
+  const openMastEdit = (client) => {
+    setDetailClient(client);
+    setMastEditForm({
+      projectStatus: client.projectStatus || 'ongoing',
+      projectType: client.projectType || '',
+      projectTags: (client.projectTags || []).join(', '),
+      projectStartDate: client.projectStartDate || '',
+      projectEndDate: client.projectEndDate || '',
+      launchDate: client.launchDate || '',
+      projectNotes: client.projectNotes || '',
+      contractTotal: client.contractTotal !== undefined ? client.contractTotal : '',
+      paymentScheme: client.paymentScheme || 'full',
+      downpaymentAmount: client.downpaymentAmount !== undefined ? client.downpaymentAmount : '',
+      downpaymentDate: client.downpaymentDate || '',
+      downpaymentPaid: client.downpaymentPaid || false,
+      installments: client.installments || []
+    });
+    setShowMastEdit(true);
+  };
+
+  const handleSaveMastEdit = async (e) => {
+    e.preventDefault();
+    setSavingMast(true);
+    
+    const payload = {
+      projectStatus: mastEditForm.projectStatus,
+      projectType: mastEditForm.projectType,
+      projectTags: mastEditForm.projectTags.split(',').map(t => t.trim()).filter(Boolean),
+      projectStartDate: mastEditForm.projectStartDate,
+      projectEndDate: mastEditForm.projectEndDate,
+      launchDate: mastEditForm.launchDate,
+      projectNotes: mastEditForm.projectNotes,
+      contractTotal: Number(mastEditForm.contractTotal || 0),
+      paymentScheme: mastEditForm.paymentScheme,
+      downpaymentAmount: Number(mastEditForm.downpaymentAmount || 0),
+      downpaymentDate: mastEditForm.downpaymentDate,
+      downpaymentPaid: mastEditForm.downpaymentPaid,
+      installments: mastEditForm.installments
+    };
+
+    try {
+      await updateDoc(doc(db, 'clients', detailClient.id), payload);
+      setShowMastEdit(false);
+      
+      // Update local state for immediate feedback
+      setClients(prev => prev.map(c => c.id === detailClient.id ? { ...c, ...payload } : c));
+      setDetailClient(prev => ({ ...prev, ...payload }));
+      
+    } catch (err) {
+      console.error(err);
+      alert('Error saving masterlist info: ' + err.message);
+    }
+    setSavingMast(false);
+  };
+
+  const quickMarkDownpayment = async (client, paidStatus) => {
+    try {
+      await updateDoc(doc(db, 'clients', client.id), { downpaymentPaid: paidStatus });
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, downpaymentPaid: paidStatus } : c));
+      if (detailClient?.id === client.id) setDetailClient(prev => ({ ...prev, downpaymentPaid: paidStatus }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const quickMarkInstallment = async (client, installmentId, status) => {
+    const updatedInst = (client.installments || []).map(i => {
+      if (i.id === installmentId) {
+        return { ...i, status, paidDate: status === 'paid' ? today() : null };
+      }
+      return i;
+    });
+    
+    try {
+      await updateDoc(doc(db, 'clients', client.id), { installments: updatedInst });
+      setClients(prev => prev.map(c => c.id === client.id ? { ...c, installments: updatedInst } : c));
+      if (detailClient?.id === client.id) setDetailClient(prev => ({ ...prev, installments: updatedInst }));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  
+  const today = () => new Date().toISOString().split('T')[0];
+
   // Triggers the invoice creation modal pre-populated with default client billing data
   const handleOpenGenerateInvoice = (client) => {
     if (!client.billingType || !client.billingRate) {
@@ -569,6 +694,85 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
     return acc + clientTotal;
   }, 0);
 
+  // Masterlist calculations
+  const getClientCollected = (c) => {
+    let sum = 0;
+    if (c.paymentScheme !== 'full' && c.downpaymentPaid) {
+      sum += Number(c.downpaymentAmount || 0);
+    }
+    (c.installments || []).forEach(inst => {
+      if (inst.status === 'paid') sum += Number(inst.amount || 0);
+    });
+    return sum;
+  };
+
+  const mastStats = clients.reduce((acc, c) => {
+    const status = c.projectStatus || 'ongoing';
+    if (status === 'ongoing') acc.ongoing++;
+    if (status === 'completed') acc.completed++;
+    if (status === 'pending_launch') acc.pendingLaunch++;
+    
+    const contract = Number(c.contractTotal || 0);
+    const collected = getClientCollected(c);
+    acc.totalContract += contract;
+    acc.totalCollected += collected;
+
+    // Billing tracker data
+    if (c.billingType) {
+      acc.billingActive++;
+      const isUSD = c.billingCurrency === 'USD';
+      const rate = Number(c.billingRate || 0);
+      const exRate = Number(c.exchangeRate || 58.0);
+      const rateInPHP = isUSD ? rate * exRate : rate;
+      let clientBillTotal = c.billingType === 'flat_rate' ? rateInPHP : rateInPHP * Number(c.currentBookingsCount || 0);
+      if (c.maintenancePlan && c.maintenancePlan !== 'none') clientBillTotal += Number(c.maintenanceRate || 0);
+      acc.projectedRevenue += clientBillTotal;
+    }
+    
+    if (c.billingType && c.nextDueDate) {
+      const billStatus = getDueDateStatus(c.nextDueDate);
+      if (billStatus === 'overdue') acc.billingOverdue++;
+      if (billStatus === 'due_today' || billStatus === 'due_soon') acc.billingSoon++;
+    }
+
+    return acc;
+  }, { ongoing: 0, completed: 0, pendingLaunch: 0, totalContract: 0, totalCollected: 0, billingActive: 0, projectedRevenue: 0, billingOverdue: 0, billingSoon: 0 });
+  mastStats.outstanding = mastStats.totalContract - mastStats.totalCollected;
+
+  const filteredMasterlist = clients.filter(c => {
+    const s = (c.projectStatus || 'ongoing');
+    const p = (c.paymentScheme || 'full');
+    
+    const matchSearch = 
+      c.name?.toLowerCase().includes(mastSearch.toLowerCase()) ||
+      c.business?.toLowerCase().includes(mastSearch.toLowerCase()) ||
+      c.projectType?.toLowerCase().includes(mastSearch.toLowerCase()) ||
+      (c.projectTags || []).some(t => t.toLowerCase().includes(mastSearch.toLowerCase()));
+      
+    const matchStatus = mastStatusFilter === 'all' || s === mastStatusFilter;
+    
+    let matchPay = true;
+    if (mastPayFilter === 'fully_paid') {
+      matchPay = getClientCollected(c) >= Number(c.contractTotal || 0);
+    } else if (mastPayFilter === 'outstanding') {
+      matchPay = getClientCollected(c) < Number(c.contractTotal || 0);
+    } else if (mastPayFilter === 'overdue_installment') {
+      matchPay = (c.installments || []).some(i => i.status === 'overdue');
+    }
+
+    return matchSearch && matchStatus && matchPay;
+  }).sort((a, b) => {
+    if (mastSort === 'newest') return (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0);
+    if (mastSort === 'oldest') return (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0);
+    if (mastSort === 'highest_contract') return Number(b.contractTotal || 0) - Number(a.contractTotal || 0);
+    if (mastSort === 'completion') {
+      const pA = Number(a.contractTotal || 0) ? getClientCollected(a) / Number(a.contractTotal) : 0;
+      const pB = Number(b.contractTotal || 0) ? getClientCollected(b) / Number(b.contractTotal) : 0;
+      return pB - pA;
+    }
+    return 0;
+  });
+
   // Filter client directory list
   const filteredDirectory = clients; 
 
@@ -694,6 +898,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
       {/* Sub-navigation Subtabs */}
       <div className="admin-tabs-wrapper" style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
         {[
+          { id: 'masterlist', label: 'Masterlist', count: clients.length, Icon: LayoutList },
           { id: 'directory', label: 'Client Directory', count: clients.length, Icon: Users },
           { id: 'billing', label: 'Billing Tracker', count: activeBillingClients.length, Icon: CreditCard },
           { id: 'feedback', label: 'Client Feedback', count: feedbacks.length, Icon: MessageSquare }
@@ -737,6 +942,408 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
       </div>
 
       {/* ACTIVE TAB RENDER */}
+
+      {/* TAB 0: MASTERLIST */}
+      {activeSubTab === 'masterlist' && (
+        <>
+          {/* === SECTION 1: Project Status KPIs === */}
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>📁 Project Status</div>
+          <div className="admin-metrics-grid mast-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+            {[
+              { l: 'Total Clients', v: clients.length, c: '#fff', icon: '👥' },
+              { l: 'Ongoing', v: mastStats.ongoing, c: '#34d399', icon: '🟢' },
+              { l: 'Completed', v: mastStats.completed, c: '#60a5fa', icon: '🔵' },
+              { l: 'Pending Launch', v: mastStats.pendingLaunch, c: '#a78bfa', icon: '🚀' },
+            ].map(({ l, v, c, icon }) => (
+              <div key={l} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
+                  <div style={{ color: c, fontSize: 22, fontWeight: 700 }}>{v}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* === SECTION 2: Contract & Payments === */}
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>💰 Contract & Payments</div>
+          <div className="admin-metrics-grid mast-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+            {[
+              { l: 'Total Contract Value', v: `₱${mastStats.totalContract.toLocaleString('en-PH')}`, c: '#fff', icon: '📄' },
+              { l: 'Total Collected', v: `₱${mastStats.totalCollected.toLocaleString('en-PH')}`, c: '#34d399', icon: '💰' },
+              { l: 'Outstanding Balance', v: `₱${mastStats.outstanding.toLocaleString('en-PH')}`, c: mastStats.outstanding > 0 ? '#f87171' : '#34d399', icon: '⏳' },
+            ].map(({ l, v, c, icon }) => (
+              <div key={l} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
+                  <div style={{ color: c, fontSize: 18, fontWeight: 700 }}>{v}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* === SECTION 3: Billing Tracker Summary === */}
+          <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>📋 Billing Tracker</div>
+          <div className="admin-metrics-grid mast-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+            {[
+              { l: 'Billing Configured', v: mastStats.billingActive, c: '#fff', icon: '⚙️', sub: `of ${clients.length} clients` },
+              { l: 'Projected Monthly', v: `₱${mastStats.projectedRevenue.toLocaleString('en-PH')}`, c: '#ff9a4a', icon: '📈', sub: 'recurring revenue' },
+              { l: 'Overdue Billing', v: mastStats.billingOverdue, c: mastStats.billingOverdue > 0 ? '#f87171' : '#34d399', icon: '🔴', sub: 'need collection' },
+              { l: 'Due Soon', v: mastStats.billingSoon, c: mastStats.billingSoon > 0 ? '#fbbf24' : '#34d399', icon: '⏰', sub: 'within 7 days' },
+            ].map(({ l, v, c, icon, sub }) => (
+              <div key={l} style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${l === 'Overdue Billing' && mastStats.billingOverdue > 0 ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ fontSize: 20 }}>{icon}</span>
+                <div>
+                  <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{l}</div>
+                  <div style={{ color: c, fontSize: 18, fontWeight: 700 }}>{v}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.25)', fontSize: 10, marginTop: 2 }}>{sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Toolbar: Search + Filters + View Toggle */}
+          <div className="admin-toolbar" style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: 220 }}>
+              <Search size={14} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                placeholder="Search clients, business, project type, tags..."
+                value={mastSearch}
+                onChange={e => { setMastSearch(e.target.value); setMastPage(1); }}
+                style={{ ...S.inp, paddingLeft: 36, fontSize: 13 }}
+              />
+            </div>
+            {/* Status filter with live counts */}
+            <select style={{ ...S.inp, width: 'auto', minWidth: 160, cursor: 'pointer', fontSize: 13 }} value={mastStatusFilter} onChange={e => { setMastStatusFilter(e.target.value); setMastPage(1); }}>
+              <option value="all" style={{ background: '#0f1218' }}>All Status ({clients.length})</option>
+              <option value="ongoing" style={{ background: '#0f1218' }}>🟢 Ongoing ({mastStats.ongoing})</option>
+              <option value="completed" style={{ background: '#0f1218' }}>🔵 Completed ({mastStats.completed})</option>
+              <option value="pending_launch" style={{ background: '#0f1218' }}>🟣 Pending Launch ({mastStats.pendingLaunch})</option>
+              <option value="pending_contract" style={{ background: '#0f1218' }}>🟡 Pending Contract ({clients.filter(c => (c.projectStatus||'ongoing') === 'pending_contract').length})</option>
+              <option value="on_hold" style={{ background: '#0f1218' }}>🟠 On Hold ({clients.filter(c => (c.projectStatus||'ongoing') === 'on_hold').length})</option>
+              <option value="cancelled" style={{ background: '#0f1218' }}>🔴 Cancelled ({clients.filter(c => (c.projectStatus||'ongoing') === 'cancelled').length})</option>
+            </select>
+            <select style={{ ...S.inp, width: 'auto', minWidth: 150, cursor: 'pointer', fontSize: 13 }} value={mastPayFilter} onChange={e => { setMastPayFilter(e.target.value); setMastPage(1); }}>
+              <option value="all" style={{ background: '#0f1218' }}>All Payments</option>
+              <option value="fully_paid" style={{ background: '#0f1218' }}>✅ Fully Paid</option>
+              <option value="outstanding" style={{ background: '#0f1218' }}>⏳ Has Balance</option>
+              <option value="overdue_installment" style={{ background: '#0f1218' }}>🔴 Overdue</option>
+            </select>
+            <select style={{ ...S.inp, width: 'auto', minWidth: 140, cursor: 'pointer', fontSize: 13 }} value={mastSort} onChange={e => setMastSort(e.target.value)}>
+              <option value="newest" style={{ background: '#0f1218' }}>Newest First</option>
+              <option value="oldest" style={{ background: '#0f1218' }}>Oldest First</option>
+              <option value="highest_contract" style={{ background: '#0f1218' }}>Highest Contract</option>
+              <option value="completion" style={{ background: '#0f1218' }}>% Paid (High→Low)</option>
+            </select>
+            {/* View Toggle */}
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}>
+              <button onClick={() => setMastView('grid')} title="Card View" style={{ ...S.btn, borderRadius: 0, padding: '8px 14px', background: mastView === 'grid' ? 'rgba(255,106,26,0.2)' : 'transparent', color: mastView === 'grid' ? '#ff9a4a' : 'rgba(255,255,255,0.4)', gap: 4 }}>
+                <LayoutList size={15} />
+              </button>
+              <button onClick={() => setMastView('table')} title="Table View" style={{ ...S.btn, borderRadius: 0, padding: '8px 14px', background: mastView === 'table' ? 'rgba(255,106,26,0.2)' : 'transparent', color: mastView === 'table' ? '#ff9a4a' : 'rgba(255,255,255,0.4)', gap: 4 }}>
+                <Layers size={15} />
+              </button>
+            </div>
+          </div>
+
+          {/* Results count */}
+          <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>
+            Showing <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{Math.min(mastPageSize, filteredMasterlist.length - (mastPage - 1) * mastPageSize)}</strong> of <strong style={{ color: 'rgba(255,255,255,0.7)' }}>{filteredMasterlist.length}</strong> clients
+            {filteredMasterlist.length !== clients.length && ` (filtered from ${clients.length})`}
+          </div>
+
+          {/* ── GRID VIEW ── */}
+          {mastView === 'grid' && (
+            <div className="mast-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+              {filteredMasterlist.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', gridColumn: '1 / -1' }}>No masterlist records found.</div>
+              ) : (
+                filteredMasterlist.slice((mastPage - 1) * mastPageSize, mastPage * mastPageSize).map(c => {
+                  const s = MAST_STATUS_COLORS[c.projectStatus || 'ongoing'];
+                  const contract = Number(c.contractTotal || 0);
+                  const collected = getClientCollected(c);
+                  const pct = contract > 0 ? Math.min(100, Math.round((collected / contract) * 100)) : 0;
+                  const hasFinancials = contract > 0;
+                  const overdueCount = (c.installments || []).filter(i => i.status === 'overdue').length;
+                  const billStatus = c.billingType && c.nextDueDate ? getDueDateStatus(c.nextDueDate) : null;
+                  
+                  let cardBorder = 'rgba(255,255,255,0.08)';
+                  let cardBg = 'rgba(255,255,255,0.04)';
+                  if (overdueCount > 0 || billStatus === 'overdue') {
+                    cardBorder = 'rgba(248,113,113,0.4)';
+                    cardBg = 'rgba(248,113,113,0.08)';
+                  } else if (billStatus === 'due_today' || billStatus === 'due_soon') {
+                    cardBorder = 'rgba(251,191,36,0.4)';
+                    cardBg = 'rgba(251,191,36,0.08)';
+                  }
+                  
+                  return (
+                    <div key={c.id} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 14, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s, background-color 0.2s' }}>
+                      {/* Card Header */}
+                      <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff9a4a', fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                            {c.name[0]?.toUpperCase()}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ color: '#fff', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.name}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <Building2 size={10} /> {c.business || '—'}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Inline Quick Status Badge */}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <button onClick={() => setMastQuickStatusId(mastQuickStatusId === c.id ? null : c.id)} style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '3px 8px', borderRadius: 7, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, letterSpacing: '0.04em' }} title="Click to change status">
+                            {s.label} <ChevronDown size={10} />
+                          </button>
+                          {mastQuickStatusId === c.id && (
+                            <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, zIndex: 50, minWidth: 170, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                              {Object.entries(MAST_STATUS_COLORS).map(([key, col]) => (
+                                <button key={key} onClick={async () => {
+                                  await updateDoc(doc(db, 'clients', c.id), { projectStatus: key });
+                                  setClients(prev => prev.map(x => x.id === c.id ? { ...x, projectStatus: key } : x));
+                                  setMastQuickStatusId(null);
+                                }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', background: c.projectStatus === key ? 'rgba(255,255,255,0.06)' : 'none', border: 'none', cursor: 'pointer', color: col.color, fontSize: 12, fontWeight: c.projectStatus === key ? 700 : 400, textAlign: 'left', fontFamily: 'inherit' }}>
+                                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, flexShrink: 0 }} />
+                                  {col.label}
+                                  {c.projectStatus === key && <Check size={11} style={{ marginLeft: 'auto' }} />}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      <div style={{ padding: '12px 16px', flex: 1 }}>
+                        {/* Tags row */}
+                        {(c.projectType || (c.projectTags || []).length > 0) && (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+                            {c.projectType && <span style={{ background: 'rgba(255,255,255,0.07)', padding: '2px 7px', borderRadius: 5, fontSize: 10, color: 'rgba(255,255,255,0.7)' }}>{c.projectType}</span>}
+                            {(c.projectTags || []).slice(0, 3).map(tag => (
+                              <span key={tag} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 7px', borderRadius: 5, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Financials row */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                          <div>
+                            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Contract</div>
+                            <div style={{ color: hasFinancials ? '#fff' : 'rgba(255,255,255,0.25)', fontSize: 13, fontWeight: hasFinancials ? 600 : 400, fontStyle: hasFinancials ? 'normal' : 'italic' }}>
+                              {hasFinancials ? `₱${contract.toLocaleString('en-PH')}` : 'Not set'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Collected</div>
+                            <div style={{ color: hasFinancials ? '#34d399' : 'rgba(255,255,255,0.25)', fontSize: 13, fontWeight: 600, fontStyle: hasFinancials ? 'normal' : 'italic' }}>
+                              {hasFinancials ? `₱${collected.toLocaleString('en-PH')}` : '—'}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>Balance</div>
+                            <div style={{ color: (contract - collected) > 0 ? '#f87171' : '#34d399', fontSize: 13, fontWeight: 600 }}>
+                              {hasFinancials ? `₱${(contract - collected).toLocaleString('en-PH')}` : '—'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        {hasFinancials && (
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment Progress</span>
+                              <span style={{ fontSize: 10, color: pct === 100 ? '#34d399' : '#fff', fontWeight: 700 }}>{pct}%</span>
+                            </div>
+                            <div style={{ width: '100%', height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+                              <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#34d399' : 'linear-gradient(90deg, #ff6a1a, #ff9a4a)', borderRadius: 3, transition: 'width 0.4s ease' }} />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Billing Tracker Quick Info */}
+                        {c.billingType && (
+                          <div style={{ marginTop: 12, padding: '8px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>🔄 Billing ({c.billingCycle})</span>
+                              {c.nextDueDate ? (() => {
+                                const st = getDueDateStatus(c.nextDueDate);
+                                if (st === 'overdue') return <span style={{ color: '#f87171', fontSize: 10, fontWeight: 600 }}>Overdue</span>;
+                                if (st === 'due_today') return <span style={{ color: '#fbbf24', fontSize: 10, fontWeight: 600 }}>Due Today</span>;
+                                if (st === 'due_soon') return <span style={{ color: '#fbbf24', fontSize: 10, fontWeight: 600 }}>Due Soon</span>;
+                                return <span style={{ color: '#34d399', fontSize: 10, fontWeight: 600 }}>On Track</span>;
+                              })() : <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>Not Scheduled</span>}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, alignItems: 'flex-end' }}>
+                              <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>
+                                {(() => {
+                                  const isUSD = c.billingCurrency === 'USD';
+                                  const rate = Number(c.billingRate || 0);
+                                  const exRate = Number(c.exchangeRate || 58.0);
+                                  
+                                  const rateInPHP = isUSD ? rate * exRate : rate;
+                                  let clientBillTotal = c.billingType === 'flat_rate' ? rateInPHP : rateInPHP * Number(c.currentBookingsCount || 0);
+                                  if (c.maintenancePlan && c.maintenancePlan !== 'none') clientBillTotal += Number(c.maintenanceRate || 0);
+                                  
+                                  const phpDisplay = `₱${clientBillTotal.toLocaleString('en-PH')}`;
+                                  
+                                  if (isUSD) {
+                                    let usdTotal = c.billingType === 'flat_rate' ? rate : rate * Number(c.currentBookingsCount || 0);
+                                    // Note: Maintenance rate is always assumed to be in PHP, so we don't add it to the base USD display.
+                                    return <>{phpDisplay} <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 400 }}>(${usdTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})</span></>;
+                                  }
+                                  
+                                  return phpDisplay;
+                                })()}
+                              </div>
+                              {c.nextDueDate && (
+                                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>Due: {fmtDateStr(c.nextDueDate)}</div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Overdue alert */}
+                        {overdueCount > 0 && (
+                          <div style={{ marginTop: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', borderRadius: 6, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <AlertCircle size={12} color="#f87171" />
+                            <span style={{ color: '#f87171', fontSize: 11, fontWeight: 600 }}>{overdueCount} overdue installment{overdueCount > 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card Footer */}
+                      <div style={{ padding: '10px 16px', background: 'rgba(0,0,0,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', borderBottomLeftRadius: 14, borderBottomRightRadius: 14 }}>
+                        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>
+                          {c.projectStartDate ? <>📅 {fmtDateStr(c.projectStartDate)}</> : <span style={{ fontStyle: 'italic' }}>No start date</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => { setDetailClient(c); setShowMastDetail(true); }} style={{ ...S.btn, padding: '5px 10px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+                            <Layers size={12} /> Details
+                          </button>
+                          <button onClick={() => openMastEdit(c)} style={{ ...S.btn, padding: '5px 10px', background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 12 }}>
+                            <Edit2 size={12} /> Edit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* ── TABLE VIEW ── */}
+          {mastView === 'table' && (
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+              {filteredMasterlist.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No records found.</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(0,0,0,0.25)' }}>
+                      {['Client / Business', 'Status', 'Project Type', 'Contract', 'Collected', 'Balance', 'Progress', 'Actions'].map(h => (
+                        <th key={h} style={{ padding: '12px 16px', textAlign: 'left', color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.06)', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMasterlist.slice((mastPage - 1) * mastPageSize, mastPage * mastPageSize).map(c => {
+                      const s = MAST_STATUS_COLORS[c.projectStatus || 'ongoing'];
+                      const contract = Number(c.contractTotal || 0);
+                      const collected = getClientCollected(c);
+                      const pct = contract > 0 ? Math.min(100, Math.round((collected / contract) * 100)) : 0;
+                      const overdueCount = (c.installments || []).filter(i => i.status === 'overdue').length;
+                      const billStatus = c.billingType && c.nextDueDate ? getDueDateStatus(c.nextDueDate) : null;
+                      
+                      let rowBg = 'transparent';
+                      if (overdueCount > 0 || billStatus === 'overdue') {
+                        rowBg = 'rgba(248,113,113,0.08)';
+                      } else if (billStatus === 'due_today' || billStatus === 'due_soon') {
+                        rowBg = 'rgba(251,191,36,0.08)';
+                      }
+
+                      return (
+                        <tr key={c.id} className="client-row" style={{ background: rowBg, borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background-color 0.2s' }}>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                              <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff9a4a', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>{c.name[0]?.toUpperCase()}</div>
+                              <div>
+                                <div style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>{c.name}</div>
+                                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>{c.business || '—'}</div>
+                              </div>
+                            </div>
+                            {overdueCount > 0 && <div style={{ marginTop: 4, color: '#f87171', fontSize: 10, fontWeight: 600 }}>⚠ {overdueCount} overdue</div>}
+                          </td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ position: 'relative' }}>
+                              <button onClick={() => setMastQuickStatusId(mastQuickStatusId === c.id ? null : c.id)} style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                {s.label} <ChevronDown size={9} />
+                              </button>
+                              {mastQuickStatusId === c.id && (
+                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: 4, background: '#1a1f2e', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 10, zIndex: 50, minWidth: 170, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}>
+                                  {Object.entries(MAST_STATUS_COLORS).map(([key, col]) => (
+                                    <button key={key} onClick={async () => {
+                                      await updateDoc(doc(db, 'clients', c.id), { projectStatus: key });
+                                      setClients(prev => prev.map(x => x.id === c.id ? { ...x, projectStatus: key } : x));
+                                      setMastQuickStatusId(null);
+                                    }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', background: c.projectStatus === key ? 'rgba(255,255,255,0.06)' : 'none', border: 'none', cursor: 'pointer', color: col.color, fontSize: 12, fontWeight: c.projectStatus === key ? 700 : 400, textAlign: 'left', fontFamily: 'inherit' }}>
+                                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: col.color }} />{col.label}
+                                      {c.projectStatus === key && <Check size={10} style={{ marginLeft: 'auto' }} />}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>{c.projectType || '—'}</td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#fff', fontSize: 13, fontWeight: 600 }}>{contract > 0 ? `₱${contract.toLocaleString('en-PH')}` : <span style={{ color: 'rgba(255,255,255,0.2)', fontStyle: 'italic', fontWeight: 400 }}>Not set</span>}</td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: '#34d399', fontSize: 13, fontWeight: 600 }}>{contract > 0 ? `₱${collected.toLocaleString('en-PH')}` : '—'}</td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', color: (contract - collected) > 0 ? '#f87171' : '#34d399', fontSize: 13, fontWeight: 600 }}>{contract > 0 ? `₱${(contract - collected).toLocaleString('en-PH')}` : '—'}</td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle', minWidth: 100 }}>
+                            {contract > 0 ? (
+                              <div>
+                                <div style={{ height: 5, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 3 }}>
+                                  <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#34d399' : 'linear-gradient(90deg,#ff6a1a,#ff9a4a)', borderRadius: 3 }} />
+                                </div>
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>{pct}%</span>
+                              </div>
+                            ) : <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 11 }}>—</span>}
+                          </td>
+                          <td style={{ padding: '12px 16px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button onClick={() => { setDetailClient(c); setShowMastDetail(true); }} style={{ ...S.btn, padding: '5px 8px', background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)', fontSize: 11 }}><Layers size={12} /></button>
+                              <button onClick={() => openMastEdit(c)} style={{ ...S.btn, padding: '5px 8px', background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 11 }}><Edit2 size={12} /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredMasterlist.length > mastPageSize && (() => {
+            const totalPages = Math.ceil(filteredMasterlist.length / mastPageSize);
+            return (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap' }}>
+                <button onClick={() => setMastPage(p => Math.max(1, p - 1))} disabled={mastPage === 1} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: mastPage === 1 ? 'rgba(255,255,255,0.2)' : '#fff', padding: '7px 14px', fontSize: 13 }}>← Prev</button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                  <button key={p} onClick={() => setMastPage(p)} style={{ ...S.btn, padding: '7px 12px', minWidth: 36, justifyContent: 'center', background: mastPage === p ? 'rgba(255,106,26,0.25)' : 'rgba(255,255,255,0.06)', color: mastPage === p ? '#ff9a4a' : 'rgba(255,255,255,0.6)', fontWeight: mastPage === p ? 700 : 400, fontSize: 13 }}>{p}</button>
+                ))}
+                <button onClick={() => setMastPage(p => Math.min(totalPages, p + 1))} disabled={mastPage === totalPages} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: mastPage === totalPages ? 'rgba(255,255,255,0.2)' : '#fff', padding: '7px 14px', fontSize: 13 }}>Next →</button>
+              </div>
+            );
+          })()}
+
+        </>
+      )}
 
       {/* TAB 1: CLIENT DIRECTORY */}
       {activeSubTab === 'directory' && (
@@ -1769,6 +2376,326 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
 
               <button type="submit" disabled={savingInvoice} style={{ ...S.btn, background: savingInvoice ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingInvoice ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
                 {savingInvoice ? 'Generating Invoice…' : 'Generate Invoice'}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
+
+      {/* MASTERLIST DETAIL DRAWER */}
+      {showMastDetail && detailClient && (
+        <>
+          <div onClick={() => setShowMastDetail(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
+          <div className="mast-drawer" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 450, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+              <div>
+                <h3 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>{detailClient.name}</h3>
+                <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <Building2 size={12} /> {detailClient.business || 'N/A'}
+                </div>
+              </div>
+              <button onClick={() => setShowMastDetail(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
+            </div>
+
+            {(() => {
+              const s = MAST_STATUS_COLORS[detailClient.projectStatus || 'ongoing'];
+              const contract = Number(detailClient.contractTotal || 0);
+              const collected = getClientCollected(detailClient);
+              const pct = contract > 0 ? Math.min(100, Math.round((collected / contract) * 100)) : 0;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {/* Status & Dates */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={S.lbl}>Project Status</div>
+                      <div style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.color, padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, textTransform: 'uppercase' }}>
+                        {s.label}
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                      <div>
+                        <div style={S.lbl}>Start Date</div>
+                        <div style={{ color: '#fff', fontSize: 14 }}>{fmtDateStr(detailClient.projectStartDate)}</div>
+                      </div>
+                      {detailClient.launchDate && (
+                        <div>
+                          <div style={S.lbl}>Launch Target</div>
+                          <div style={{ color: '#a78bfa', fontSize: 14 }}>{fmtDateStr(detailClient.launchDate)}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Financial Summary */}
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <div style={S.lbl}>Contract Value</div>
+                      <div style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>₱{contract.toLocaleString('en-PH')}</div>
+                    </div>
+                    
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Collected (₱{collected.toLocaleString('en-PH')})</span>
+                        <span style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>{pct}%</span>
+                      </div>
+                      <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: pct === 100 ? '#34d399' : 'linear-gradient(90deg, #ff6a1a, #ff9a4a)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                      <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)' }}>Remaining Balance</span>
+                      <span style={{ fontSize: 14, color: '#f87171', fontWeight: 700 }}>₱{(contract - collected).toLocaleString('en-PH')}</span>
+                    </div>
+                  </div>
+
+                  {/* Installment Timeline */}
+                  {detailClient.paymentScheme !== 'full' && (
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
+                      <div style={{ ...S.lbl, marginBottom: 16 }}>Payment Timeline</div>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        {/* Downpayment Row */}
+                        {detailClient.downpaymentAmount > 0 && (
+                          <div style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ marginTop: 2, color: detailClient.downpaymentPaid ? '#34d399' : '#fbbf24' }}>
+                              {detailClient.downpaymentPaid ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>Downpayment</span>
+                                <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>₱{Number(detailClient.downpaymentAmount).toLocaleString('en-PH')}</span>
+                              </div>
+                              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 }}>
+                                {detailClient.downpaymentPaid ? 'Paid' : `Due: ${fmtDateStr(detailClient.downpaymentDate)}`}
+                              </div>
+                              {!detailClient.downpaymentPaid && (
+                                <button onClick={() => quickMarkDownpayment(detailClient, true)} style={{ ...S.btn, marginTop: 8, background: 'rgba(52,211,153,0.15)', color: '#34d399', fontSize: 11, padding: '4px 10px' }}>Mark Paid</button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Installments Rows */}
+                        {(detailClient.installments || []).map((inst, idx) => (
+                          <div key={inst.id} style={{ display: 'flex', gap: 12 }}>
+                            <div style={{ marginTop: 2, color: inst.status === 'paid' ? '#34d399' : inst.status === 'overdue' ? '#f87171' : '#fbbf24' }}>
+                              {inst.status === 'paid' ? <CheckCircle2 size={16} /> : inst.status === 'overdue' ? <AlertCircle size={16} /> : <Clock size={16} />}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{inst.label || `Installment ${idx + 1}`}</span>
+                                <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>₱{Number(inst.amount).toLocaleString('en-PH')}</span>
+                              </div>
+                              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4, display: 'flex', gap: 8 }}>
+                                <span>{inst.status === 'paid' ? `Paid on ${fmtDateStr(inst.paidDate)}` : `Due: ${fmtDateStr(inst.dueDate)}`}</span>
+                                {inst.paymentMethod && <span>• {inst.paymentMethod}</span>}
+                              </div>
+                              {inst.status !== 'paid' && (
+                                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                  <button onClick={() => quickMarkInstallment(detailClient, inst.id, 'paid')} style={{ ...S.btn, background: 'rgba(52,211,153,0.15)', color: '#34d399', fontSize: 11, padding: '4px 10px' }}>Mark Paid</button>
+                                  {inst.status !== 'overdue' && (
+                                    <button onClick={() => quickMarkInstallment(detailClient, inst.id, 'overdue')} style={{ ...S.btn, background: 'rgba(248,113,113,0.15)', color: '#f87171', fontSize: 11, padding: '4px 10px' }}>Mark Overdue</button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {detailClient.projectNotes && (
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
+                      <div style={S.lbl}>Project Notes</div>
+                      <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
+                        {detailClient.projectNotes}
+                      </div>
+                    </div>
+                  )}
+
+                  <button onClick={() => { setShowMastDetail(false); openMastEdit(detailClient); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '12px 0', justifyContent: 'center', fontSize: 14, fontWeight: 600, boxShadow: '0 4px 16px rgba(255,106,26,0.3)' }}>
+                    Edit Masterlist Data
+                  </button>
+
+                </div>
+              );
+            })()}
+          </div>
+        </>
+      )}
+
+      {/* MASTERLIST EDIT SIDEBAR */}
+      {showMastEdit && detailClient && (
+        <>
+          <div onClick={() => setShowMastEdit(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 100 }} />
+          <div className="mast-drawer" style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 520, background: '#0f1218', borderLeft: '1px solid rgba(255,255,255,0.1)', zIndex: 101, overflowY: 'auto', padding: 32 }}>
+            <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <h3 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>Edit Masterlist Info</h3>
+              <button onClick={() => setShowMastEdit(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.6)', padding: '6px 10px' }}><X size={16} /></button>
+            </div>
+
+            <form onSubmit={handleSaveMastEdit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              
+              {/* Section 1: Project Info */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <h4 style={{ color: '#fff', fontSize: 15, margin: 0, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>1. Project Information</h4>
+                
+                <div>
+                  <label style={S.lbl}>Project Status</label>
+                  <select style={{ ...S.inp, cursor: 'pointer' }} value={mastEditForm.projectStatus} onChange={e => setMastEditForm(f => ({ ...f, projectStatus: e.target.value }))}>
+                    <option value="ongoing">🟢 Ongoing</option>
+                    <option value="completed">🔵 Completed</option>
+                    <option value="pending_launch">🟣 Pending Launch</option>
+                    <option value="pending_contract">🟡 Pending Contract</option>
+                    <option value="on_hold">🟠 On Hold</option>
+                    <option value="cancelled">🔴 Cancelled</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={S.lbl}>Project Type</label>
+                    <input style={S.inp} placeholder="e.g. Web App" value={mastEditForm.projectType} onChange={e => setMastEditForm(f => ({ ...f, projectType: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={S.lbl}>Project Tags</label>
+                    <input style={S.inp} placeholder="e.g. React, E-commerce" value={mastEditForm.projectTags} onChange={e => setMastEditForm(f => ({ ...f, projectTags: e.target.value }))} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={S.lbl}>Start Date</label>
+                    <input type="date" style={S.inp} value={mastEditForm.projectStartDate} onChange={e => setMastEditForm(f => ({ ...f, projectStartDate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={S.lbl}>Est. End Date</label>
+                    <input type="date" style={S.inp} value={mastEditForm.projectEndDate} onChange={e => setMastEditForm(f => ({ ...f, projectEndDate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={S.lbl}>Launch Target</label>
+                    <input type="date" style={S.inp} value={mastEditForm.launchDate} onChange={e => setMastEditForm(f => ({ ...f, launchDate: e.target.value }))} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={S.lbl}>Project Notes</label>
+                  <textarea style={{ ...S.inp, minHeight: 80, resize: 'vertical' }} placeholder="Additional context..." value={mastEditForm.projectNotes} onChange={e => setMastEditForm(f => ({ ...f, projectNotes: e.target.value }))} />
+                </div>
+              </div>
+
+              {/* Section 2: Financials */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <h4 style={{ color: '#fff', fontSize: 15, margin: 0, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>2. Financials & Payment Scheme</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={S.lbl}>Contract Total (₱)</label>
+                    <input type="number" style={S.inp} placeholder="0.00" value={mastEditForm.contractTotal} onChange={e => setMastEditForm(f => ({ ...f, contractTotal: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label style={S.lbl}>Payment Scheme</label>
+                    <select style={{ ...S.inp, cursor: 'pointer' }} value={mastEditForm.paymentScheme} onChange={e => setMastEditForm(f => ({ ...f, paymentScheme: e.target.value }))}>
+                      <option value="full">Full Payment</option>
+                      <option value="installment">Installment Schedule</option>
+                      <option value="downpayment_balance">Downpayment + Balance</option>
+                    </select>
+                  </div>
+                </div>
+
+                {mastEditForm.paymentScheme !== 'full' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 14, alignItems: 'end' }}>
+                    <div>
+                      <label style={S.lbl}>Downpayment (₱)</label>
+                      <input type="number" style={S.inp} placeholder="0.00" value={mastEditForm.downpaymentAmount} onChange={e => setMastEditForm(f => ({ ...f, downpaymentAmount: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label style={S.lbl}>DP Due Date</label>
+                      <input type="date" style={S.inp} value={mastEditForm.downpaymentDate} onChange={e => setMastEditForm(f => ({ ...f, downpaymentDate: e.target.value }))} />
+                    </div>
+                    <div style={{ paddingBottom: 8 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 13, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mastEditForm.downpaymentPaid} onChange={e => setMastEditForm(f => ({ ...f, downpaymentPaid: e.target.checked }))} style={{ width: 16, height: 16 }} />
+                        Paid
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 3: Installments */}
+              {mastEditForm.paymentScheme !== 'full' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>
+                    <h4 style={{ color: '#fff', fontSize: 15, margin: 0 }}>3. Installments / Milestones</h4>
+                    <button type="button" onClick={() => setMastEditForm(f => ({ ...f, installments: [...f.installments, { id: crypto.randomUUID(), label: '', amount: '', dueDate: '', status: 'pending', paidDate: '', paymentMethod: '' }] }))} style={{ ...S.btn, background: 'rgba(255,106,26,0.15)', color: '#ff9a4a', fontSize: 11, padding: '4px 10px' }}><Plus size={12} /> Add Installment</button>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {mastEditForm.installments.map((inst, idx) => (
+                      <div key={inst.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600 }}>INSTALLMENT {idx + 1}</span>
+                          <button type="button" onClick={() => setMastEditForm(f => ({ ...f, installments: f.installments.filter(i => i.id !== inst.id) }))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}><X size={14} /></button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <input style={S.inp} placeholder="Label (e.g. Milestone 1)" value={inst.label} onChange={e => {
+                            const v = e.target.value;
+                            setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, label: v } : i) }));
+                          }} />
+                          <input type="number" style={S.inp} placeholder="Amount (₱)" value={inst.amount} onChange={e => {
+                            const v = e.target.value;
+                            setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, amount: v } : i) }));
+                          }} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div>
+                            <div style={{ ...S.lbl, fontSize: 10 }}>Due Date</div>
+                            <input type="date" style={S.inp} value={inst.dueDate} onChange={e => {
+                              const v = e.target.value;
+                              setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, dueDate: v } : i) }));
+                            }} />
+                          </div>
+                          <div>
+                            <div style={{ ...S.lbl, fontSize: 10 }}>Status</div>
+                            <select style={{ ...S.inp, cursor: 'pointer' }} value={inst.status} onChange={e => {
+                              const v = e.target.value;
+                              setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, status: v } : i) }));
+                            }}>
+                              <option value="pending">⏳ Pending</option>
+                              <option value="paid">✅ Paid</option>
+                              <option value="overdue">🔴 Overdue</option>
+                            </select>
+                          </div>
+                        </div>
+                        {inst.status === 'paid' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 10 }}>
+                            <div>
+                              <div style={{ ...S.lbl, fontSize: 10 }}>Date Paid</div>
+                              <input type="date" style={S.inp} value={inst.paidDate} onChange={e => {
+                                const v = e.target.value;
+                                setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, paidDate: v } : i) }));
+                              }} />
+                            </div>
+                            <div>
+                              <div style={{ ...S.lbl, fontSize: 10 }}>Method</div>
+                              <input style={S.inp} placeholder="e.g. GoTyme" value={inst.paymentMethod || ''} onChange={e => {
+                                const v = e.target.value;
+                                setMastEditForm(f => ({ ...f, installments: f.installments.map(i => i.id === inst.id ? { ...i, paymentMethod: v } : i) }));
+                              }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button type="submit" disabled={savingMast} style={{ ...S.btn, background: savingMast ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingMast ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                {savingMast ? 'Saving...' : 'Save Masterlist Record'}
               </button>
             </form>
           </div>
