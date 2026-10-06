@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db, auth, secondaryAuth } from '../lib/firebase';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import {
   ALL_ADMIN_NAVIGATIONS,
   getAllActionIds,
@@ -178,6 +180,7 @@ const S = {
 };
 
 export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllowances, onOpenDemos }) {
+  const modal = useSystemModal();
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -418,7 +421,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
     const raw = targetEmail || form.email || '';
     const emailToReset = normalizeAuthIdentifier(raw);
     if (!emailToReset) {
-      alert('Please provide a valid username or email address.');
+      modal.error({ title: 'Valid identifier required', message: 'Enter a valid username or email address before sending a reset link.' });
       return;
     }
 
@@ -633,18 +636,18 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       });
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to update status.');
+      modal.error('We could not update the staff status. Please try again.');
     }
   };
 
   // Delete Staff Member
   const handleDeleteStaff = async (member) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to remove ${member.name} (${formatDisplayIdentifier(member.email)})? They will lose access immediately.`
-      )
-    )
-      return;
+    const confirmed = await modal.confirm({
+      title: 'Remove staff access?',
+      message: `${member.name} (${formatDisplayIdentifier(member.email)}) will be removed and lose access immediately.`,
+      confirmLabel: 'Remove access',
+    });
+    if (!confirmed) return;
     try {
       if (member.password && member.email) {
         try {
@@ -662,9 +665,10 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       await deleteDoc(doc(db, 'staff', member.id));
       setStaffList((prev) => prev.filter((s) => s.id !== member.id));
       setToast({ type: 'info', text: `Removed ${member.name} from staff records.` });
+      modal.success({ title: 'Staff access removed', message: `${member.name} can no longer access the admin system.` });
     } catch (err) {
       console.error('Error deleting staff:', err);
-      alert('Failed to delete staff member.');
+      modal.error('We could not remove the staff member. Please try again.');
     }
   };
 
@@ -869,9 +873,10 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
             </option>
           </select>
 
-          <button
+          <LoadingButton
             onClick={() => loadStaff(true)}
-            disabled={refreshing}
+            loading={refreshing}
+            loadingLabel="Refreshing…"
             style={{
               ...S.btn,
               background: 'rgba(255,255,255,0.06)',
@@ -881,12 +886,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
               borderRadius: 12,
             }}
           >
-            <RefreshCw
-              size={14}
-              style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }}
-            />
+            <RefreshCw size={14} />
             Refresh
-          </button>
+          </LoadingButton>
         </div>
 
         {canCreateStaff && (
@@ -1154,8 +1156,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                     )}
 
                     {canToggleStaffStatus && (
-                      <button
+                      <LoadingButton
                         onClick={() => handleToggleStatus(member)}
+                        loadingLabel="Updating…"
                         style={{
                           ...S.btn,
                           background: isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)',
@@ -1166,12 +1169,14 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                         }}
                       >
                         {isActive ? 'Deactivate' : 'Activate'}
-                      </button>
+                      </LoadingButton>
                     )}
 
                     {canDeleteStaff && (
-                      <button
+                      <LoadingButton
                         onClick={() => handleDeleteStaff(member)}
+                        loadingLabel="Removing staff"
+                        spinnerOnly
                         style={{
                           ...S.btn,
                           background: 'rgba(239,68,68,0.08)',
@@ -1182,7 +1187,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                         title="Delete staff account"
                       >
                         <Trash2 size={13} />
-                      </button>
+                      </LoadingButton>
                     )}
                   </div>
                 </div>
@@ -1612,10 +1617,11 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                     form.email &&
                     form.email.includes('@') &&
                     !form.email.endsWith('@odc.internal') && (
-                      <button
+                      <LoadingButton
                         type="button"
                         onClick={() => handleSendResetEmail(form.email)}
-                        disabled={resetSending}
+                        loading={resetSending}
+                        loadingLabel="Sending link…"
                         style={{
                           ...S.btn,
                           background: 'rgba(56,189,248,0.12)',
@@ -1625,9 +1631,8 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                           padding: '6px 12px',
                         }}
                       >
-                        <Send size={12} />{' '}
-                        {resetSending ? 'Sending Link...' : 'Send Password Reset Email'}
-                      </button>
+                        <Send size={12} /> Send Password Reset Email
+                      </LoadingButton>
                     )}
                 </div>
 
@@ -2132,9 +2137,11 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   type="submit"
-                  disabled={saving || modulePermissionLoading}
+                  loading={saving}
+                  loadingLabel="Saving…"
+                  disabled={modulePermissionLoading}
                   style={{
                     ...S.btn,
                     background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
@@ -2146,18 +2153,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                     opacity: saving ? 0.6 : 1,
                   }}
                 >
-                  {saving ? (
-                    <>
-                      <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Check size={15} />
-                      {editingStaffId ? 'Save Changes' : 'Create Staff Member'}
-                    </>
-                  )}
-                </button>
+                  <Check size={15} />
+                  {editingStaffId ? 'Save Changes' : 'Create Staff Member'}
+                </LoadingButton>
               </div>
             </form>
           </div>

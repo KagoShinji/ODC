@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Eye, Copy, Check, Award } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -682,9 +683,9 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
       <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Memorandum of Agreement</h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => load()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {canCreateMOA && (
             <>
               <button onClick={() => { setEditingId(null); setShowFreeformModal(true); setFreeformText(''); }} style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', padding: '10px 18px', border: '1px solid rgba(96,165,250,0.3)' }}>
@@ -905,9 +906,9 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
                 <textarea style={{ ...S.inp, resize: 'vertical', minHeight: 100 }} value={(form.generalTerms || []).join('\n')} onChange={e => handleListChange('generalTerms', e.target.value)} required />
               </div>
 
-              <button type="submit" disabled={saving} style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
-                {saving ? 'Saving…' : editingId ? 'Update MOA' : 'Create MOA'}
-              </button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                {editingId ? 'Update MOA' : 'Create MOA'}
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -1004,9 +1005,9 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
             
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setShowFreeformModal(false)} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
-              <button onClick={handleFreeformSubmit} disabled={!freeformText.trim() || saving} style={{ ...S.btn, flex: 2, justifyContent: 'center', background: (!freeformText.trim() || saving) ? 'rgba(96,165,250,0.2)' : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontWeight: 600, boxShadow: (!freeformText.trim() || saving) ? 'none' : '0 4px 14px rgba(59,130,246,0.3)' }}>
-                {saving ? 'Saving...' : editingId ? 'Update Freeform MOA' : 'Save & Print MOA'}
-              </button>
+              <LoadingButton onClick={handleFreeformSubmit} loading={saving} loadingLabel="Saving…" disabled={!freeformText.trim()} style={{ ...S.btn, flex: 2, justifyContent: 'center', background: (!freeformText.trim() || saving) ? 'rgba(96,165,250,0.2)' : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontWeight: 600, boxShadow: (!freeformText.trim() || saving) ? 'none' : '0 4px 14px rgba(59,130,246,0.3)' }}>
+                {editingId ? 'Update Freeform MOA' : 'Save & Print MOA'}
+              </LoadingButton>
             </div>
           </div>
         </>

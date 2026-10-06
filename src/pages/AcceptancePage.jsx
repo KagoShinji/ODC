@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw } from 'lucide-react';
 import { printCertificate } from './AdminAcceptance';
 import CustomModal from '../components/ui/CustomModal';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const S = {
   container: {
@@ -463,9 +464,11 @@ export default function AcceptancePage() {
             </label>
 
             {/* Submit Button */}
-            <button
+            <LoadingButton
               type="submit"
-              disabled={submitting || !signeeName.trim()}
+              loading={submitting}
+              loadingLabel="Submitting acceptance…"
+              disabled={!signeeName.trim()}
               style={{
                 ...S.btn,
                 background: (submitting || !signeeName.trim())
@@ -476,16 +479,8 @@ export default function AcceptancePage() {
                 boxShadow: (submitting || !signeeName.trim()) ? 'none' : '0 6px 20px rgba(255,106,26,0.3)',
               }}
             >
-              {submitting ? (
-                <>
-                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Submitting Acceptance…
-                </>
-              ) : (
-                <>
-                  Accept & Turnover System <ChevronRight size={16} />
-                </>
-              )}
-            </button>
+              Accept & Turnover System <ChevronRight size={16} />
+            </LoadingButton>
           </form>
         ) : (
           /* Accepted Success State */

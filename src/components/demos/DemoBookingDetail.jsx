@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowSquareOut } from '@phosphor-icons/react';
 import { formatDemoDate, formatDemoTime } from '../../utils/demoScheduling';
 import { DemoField } from './DemoBookingForm';
+import LoadingButton from '../ui/LoadingButton';
 
 export default function DemoBookingDetail({ booking, events, access, uid, onAction }) {
   const manager = access.actions.includes('demos:manage');
@@ -19,5 +20,5 @@ export default function DemoBookingDetail({ booking, events, access, uid, onActi
 export function DemoOutcomeForm({ booking, command, busy, onSave }) {
   const [notes, setNotes] = useState('');
   const label = command === 'cancel' ? 'Cancel demonstration' : command === 'complete' ? 'Mark completed' : 'Mark no-show';
-  return <form onSubmit={e => { e.preventDefault(); onSave(command, { id: booking.id, version: booking.version, notes }); }}><p>{booking.clientName} · {formatDemoDate(booking.date)} · {formatDemoTime(booking.startAt)} PHT</p><p className="demo-helper">{command === 'cancel' ? 'The reserved time will become available again. The presenter and salesperson will be notified.' : 'Record the meeting outcome and any follow-up for the sales team.'}</p><DemoField label={command === 'cancel' ? 'Cancellation reason (optional)' : 'Outcome and follow-up notes'}><textarea value={notes} maxLength={2000} disabled={busy} onChange={e => setNotes(e.target.value)} /></DemoField><button className="demo-primary" type="submit" disabled={busy}>{busy ? 'Saving…' : label}</button></form>;
+  return <form onSubmit={e => { e.preventDefault(); onSave(command, { id: booking.id, version: booking.version, notes }); }}><p>{booking.clientName} · {formatDemoDate(booking.date)} · {formatDemoTime(booking.startAt)} PHT</p><p className="demo-helper">{command === 'cancel' ? 'The reserved time will become available again. The presenter and salesperson will be notified.' : 'Record the meeting outcome and any follow-up for the sales team.'}</p><DemoField label={command === 'cancel' ? 'Cancellation reason (optional)' : 'Outcome and follow-up notes'}><textarea value={notes} maxLength={2000} disabled={busy} onChange={e => setNotes(e.target.value)} /></DemoField><LoadingButton className="demo-primary" type="submit" loading={busy} loadingLabel="Saving…">{label}</LoadingButton></form>;
 }

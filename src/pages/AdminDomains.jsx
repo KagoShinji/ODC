@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import {
   collection,
   getDocs,
@@ -46,6 +48,7 @@ const today = () => {
 };
 
 export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
+  const modal = useSystemModal();
   const canCreateDomain = can ? can('domains:create') : isSuperAdmin;
   const canEditDomain = can ? can('domains:edit') : isSuperAdmin;
   const canDeleteDomain = can ? can('domains:delete') : isSuperAdmin;
@@ -193,13 +196,19 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
   };
 
   const handleDeleteDomain = async (domain) => {
-    if (!window.confirm(`Are you sure you want to stop tracking ${domain.domainName}?`)) return;
+    const confirmed = await modal.confirm({
+      title: 'Stop tracking this domain?',
+      message: `${domain.domainName} and its renewal history will be removed from this dashboard.`,
+      confirmLabel: 'Stop tracking',
+    });
+    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'domains', domain.id));
       loadDomains(false);
+      modal.success({ title: 'Domain removed', message: `${domain.domainName} is no longer being tracked.` });
     } catch (err) {
       console.error(err);
-      alert('Failed to delete domain.');
+      modal.error('We could not remove the domain. Please try again.');
     }
   };
 
@@ -308,9 +317,9 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => loadDomains()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => loadDomains()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {canCreateDomain && (
             <button onClick={handleOpenCreate} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Add Domain
@@ -469,9 +478,9 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
                             </button>
                           )}
                           {canDeleteDomain && (
-                            <button onClick={() => handleDeleteDomain(d)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
+                            <LoadingButton onClick={() => handleDeleteDomain(d)} loadingLabel="Removing domain" spinnerOnly style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}>
                               <Trash2 size={13} />
-                            </button>
+                            </LoadingButton>
                           )}
                         </div>
                       </td>
@@ -618,9 +627,9 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
                 <button type="button" onClick={() => setShowDomainModal(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
-                  {saving ? 'Saving...' : 'Save Domain'}
-                </button>
+                <LoadingButton type="submit" loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
+                  Save Domain
+                </LoadingButton>
               </div>
             </form>
           </div>
@@ -701,9 +710,9 @@ export default function AdminDomains({ firebaseUser, isSuperAdmin, can }) {
                 <button type="button" onClick={() => setShowRenewModal(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
-                  {saving ? 'Processing...' : 'Confirm Renewal'}
-                </button>
+                <LoadingButton type="submit" loading={saving} loadingLabel="Processing…" style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
+                  Confirm Renewal
+                </LoadingButton>
               </div>
             </form>
           </div>

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, X, CalendarX } from '@phosphor-icons/react';
 import { DemoField } from './DemoBookingForm';
 import { DEMO_DAYS, defaultDemoWeekly, demoToday, formatDemoDate } from '../../utils/demoScheduling';
+import LoadingButton from '../ui/LoadingButton';
 
 function AvailabilityWindows({ ranges, onChange, disabled, label }) {
   const update = (index, key, value) => onChange(ranges.map((range, i) => i === index ? { ...range, [key]: value } : range));
@@ -46,6 +47,6 @@ export default function DemoAvailabilityForm({ uid, availability, busy, onSave }
         <div className="demo-overrides-list">{Object.entries(overrides).sort(([a], [b]) => a.localeCompare(b)).map(([key, windows]) => <div className="demo-override" key={key}><div><strong>{formatDemoDate(key, { year: 'numeric' })}</strong><small>{windows.length ? windows.map(r => `${r.start}–${r.end}`).join(', ') : 'Closed all day'}</small></div><button type="button" aria-label={`Remove override for ${key}`} disabled={busy} onClick={() => setOverrides(values => Object.fromEntries(Object.entries(values).filter(([d]) => d !== key)))}><X size={15} /></button></div>)}</div>
       </div>
     </div>
-    <div className="demo-form-footer"><p className="demo-helper">Existing meetings are protected. Reassign or reschedule conflicts before closing their time.</p><button type="submit" className="demo-primary" disabled={busy}>{busy ? 'Publishing…' : 'Publish availability'}</button></div>
+    <div className="demo-form-footer"><p className="demo-helper">Existing meetings are protected. Reassign or reschedule conflicts before closing their time.</p><LoadingButton type="submit" className="demo-primary" loading={busy} loadingLabel="Publishing…">Publish availability</LoadingButton></div>
   </form>;
 }

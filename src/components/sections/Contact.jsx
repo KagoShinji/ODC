@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { Envelope, Phone, MapPin, PaperPlaneRight, CheckCircle, Warning, Spinner, FacebookLogo } from '@phosphor-icons/react';
+import { Envelope, Phone, MapPin, PaperPlaneRight, CheckCircle, Warning, FacebookLogo } from '@phosphor-icons/react';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import LoadingButton from '../ui/LoadingButton';
 
 const easeOut = [0.22, 1, 0.36, 1];
 
@@ -266,28 +267,15 @@ export function ContactSection() {
                                         </Motion.div>
                                     )}
 
-                                    <button
+                                    <LoadingButton
                                         type="submit"
-                                        disabled={status === 'loading'}
+                                        loading={status === 'loading'}
+                                        loadingLabel="Sending…"
                                         className="w-full px-6 py-3.5 rounded-xl bg-white text-[#101718] font-black text-sm uppercase tracking-tight transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                                     >
-                                        {status === 'loading' ? (
-                                            <>
-                                                <Motion.span
-                                                    animate={{ rotate: 360 }}
-                                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                                                >
-                                                    <Spinner size={16} weight="bold" />
-                                                </Motion.span>
-                                                Sending…
-                                            </>
-                                        ) : (
-                                            <>
-                                                Send Message
-                                                <PaperPlaneRight size={16} weight="bold" />
-                                            </>
-                                        )}
-                                    </button>
+                                        Send Message
+                                        <PaperPlaneRight size={16} weight="bold" />
+                                    </LoadingButton>
 
                                     <p className="text-xs text-white/40 text-center">
                                         We'll respond within 24 hours. No spam, ever.

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import {
   collection,
   getDocs,
@@ -63,6 +65,7 @@ const MONTHS_LIST = (() => {
 })();
 
 export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initialSubTab = 'payroll', onSubTabChange }) {
+  const modal = useSystemModal();
   const canManageStaff = can ? can('salaries:manage_staff') : isSuperAdmin;
   const canPayout = can ? can('salaries:payout') : isSuperAdmin;
   const canDeleteSalary = can ? can('salaries:delete') : isSuperAdmin;
@@ -230,13 +233,19 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
   };
 
   const handleDeleteStaff = async (member) => {
-    if (!window.confirm(`Are you sure you want to delete ${member.name}? This will remove them from the active list, but historical payouts remain.`)) return;
+    const confirmed = await modal.confirm({
+      title: 'Remove staff from payroll?',
+      message: `${member.name} will be removed from the active list. Historical payouts will remain available.`,
+      confirmLabel: 'Remove staff',
+    });
+    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'staff', member.id));
       loadData(false);
+      modal.success({ title: 'Staff removed', message: `${member.name} was removed from the active payroll list.` });
     } catch (err) {
       console.error('Error deleting staff:', err);
-      alert('Failed to delete staff member.');
+      modal.error('We could not remove the staff member. Please try again.');
     }
   };
 
@@ -317,9 +326,11 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
   };
 
   const handleDeletePayout = async (payout) => {
-    const confirmation = window.confirm(
-      `Are you sure you want to delete and roll back this payment of ₱${fmt(payout.netPaid)} to ${payout.staffName}? This will also delete the linked expense and reflect in your analytics.`
-    );
+    const confirmation = await modal.confirm({
+      title: 'Roll back this payout?',
+      message: `The ₱${fmt(payout.netPaid)} payment to ${payout.staffName} and its linked expense will be deleted. Analytics will update accordingly.`,
+      confirmLabel: 'Roll back payout',
+    });
     if (!confirmation) return;
 
     try {
@@ -334,9 +345,10 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
       // 2. Delete payout doc
       await deleteDoc(doc(db, 'salaryPayouts', payout.id));
       loadData(false);
+      modal.success({ title: 'Payout rolled back', message: `${payout.staffName}’s payout and linked expense were removed.` });
     } catch (err) {
       console.error('Error deleting payout:', err);
-      alert('Failed to delete payout record.');
+      modal.error('We could not roll back the payout. Please try again.');
     }
   };
 
@@ -465,9 +477,9 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => loadData()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => loadData()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {activeSubTab === 'roster' && canManageStaff && (
             <button onClick={handleOpenCreateStaff} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Add Staff
@@ -640,7 +652,7 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                                 <button
                                   onClick={() => {
-                                    alert(`Payment Details for ${member.name}:\n\n` +
+                                    modal.info({ title: `Payment details for ${member.name}`, message:
                                       `Month: ${selectedMonth}\n` +
                                       `Base Salary: ₱${fmt(member.payout.baseSalary)}\n` +
                                       `Bonus: ₱${fmt(member.payout.bonus)}\n` +
@@ -649,19 +661,20 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                                       `Paid At: ${member.payout.paidAt}\n` +
                                       `Method: ${member.payout.paymentMethod}\n` +
                                       `Reference #: ${member.payout.referenceNumber || 'N/A'}\n` +
-                                      `Notes: ${member.payout.notes || 'None'}`);
+                                      `Notes: ${member.payout.notes || 'None'}` });
                                   }}
                                   style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}
                                 >
                                   <Info size={13} /> View Receipt
                                 </button>
                                 {canDeleteSalary && (
-                                  <button
+                                  <LoadingButton
                                     onClick={() => handleDeletePayout(member.payout)}
+                                    loadingLabel="Deleting payout…"
                                     style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
                                   >
                                     <Trash2 size={13} /> Delete
-                                  </button>
+                                  </LoadingButton>
                                 )}
                               </div>
                             ) : (
@@ -755,9 +768,9 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                             </button>
                           )}
                           {canDeleteSalary && (
-                            <button onClick={() => handleDeleteStaff(member)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', flexShrink: 0 }}>
+                            <LoadingButton onClick={() => handleDeleteStaff(member)} loadingLabel="Removing staff" spinnerOnly style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', flexShrink: 0 }}>
                               <Trash2 size={13} />
-                            </button>
+                            </LoadingButton>
                           )}
                         </div>
                       )}
@@ -812,12 +825,13 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                             <td style={{ padding: '18px 24px', color: '#34d399', textAlign: 'right', fontWeight: 600 }}>₱{fmt(p.netPaid)}</td>
                             {canDeleteSalary && (
                               <td style={{ padding: '18px 24px', textAlign: 'right' }}>
-                                <button
+                                <LoadingButton
                                   onClick={() => handleDeletePayout(p)}
+                                  loadingLabel="Deleting payout…"
                                   style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', marginLeft: 'auto' }}
                                 >
                                   <Trash2 size={13} /> Delete Payout
-                                </button>
+                                </LoadingButton>
                               </td>
                             )}
                           </tr>
@@ -939,9 +953,9 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                 <button type="button" onClick={() => setShowStaffModal(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
-                  {saving ? 'Saving...' : 'Save Member'}
-                </button>
+                <LoadingButton type="submit" loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
+                  Save Member
+                </LoadingButton>
               </div>
             </form>
           </div>
@@ -1062,9 +1076,9 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                 <button type="button" onClick={() => setShowPayModal(false)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
                   Cancel
                 </button>
-                <button type="submit" disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
-                  {saving ? 'Processing...' : 'Confirm Payout'}
-                </button>
+                <LoadingButton type="submit" loading={saving} loadingLabel="Processing…" style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff' }}>
+                  Confirm Payout
+                </LoadingButton>
               </div>
             </form>
           </div>

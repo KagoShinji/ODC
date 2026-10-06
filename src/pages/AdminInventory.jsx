@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '../lib/firebase';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import {
   collection,
   getDocs,
@@ -102,6 +104,7 @@ const getActionColor = (action) => {
 };
 
 export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
+  const modal = useSystemModal();
   const canCreateInventory = can ? can('inventory:create') : isSuperAdmin !== false;
   const canActionInventory = can ? can('inventory:action') : isSuperAdmin !== false;
   const canDeleteInventory = can ? can('inventory:delete') : isSuperAdmin !== false;
@@ -301,7 +304,7 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
       });
     } catch (err) {
       console.error("Error updating document: ", err);
-      alert("Failed to save changes to Firestore.");
+      modal.error({ title: 'Changes not saved', message: 'We could not update the inventory record. Please try again.' });
     }
   };
 
@@ -553,14 +556,20 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
 
   // Delete Entire Item Handler
   const handleDeleteItem = async (item) => {
-    if (!window.confirm(`Are you absolutely sure you want to delete ${item.name}? This will delete all stock, active issuances, and custody history permanently.`)) return;
+    const confirmed = await modal.confirm({
+      title: 'Delete inventory item?',
+      message: `${item.name}, including all stock, active issuances, and custody history, will be permanently deleted.`,
+      confirmLabel: 'Delete item',
+    });
+    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'inventory', item.id));
       setSelectedItem(null);
       setItems(prev => prev.filter(i => i.id !== item.id));
+      modal.success({ title: 'Item deleted', message: `${item.name} was removed from inventory.` });
     } catch (err) {
       console.error("Error deleting item:", err);
-      alert("Failed to delete item.");
+      modal.error('We could not delete the inventory item. Please try again.');
     }
   };
 
@@ -594,7 +603,7 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
   const handlePrintSticker = (item, issuance) => {
     const printWindow = window.open('', '_blank', 'width=600,height=500');
     if (!printWindow) {
-      alert("Please allow popups to print the property tag sticker.");
+      modal.error({ title: 'Print window blocked', message: 'Allow pop-ups for this site, then try printing the property tag again.' });
       return;
     }
     const dateStr = new Date(issuance.issuedAt).toLocaleDateString('en-PH', {
@@ -799,9 +808,9 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
           <Package size={22} color="#ff6a1a" /> Inventory & Accountability
         </h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => loadInventory()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => loadInventory()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {canCreateInventory && (
             <button onClick={() => { setErrorMsg(''); setShowAddDrawer(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Add Item
@@ -957,8 +966,10 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
                           <Info size={13} /> View Details
                         </button>
                         {canDeleteInventory && (
-                          <button
+                          <LoadingButton
                             onClick={() => handleDeleteItem(item)}
+                            loadingLabel="Deleting inventory item"
+                            spinnerOnly
                             style={{
                               ...S.btn,
                               background: 'rgba(239,68,68,0.1)',
@@ -969,7 +980,7 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
                             title="Delete Catalog Item"
                           >
                             <Trash2 size={14} />
-                          </button>
+                          </LoadingButton>
                         )}
                       </div>
                     </td>
@@ -1048,9 +1059,9 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
                 />
               </div>
 
-              <button type="submit" disabled={saving || !addForm.name || addForm.totalQuantity === ''} style={{ ...S.btn, background: (saving || !addForm.name || addForm.totalQuantity === '') ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
-                {saving ? 'Registering Entry...' : 'Register Item'}
-              </button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="Registering…" disabled={!addForm.name || addForm.totalQuantity === ''} style={{ ...S.btn, background: (saving || !addForm.name || addForm.totalQuantity === '') ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                Register Item
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -1394,9 +1405,10 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
                 >
                   Cancel
                 </button>
-                <button
+                <LoadingButton
                   type="submit"
-                  disabled={saving}
+                  loading={saving}
+                  loadingLabel="Processing…"
                   style={{
                     ...S.btn,
                     background: actionType === 'waste' ? 'rgba(239,68,68,0.8)'
@@ -1409,8 +1421,8 @@ export default function AdminInventory({ firebaseUser, isSuperAdmin, can }) {
                     height: 42
                   }}
                 >
-                  {saving ? 'Processing...' : 'Confirm Action'}
-                </button>
+                  Confirm Action
+                </LoadingButton>
               </div>
             </form>
 

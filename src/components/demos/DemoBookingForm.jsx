@@ -2,6 +2,7 @@ import { useEffect, useState, useId, cloneElement } from 'react';
 import { CalendarBlank, ArrowRight, Clock } from '@phosphor-icons/react';
 import { getDemoSlots, demoError } from '../../services/demoService';
 import { demoToday, shiftDemoDate, formatDemoTime } from '../../utils/demoScheduling';
+import LoadingButton from '../ui/LoadingButton';
 
 const contactPhone = value => String(value || '').replace(/\D/g, '').slice(0, 11);
 
@@ -74,6 +75,6 @@ export default function DemoBookingForm({ policy, presenters, clients, booking, 
       </>}
     </fieldset>
     {validation && <p className="demo-error" role="alert">{validation}</p>}
-    <div className="demo-form-footer"><span className="demo-helper">{booking ? 'Both teams will receive the update.' : 'The presenter and salesperson will be notified.'}</span><button className="demo-primary" disabled={busy || !selection || loadingSlots} type="submit">{busy ? 'Saving…' : booking ? 'Confirm new schedule' : 'Confirm demonstration'}<ArrowRight size={16} /></button></div>
+    <div className="demo-form-footer"><span className="demo-helper">{booking ? 'Both teams will receive the update.' : 'The presenter and salesperson will be notified.'}</span><LoadingButton className="demo-primary" loading={busy} loadingLabel="Saving…" disabled={!selection || loadingSlots} type="submit">{booking ? 'Confirm new schedule' : 'Confirm demonstration'}<ArrowRight size={16} /></LoadingButton></div>
   </form>;
 }

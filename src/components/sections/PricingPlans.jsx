@@ -16,6 +16,7 @@ import {
     X,
 } from '@phosphor-icons/react';
 import { db } from '../../lib/firebase';
+import LoadingButton from '../ui/LoadingButton';
 
 const easeOut = [0.22, 1, 0.36, 1];
 
@@ -309,12 +310,12 @@ function PricingInquiryModal({ selectedPlan, onClose }) {
                                 </p>
                             ) : null}
 
-                            <button type="submit" className="pricing-cta pricing-submit" disabled={submitting}>
-                                {submitting ? 'Submitting request' : 'Submit request'}
+                            <LoadingButton type="submit" className="pricing-cta pricing-submit" loading={submitting} loadingLabel="Submitting request…">
+                                Submit request
                                 <span>
                                     <ArrowRight size={14} weight="bold" />
                                 </span>
-                            </button>
+                            </LoadingButton>
                         </form>
                     </>
                 )}

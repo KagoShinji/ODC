@@ -3,6 +3,7 @@ import { Plus, Trash, UploadSimple } from '@phosphor-icons/react';
 import { DEFAULT_POLICY, toCentavos, estimatedCash, topUp, eligible, manilaDate } from '../../../functions/src/domain.js';
 import { newAllowanceId, uploadAllowanceEvidence, openAllowanceEvidence, registerAllowanceReference, allowanceCapabilities } from '../../services/allowanceService';
 import { peso } from '../../utils/allowanceDocuments';
+import LoadingButton from '../ui/LoadingButton';
 
 export function Field({ label, children, hint }) {
   const id = useId();
@@ -10,7 +11,7 @@ export function Field({ label, children, hint }) {
 }
 export function MoneyInput(props) { return <input type="number" min="0" step="0.01" required {...props} />; }
 function Controls({ busy, draft, submitLabel = 'Save' }) {
-  return <div className="allowance-controls">{draft && <button type="button" disabled={busy} onClick={draft}>Save draft</button>}<button className="allowance-primary" disabled={busy} type="submit">{busy ? 'Saving…' : submitLabel}</button></div>;
+  return <div className="allowance-controls">{draft && <button type="button" disabled={busy} onClick={draft}>Save draft</button>}<LoadingButton className="allowance-primary" loading={busy} loadingLabel="Saving…" type="submit">{submitLabel}</LoadingButton></div>;
 }
 
 export function MeetingForm({ account, meeting, clients, busy, onSave }) {

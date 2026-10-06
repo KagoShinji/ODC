@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { DemoField } from './DemoBookingForm';
+import LoadingButton from '../ui/LoadingButton';
 
 function DemoPolicyForm({ context, busy, onSave }) {
   const [policy, setPolicy] = useState(context.policy);
@@ -13,14 +14,14 @@ function DemoPolicyForm({ context, busy, onSave }) {
       <DemoField label="Booking window (days)"><input type="number" min="1" max="90" value={policy.bookingWindowDays} onChange={e => set('bookingWindowDays', e.target.value)} disabled={busy} required /></DemoField>
     </div>
     <p className="demo-helper">Allowed durations</p><div className="demo-inline-checks">{[30, 45, 60, 90, 120].map(value => <label className="demo-check" key={value}><input type="checkbox" disabled={busy} checked={policy.durations.includes(value)} onChange={e => setPolicy(p => ({ ...p, durations: e.target.checked ? [...p.durations, value].sort((a, b) => a - b) : p.durations.filter(v => v !== value) }))} />{value} min</label>)}</div>
-    <button type="submit" className="demo-primary" disabled={busy || policy.durations.length === 0}>{busy ? 'Saving…' : 'Save booking rules'}</button>
+    <LoadingButton type="submit" className="demo-primary" loading={busy} loadingLabel="Saving…" disabled={policy.durations.length === 0}>Save booking rules</LoadingButton>
   </form>;
 }
 
 export default function DemoSettingsForm({ context, busy, onSave, onOpenStaff }) {
   return <div className="demo-settings-layout">
     <div><DemoPolicyForm context={context} busy={busy} onSave={onSave} />
-      <article className="demo-self-presenter"><h3>Your presenter profile</h3><p className="demo-helper">Administrators can also conduct demonstrations. Enable your profile, then publish your hours in My availability.</p><button disabled={busy} onClick={() => onSave('setMyPresenter', { presenterEnabled: !context.access.presenterEnabled })}>{context.access.presenterEnabled ? 'Disable my presenter profile' : 'Enable my presenter profile'}</button></article>
+      <article className="demo-self-presenter"><h3>Your presenter profile</h3><p className="demo-helper">Administrators can also conduct demonstrations. Enable your profile, then publish your hours in My availability.</p><LoadingButton loading={busy} loadingLabel="Updating…" onClick={() => onSave('setMyPresenter', { presenterEnabled: !context.access.presenterEnabled })}>{context.access.presenterEnabled ? 'Disable my presenter profile' : 'Enable my presenter profile'}</LoadingButton></article>
     </div>
     <article><h3>Staff permissions</h3><p className="demo-helper">Manage sales booking, presenter access, and available presenters in Staff Management → Create/Edit Staff → Page &amp; Action Permissions → Demo Scheduling.</p>{onOpenStaff ? <button type="button" disabled={busy} onClick={onOpenStaff}>Open Staff Management</button> : <p className="demo-helper">Ask an administrator with Staff Management access to update staff permissions.</p>}</article>
   </div>;

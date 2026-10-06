@@ -3,6 +3,8 @@ import { db } from '../lib/firebase';
 // eslint-disable-next-line no-unused-vars
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, Copy, Check, Eye, Link } from 'lucide-react';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -235,6 +237,7 @@ const emptyForm = () => ({
 });
 
 export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
+  const modal = useSystemModal();
   // Permission flags
   const canCreateCert = can ? can('acceptance:create') : isSuperAdmin;
   const canEditCert = can ? can('acceptance:edit') : isSuperAdmin;
@@ -337,12 +340,19 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
   };
 
   const handleDelete = async (coa) => {
-    if (!window.confirm(`Delete turnover certificate ${coa.certificateNumber} for ${coa.projectName}?`)) return;
+    const confirmed = await modal.confirm({
+      title: 'Delete turnover certificate?',
+      message: `${coa.certificateNumber} for ${coa.projectName} will be permanently removed.`,
+      confirmLabel: 'Delete certificate',
+    });
+    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'certificates', coa.id));
       setCoas(prev => prev.filter(c => c.id !== coa.id));
+      modal.success({ title: 'Certificate deleted', message: `${coa.certificateNumber} was removed.` });
     } catch (err) {
       console.error('Error deleting certificate:', err);
+      modal.error('We could not delete the certificate. Please try again.');
     }
   };
 
@@ -354,9 +364,9 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, margin: '4px 0 0 0' }}>Issue project completion and turnover records to clients for digital signature.</p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => load()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {canCreateCert && (
             <button onClick={openCreate} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> Create Certificate
@@ -448,7 +458,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
                           <button onClick={() => openEdit(coa)} disabled={isAccepted} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: isAccepted ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.5)', padding: 8, cursor: isAccepted ? 'not-allowed' : 'pointer' }} title="Edit"><Edit2 size={14} /></button>
                         )}
                         {canDeleteCert && (
-                          <button onClick={() => handleDelete(coa)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></button>
+                          <LoadingButton onClick={() => handleDelete(coa)} loadingLabel="Deleting certificate" spinnerOnly style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete"><Trash2 size={14} /></LoadingButton>
                         )}
                       </div>
                     </td>
@@ -573,9 +583,9 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
                 />
               </div>
 
-              <button type="submit" disabled={saving} style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
-                {saving ? 'Saving…' : editingId ? 'Update Certificate' : 'Create Certificate'}
-              </button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                {editingId ? 'Update Certificate' : 'Create Certificate'}
+              </LoadingButton>
             </form>
           </div>
         </>

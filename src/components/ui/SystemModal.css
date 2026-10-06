@@ -1,0 +1,195 @@
+.system-modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(5, 8, 15, 0.78);
+  backdrop-filter: blur(10px) saturate(0.8);
+  -webkit-backdrop-filter: blur(10px) saturate(0.8);
+}
+
+.system-modal {
+  --modal-accent: #ff7a2f;
+  --modal-accent-rgb: 255, 122, 47;
+  position: relative;
+  width: min(100%, 30rem);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  padding: 1.75rem;
+  color: #f7f8fb;
+  background:
+    radial-gradient(circle at 0 0, rgba(var(--modal-accent-rgb), 0.12), transparent 42%),
+    #101520;
+  box-shadow: 0 1.5rem 4.5rem rgba(3, 6, 12, 0.54), inset 0 1px rgba(255, 255, 255, 0.045);
+}
+
+.system-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--modal-accent);
+}
+
+.system-modal--success {
+  --modal-accent: #55c99a;
+  --modal-accent-rgb: 85, 201, 154;
+}
+
+.system-modal--error {
+  --modal-accent: #ed7777;
+  --modal-accent-rgb: 237, 119, 119;
+}
+
+.system-modal--warning {
+  --modal-accent: #e9a657;
+  --modal-accent-rgb: 233, 166, 87;
+}
+
+.system-modal--info {
+  --modal-accent: #70a9e9;
+  --modal-accent-rgb: 112, 169, 233;
+}
+
+.system-modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.625rem;
+  color: rgba(255, 255, 255, 0.56);
+  background: transparent;
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+}
+
+.system-modal__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.system-modal__close:active,
+.system-modal__button:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.system-modal__mark {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 1.25rem;
+  border: 1px solid rgba(var(--modal-accent-rgb), 0.28);
+  border-radius: 0.875rem;
+  color: var(--modal-accent);
+  background: rgba(var(--modal-accent-rgb), 0.1);
+}
+
+.system-modal__copy {
+  padding-right: 2rem;
+}
+
+.system-modal__eyebrow {
+  margin: 0 0 0.45rem;
+  color: var(--modal-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.system-modal__copy h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.25rem, 4vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.system-modal__copy > p:last-child:not(.system-modal__eyebrow) {
+  margin: 0.75rem 0 0;
+  max-width: 60ch;
+  color: rgba(235, 239, 247, 0.68);
+  font-size: 0.9rem;
+  line-height: 1.65;
+  white-space: pre-line;
+  text-wrap: pretty;
+}
+
+.system-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 1.75rem;
+}
+
+.system-modal__button {
+  min-height: 2.75rem;
+  padding: 0.7rem 1.1rem;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.system-modal__button--secondary {
+  color: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.system-modal__button--secondary:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.system-modal__button--primary {
+  color: #0c111a;
+  background: var(--modal-accent);
+  box-shadow: 0 0.45rem 1.25rem rgba(var(--modal-accent-rgb), 0.2);
+}
+
+.system-modal__button--primary:hover {
+  filter: brightness(1.08);
+}
+
+.system-modal :focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 34rem) {
+  .system-modal {
+    padding: 1.4rem;
+    border-radius: 1rem;
+  }
+
+  .system-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .system-modal__button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-modal__close,
+  .system-modal__button {
+    transition: none;
+  }
+}

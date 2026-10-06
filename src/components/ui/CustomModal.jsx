@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, HelpCircle, X, ShieldAlert } from 'lucide-react';
+import LoadingButton from './LoadingButton';
 
 const S = {
   overlay: {
@@ -94,6 +95,7 @@ export default function CustomModal({
   icon = 'info', // 'info' | 'success' | 'warning' | 'question'
 }) {
   const [formData, setFormData] = useState({});
+  const [confirming, setConfirming] = useState(false);
 
   // Reset/populate form when modal opens
   useEffect(() => {
@@ -102,20 +104,25 @@ export default function CustomModal({
       promptFields.forEach(f => {
         initial[f.key] = f.defaultValue || '';
       });
-      // eslint-disable-next-line
       setFormData(initial);
     }
+    if (isOpen) setConfirming(false);
   }, [isOpen, type, promptFields]);
 
   if (!isOpen) return null;
 
-  const handleConfirm = () => {
-    if (type === 'prompt') {
-      onConfirm(formData);
-    } else {
-      onConfirm();
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      if (type === 'prompt') {
+        await onConfirm?.(formData);
+      } else {
+        await onConfirm?.();
+      }
+      onClose();
+    } finally {
+      setConfirming(false);
     }
-    onClose();
   };
 
   const getIcon = () => {
@@ -207,6 +214,7 @@ export default function CustomModal({
             {type !== 'alert' && (
               <button
                 onClick={onClose}
+                disabled={confirming}
                 style={{
                   ...S.btn,
                   background: 'rgba(255,255,255,0.06)',
@@ -217,8 +225,10 @@ export default function CustomModal({
               </button>
             )}
 
-            <button
+            <LoadingButton
               onClick={handleConfirm}
+              loading={confirming}
+              loadingLabel={type === 'confirm' ? 'Confirming…' : 'Working…'}
               style={{
                 ...S.btn,
                 background: type === 'confirm' && icon === 'warning'
@@ -229,7 +239,7 @@ export default function CustomModal({
               }}
             >
               {confirmText || (type === 'confirm' ? 'Confirm' : 'OK')}
-            </button>
+            </LoadingButton>
           </div>
         </motion.div>
       </div>

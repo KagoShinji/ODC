@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { Star, MessageSquare, ShieldCheck, RefreshCw, Send, CheckCircle2, ChevronRight } from 'lucide-react';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const S = {
   container: {
@@ -378,17 +379,9 @@ export default function FeedbackForm() {
               </label>
             </div>
 
-            <button type="submit" disabled={submitting} style={{ ...S.btn, marginTop: 10 }}>
-              {submitting ? (
-                <>
-                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Submitting...
-                </>
-              ) : (
-                <>
-                  Submit Feedback <Send size={15} />
-                </>
-              )}
-            </button>
+            <LoadingButton type="submit" loading={submitting} loadingLabel="Submitting…" style={{ ...S.btn, marginTop: 10 }}>
+              Submit Feedback <Send size={15} />
+            </LoadingButton>
           </form>
         )}
       </div>

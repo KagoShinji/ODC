@@ -4,6 +4,8 @@ import { getNextMonthDueDate } from '../utils/billingDates';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { secondaryAuth } from '../lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import { 
   Plus, X, Trash2, RefreshCw, Users, Mail, Building2, 
   CreditCard, Edit2, Calendar, Check, Minus, Search, 
@@ -113,6 +115,7 @@ const MAST_STATUS_COLORS = {
 };
 
 export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialSubTab = 'masterlist', onSubTabChange }) {
+  const modal = useSystemModal();
   const canCreateClient = can ? can('clients:create') : isSuperAdmin !== false;
   const canBillingClient = can ? can('clients:billing') : isSuperAdmin !== false;
   const canInvoiceClient = can ? can('clients:invoice') : isSuperAdmin !== false;
@@ -249,13 +252,19 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   }, []);
 
   const handleDeleteFeedback = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this feedback submission? This cannot be undone.")) return;
+    const confirmed = await modal.confirm({
+      title: 'Delete feedback submission?',
+      message: 'This feedback will be permanently removed and cannot be recovered.',
+      confirmLabel: 'Delete feedback',
+    });
+    if (!confirmed) return;
     try {
       await deleteDoc(doc(db, 'clientFeedback', id));
       setFeedbacks(prev => prev.filter(f => f.id !== id));
+      modal.success({ title: 'Feedback deleted', message: 'The feedback submission was removed.' });
     } catch (err) {
       console.error(err);
-      alert("Failed to delete feedback.");
+      modal.error('We could not delete the feedback submission. Please try again.');
     }
   };
 
@@ -406,7 +415,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       load();
     } catch (err) {
       console.error('Error saving billing configuration:', err);
-      alert('Error saving billing details: ' + err.message);
+      modal.error({ title: 'Billing details not saved', message: err.message || 'Please check the details and try again.' });
     }
     setSavingBilling(false);
   };
@@ -478,7 +487,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       
     } catch (err) {
       console.error(err);
-      alert('Error saving masterlist info: ' + err.message);
+      modal.error({ title: 'Client details not saved', message: err.message || 'Please check the details and try again.' });
     }
     setSavingMast(false);
   };
@@ -515,7 +524,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   // Triggers the invoice creation modal pre-populated with default client billing data
   const handleOpenGenerateInvoice = (client) => {
     if (!client.billingType || !client.billingRate) {
-      alert('Configure billing settings first.');
+      modal.error({ title: 'Billing setup required', message: 'Configure this client’s billing type and rate before generating an invoice.' });
       return;
     }
 
@@ -628,12 +637,12 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       }
 
       await updateDoc(doc(db, 'clients', invoicingClient.id), clientUpdate);
-      alert(`Invoice ${invoiceNumber} successfully created! View it in the "Invoices & Finance" tab.`);
       setShowInvoiceSidebar(false);
       load();
+      modal.success({ title: 'Invoice created', message: `${invoiceNumber} is ready in Invoices & Finance.` });
     } catch (err) {
       console.error('Error generating invoice:', err);
-      alert('Invoice generation failed: ' + err.message);
+      modal.error({ title: 'Invoice not created', message: err.message || 'Please review the invoice details and try again.' });
     } finally {
       setSavingInvoice(false);
     }
@@ -665,9 +674,20 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   };
 
   const handleDelete = async (client) => {
-    if (!window.confirm(`Delete record for ${client.name}? Note: This only removes them from this list, it does not delete their Firebase Auth account.`)) return;
-    await deleteDoc(doc(db, 'clients', client.id));
-    setClients(prev => prev.filter(c => c.id !== client.id));
+    const confirmed = await modal.confirm({
+      title: 'Delete client record?',
+      message: `${client.name} will be removed from this list. Their Firebase Auth account will remain active.`,
+      confirmLabel: 'Delete record',
+    });
+    if (!confirmed) return;
+    try {
+      await deleteDoc(doc(db, 'clients', client.id));
+      setClients(prev => prev.filter(c => c.id !== client.id));
+      modal.success({ title: 'Client record deleted', message: `${client.name} was removed from the client list.` });
+    } catch (err) {
+      console.error('Error deleting client record:', err);
+      modal.error('We could not delete the client record. Please try again.');
+    }
   };
 
   // Compute metrics for Billing Tracker tab
@@ -894,9 +914,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Client Management</h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => load()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {activeSubTab === 'feedback' ? (
             <button onClick={() => { setLinkModalClientId(clients[0]?.id || ''); setCopiedLink(false); setShowLinkModal(true); }} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Link size={16} /> Get Feedback Link
@@ -1437,9 +1457,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                             </button>
                           )}
                           {canDeleteClient && (
-                            <button onClick={() => handleDelete(client)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete Record">
+                            <LoadingButton onClick={() => handleDelete(client)} loadingLabel="Deleting client record" spinnerOnly style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: 8 }} title="Delete Record">
                               <Trash2 size={14} />
-                            </button>
+                            </LoadingButton>
                           )}
                         </div>
                       </td>
@@ -1791,9 +1811,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
 
                   {canDeleteClient && (
                     <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12 }}>
-                      <button onClick={() => handleDeleteFeedback(f.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '6px 12px' }}>
+                      <LoadingButton onClick={() => handleDeleteFeedback(f.id)} loadingLabel="Deleting…" style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', padding: '6px 12px' }}>
                         <Trash2 size={13} /> Delete Review
-                      </button>
+                      </LoadingButton>
                     </div>
                   )}
                 </div>
@@ -2093,9 +2113,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 </div>
               )}
 
-              <button type="submit" disabled={saving} style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
-                {saving ? 'Registering Client…' : 'Register Client'}
-              </button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="Registering client…" style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                Register Client
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -2288,9 +2308,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 />
               </div>
 
-              <button 
+              <LoadingButton
                 type="submit" 
-                disabled={savingBilling} 
+                loading={savingBilling}
+                loadingLabel="Saving billing info…"
                 style={{ 
                   ...S.btn, 
                   background: savingBilling ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', 
@@ -2304,8 +2325,8 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                   marginTop: 16 
                 }}
               >
-                {savingBilling ? 'Saving Billing Info...' : 'Save Configuration'}
-              </button>
+                Save Configuration
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -2398,9 +2419,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 </div>
               </div>
 
-              <button type="submit" disabled={savingInvoice} style={{ ...S.btn, background: savingInvoice ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingInvoice ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
-                {savingInvoice ? 'Generating Invoice…' : 'Generate Invoice'}
-              </button>
+              <LoadingButton type="submit" loading={savingInvoice} loadingLabel="Generating invoice…" style={{ ...S.btn, background: savingInvoice ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingInvoice ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
+                Generate Invoice
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -2745,9 +2766,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 </div>
               )}
 
-              <button type="submit" disabled={savingMast} style={{ ...S.btn, background: savingMast ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingMast ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
-                {savingMast ? 'Saving...' : 'Save Masterlist Record'}
-              </button>
+              <LoadingButton type="submit" loading={savingMast} loadingLabel="Saving…" style={{ ...S.btn, background: savingMast ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingMast ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 8 }}>
+                Save Masterlist Record
+              </LoadingButton>
             </form>
           </div>
         </>

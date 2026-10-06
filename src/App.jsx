@@ -10,6 +10,7 @@ import { Contact } from './pages/Contact';
 import { NotFound } from './pages/NotFound';
 import { SplashScreen } from './components/ui/SplashScreen';
 import { Chatbot } from './components/ui/Chatbot';
+import { SystemModalProvider } from './components/ui/SystemModal';
 const AdminPage = lazy(() => import('./pages/Admin'));
 const ClientPortal = lazy(() => import('./pages/ClientPortal'));
 const Pricing = lazy(() => import('./pages/Pricing'));
@@ -69,11 +70,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <Router>
-      <Suspense fallback={<div role="status" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>Loading page…</div>}>
-        <AppRoutes />
-      </Suspense>
-    </Router>
+    <SystemModalProvider>
+      <Router>
+        <Suspense fallback={<div role="status" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}>Loading page…</div>}>
+          <AppRoutes />
+        </Suspense>
+      </Router>
+    </SystemModalProvider>
   );
 }
 

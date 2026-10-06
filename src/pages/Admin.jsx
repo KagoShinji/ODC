@@ -6,6 +6,8 @@ import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authH
 import { useAllowanceContext } from '../hooks/useAllowanceContext';
 import { useDemoContext } from '../hooks/useDemoContext';
 import { PortalLogin } from '../components/ui/PortalLogin';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import {
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
@@ -249,11 +251,24 @@ function LoginScreen() {
 function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
     const [expanded, setExpanded] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const modal = useSystemModal();
 
     const handleDelete = async () => {
-        if (!window.confirm(`Delete submission from ${sub.name}?`)) return;
+        const confirmed = await modal.confirm({
+            title: 'Delete contact submission?',
+            message: `The submission from ${sub.name} will be permanently removed.`,
+            confirmLabel: 'Delete submission',
+        });
+        if (!confirmed) return;
         setDeleting(true);
-        await onDelete(sub.id);
+        try {
+            await onDelete(sub.id);
+            modal.success({ title: 'Submission deleted', message: `The submission from ${sub.name} was removed.` });
+        } catch (error) {
+            console.error('Error deleting submission:', error);
+            setDeleting(false);
+            modal.error('We could not delete the submission. Please try again.');
+        }
     };
 
     return (
@@ -313,9 +328,10 @@ function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
                         {expanded ? 'Less' : 'More'}
                     </button>
                     {canDelete && (
-                        <button
+                        <LoadingButton
                             onClick={handleDelete}
-                            disabled={deleting}
+                            loading={deleting}
+                            loadingLabel="Deleting…"
                             style={{
                                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
                                 borderRadius: 10, padding: '7px 12px',
@@ -324,7 +340,7 @@ function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
                             }}
                         >
                             <Trash2 size={14} /> Delete
-                        </button>
+                        </LoadingButton>
                     )}
                 </div>
             </div>
@@ -892,10 +908,11 @@ function AdminDashboard({ firebaseUser }) {
                                 />
                             </div>
 
-                            <button
+                            <LoadingButton
                                 id="admin-refresh-btn"
                                 onClick={() => fetchSubmissions()}
-                                disabled={refreshing}
+                                loading={refreshing}
+                                loadingLabel="Refreshing…"
                                 style={{
                                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                                     borderRadius: 12, padding: '10px 16px', color: 'rgba(255,255,255,0.7)',
@@ -903,9 +920,9 @@ function AdminDashboard({ firebaseUser }) {
                                     fontSize: 13, fontFamily: 'inherit',
                                 }}
                             >
-                                <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+                                <RefreshCw size={14} />
                                 Refresh
-                            </button>
+                            </LoadingButton>
 
                             {can('contacts:export') && submissions.length > 0 && (
                                 <button

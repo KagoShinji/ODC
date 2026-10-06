@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { Save, Plus, Trash2, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const S = {
   card: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '24px' },
@@ -109,9 +110,9 @@ export default function AdminMaintenance({ isSuperAdmin, can }) {
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>Modify the pricing, features, and content of the maintenance plans page.</p>
         </div>
         {canSaveMaintenance && (
-          <button onClick={handleSave} disabled={saving} style={{ ...S.btn, background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)', color: '#fff', padding: '10px 24px', fontWeight: 600 }}>
-            {saving ? <RefreshCw size={16} className="spin" /> : <Save size={16} />} Save Changes
-          </button>
+          <LoadingButton onClick={handleSave} loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)', color: '#fff', padding: '10px 24px', fontWeight: 600 }}>
+            <Save size={16} /> Save Changes
+          </LoadingButton>
         )}
       </div>
 

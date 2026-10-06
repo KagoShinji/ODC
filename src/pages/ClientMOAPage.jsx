@@ -6,6 +6,7 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw, PenTool, Clock } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -756,9 +757,11 @@ li { margin-bottom: 5px; }
               </span>
             </label>
 
-            <button
+            <LoadingButton
               type="submit"
-              disabled={submitting || !signeeName.trim()}
+              loading={submitting}
+              loadingLabel="Submitting signature…"
+              disabled={!signeeName.trim()}
               style={{
                 ...S.btn,
                 background: (submitting || !signeeName.trim())
@@ -769,16 +772,8 @@ li { margin-bottom: 5px; }
                 boxShadow: (submitting || !signeeName.trim()) ? 'none' : '0 6px 20px rgba(255,106,26,0.3)',
               }}
             >
-              {submitting ? (
-                <>
-                  <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> Submitting Signature…
-                </>
-              ) : (
-                <>
-                  Sign & Execute Agreement <ChevronRight size={16} />
-                </>
-              )}
-            </button>
+              Sign & Execute Agreement <ChevronRight size={16} />
+            </LoadingButton>
           </form>
         )}
 

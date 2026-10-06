@@ -1,4 +1,5 @@
 import { motion as Motion } from 'framer-motion';
+import LoadingButton from './LoadingButton';
 import {
     ArrowRight,
     Circuitry,
@@ -115,12 +116,12 @@ export function PortalLogin({
                             </div>
                         ) : null}
 
-                        <button type="submit" className="portal-login-submit" disabled={loading}>
-                            {loading ? loadingLabel : submitLabel}
+                        <LoadingButton type="submit" className="portal-login-submit" loading={loading} loadingLabel={loadingLabel}>
+                            {submitLabel}
                             <span>
                                 <ArrowRight size={14} weight="bold" />
                             </span>
-                        </button>
+                        </LoadingButton>
                     </form>
                 </section>
             </Motion.main>

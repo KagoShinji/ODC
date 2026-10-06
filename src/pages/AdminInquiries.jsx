@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { useSystemModal } from '../components/ui/SystemModalContext';
+import LoadingButton from '../components/ui/LoadingButton';
 import { 
   Search, RefreshCw, Trash2, Mail, Building2, 
   Calendar, Clock, CheckCircle2, MessageSquare,
@@ -24,6 +26,7 @@ function formatDate(ts) {
 }
 
 export default function AdminInquiries({ isSuperAdmin, can }) {
+  const modal = useSystemModal();
   const canStatusInquiry = can ? can('inquiries:status') : isSuperAdmin !== false;
   const canDeleteInquiry = can ? can('inquiries:delete') : isSuperAdmin !== false;
 
@@ -48,9 +51,20 @@ export default function AdminInquiries({ isSuperAdmin, can }) {
   useEffect(() => { fetchInquiries(false); }, [fetchInquiries]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this inquiry?')) return;
-    await deleteDoc(doc(db, 'serviceInquiries', id));
-    setInquiries(prev => prev.filter(i => i.id !== id));
+    const confirmed = await modal.confirm({
+      title: 'Delete this inquiry?',
+      message: 'The inquiry and its contact details will be permanently removed.',
+      confirmLabel: 'Delete inquiry',
+    });
+    if (!confirmed) return;
+    try {
+      await deleteDoc(doc(db, 'serviceInquiries', id));
+      setInquiries(prev => prev.filter(i => i.id !== id));
+      modal.success({ title: 'Inquiry deleted', message: 'The inquiry was removed.' });
+    } catch (error) {
+      console.error('Error deleting inquiry:', error);
+      modal.error('We could not delete the inquiry. Please try again.');
+    }
   };
 
   const handleStatusUpdate = async (id, newStatus) => {
@@ -80,9 +94,9 @@ export default function AdminInquiries({ isSuperAdmin, can }) {
           <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Service Inquiries</h2>
           <p style={{ color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>Manage maintenance plan requests from the pricing page.</p>
         </div>
-        <button onClick={() => fetchInquiries()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}>
-          <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> Refresh
-        </button>
+        <LoadingButton onClick={() => fetchInquiries()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}>
+          <RefreshCw size={14} /> Refresh
+        </LoadingButton>
       </div>
 
       {/* Toolbar */}
@@ -143,7 +157,7 @@ export default function AdminInquiries({ isSuperAdmin, can }) {
                     </span>
                   )}
                   {canDeleteInquiry && (
-                    <button onClick={() => handleDelete(item.id)} style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}><Trash2 size={14} /></button>
+                    <LoadingButton onClick={() => handleDelete(item.id)} loadingLabel="Deleting inquiry" spinnerOnly style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}><Trash2 size={14} /></LoadingButton>
                   )}
                 </div>
               </div>

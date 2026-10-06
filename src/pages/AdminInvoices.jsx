@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase, Copy, Check, Award, PenTool, ChevronDown, ChevronUp, Download, Search, Filter } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
+import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
   address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
@@ -1220,9 +1221,9 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
               return <option key={ym} value={ym} style={{ background: '#0f1218', color: '#fff' }}>{dateObj.toLocaleString('en-US', { month: 'short', year: 'numeric' })}</option>;
             })}
           </select>
-          <button onClick={() => load()} disabled={refreshing} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
-            <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} /> Refresh
-          </button>
+          <LoadingButton onClick={() => load()} loading={refreshing} loadingLabel="Refreshing…" style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>
+            <RefreshCw size={14} /> Refresh
+          </LoadingButton>
           {canCreateInvoice && activeSubTab === 'invoices' && (
             <button onClick={openCreate} style={{ ...S.btn, background: 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '10px 18px', boxShadow: '0 4px 14px rgba(255,106,26,0.3)' }}>
               <Plus size={16} /> New Invoice
@@ -2217,9 +2218,9 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                 </div>
               </div>
 
-              <button type="submit" disabled={saving} style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
-                {saving ? 'Saving…' : editingId ? 'Update Invoice' : 'Create Invoice'}
-              </button>
+              <LoadingButton type="submit" loading={saving} loadingLabel="Saving…" style={{ ...S.btn, background: saving ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: saving ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
+                {editingId ? 'Update Invoice' : 'Create Invoice'}
+              </LoadingButton>
             </form>
           </div>
         </>
@@ -2304,9 +2305,9 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                 <input type="checkbox" checked={expenseForm.isRecurring || false} onChange={e => setExpenseForm(f => ({ ...f, isRecurring: e.target.checked }))} style={{ width: 16, height: 16 }} />
                 <span>Mark as Recurring Expense</span>
               </label>
-              <button type="submit" disabled={savingExpense} style={{ ...S.btn, background: savingExpense ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingExpense ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
-                {savingExpense ? 'Saving…' : expenseEditingId ? 'Update Expense' : 'Record Expense'}
-              </button>
+              <LoadingButton type="submit" loading={savingExpense} loadingLabel="Saving…" style={{ ...S.btn, background: savingExpense ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', color: '#fff', padding: '13px 0', justifyContent: 'center', fontSize: 15, fontWeight: 600, boxShadow: savingExpense ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', width: '100%', marginTop: 4 }}>
+                {expenseEditingId ? 'Update Expense' : 'Record Expense'}
+              </LoadingButton>
             </form>
           </div>
         </>
