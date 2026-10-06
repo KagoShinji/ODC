@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { ArrowClockwise, Plus, Printer, DownloadSimple, Wallet, X } from '@phosphor-icons/react';
+import { ArrowClockwise, BookOpen, Plus, Printer, DownloadSimple, Wallet, X } from '@phosphor-icons/react';
 import { db } from '../lib/firebase';
 import { useAllowances } from '../hooks/useAllowances';
 import { newAllowanceId, runAllowanceCommand, allowanceError, openAllowanceEvidence } from '../services/allowanceService';
 import { estimatedCash, manilaDate } from '../../functions/src/domain.js';
 import { peso, timestampLabel, exportAllowanceCsv, printAllowanceSlip } from '../utils/allowanceDocuments';
 import { AccountForm, CorrectionForm, LiquidationForm, MeetingForm, PolicyForm, ReleaseForm, RequisitionForm, ReviewForm } from '../components/allowances/AllowanceForms';
+import AllowanceSlipDetail from '../components/allowances/AllowanceSlipDetail';
+import AllowanceWorkflowGuide from '../components/allowances/AllowanceWorkflowGuide';
+import LoadingButton from '../components/ui/LoadingButton';
 import './AdminAllowances.css';
 
-const TITLES = { meeting: 'Record client meeting', liquidation: 'Liquidation slip', requisition: 'Replenishment requisition', review: 'Operations review', approve: 'Requisition approval', release: 'Record actual release', policy: 'Allowance policy', account: 'Allowance account', reconcile: 'Verify cash on hand', return: 'Record cash return', correct: 'Correct approved expense', detail: 'Slip and supporting evidence' };
+const TITLES = { guide: 'Allowance & requisition operations guide', meeting: 'Record client meeting', liquidation: 'Liquidation slip', requisition: 'Replenishment requisition', review: 'Operations review', approve: 'Requisition approval', release: 'Record actual release', policy: 'Allowance policy', account: 'Allowance account', reconcile: 'Verify cash on hand', return: 'Record cash return', correct: 'Correct approved expense', detail: 'Slip and supporting evidence' };
 const statusLabel = value => String(value || '').replaceAll('_', ' ');
 
 export default function AdminAllowances({ firebaseUser, allowanceState, isSuperAdmin = false, initialSection = 'overview', onSectionChange, onOpenStaff }) {
@@ -128,14 +131,14 @@ export default function AdminAllowances({ firebaseUser, allowanceState, isSuperA
     try { printAllowanceSlip(slip, type, type === 'liquidation' ? await evidenceFor(slip) : [], audits.filter(x => x.entityId === slip.id)); }
     catch (err) { setError(allowanceError(err)); }
   };
-  const more = name => data.more[name] && <button disabled={loading} onClick={() => data.loadMore(name)}>Load more</button>;
+  const more = name => data.more[name] && <LoadingButton loading={loading} loadingLabel="Loading…" onClick={() => data.loadMore(name)}>Load more</LoadingButton>;
   const tabs = ['overview', 'meetings', 'liquidations', 'requisitions', 'history', ...(manager ? ['settings'] : [])];
   const list = (items, row, empty = 'No records yet.') => <div className="allowance-records">{items.length ? items.map(row) : <div className="allowance-empty"><Wallet size={28} /><p>{empty}</p></div>}</div>;
   const matches = record => (!account || record.accountId === account.id) && (filter === 'all' || record.status === filter);
   const targetAccount = modal?.slip ? accounts.find(a => a.id === modal.slip.accountId) || account : modal?.account || account;
 
   return <section className="allowance-module">
-    <header className="allowance-heading"><div><p className="allowance-eyebrow">STAFF OPERATIONS</p><h2>Allowances & Requisitions</h2><p>Track meeting spending, check evidence, and replenish the staff float.</p></div><button disabled={loading} onClick={() => { allowanceState.refresh(); data.refresh(); }}><ArrowClockwise size={18} /> Refresh</button></header>
+    <header className="allowance-heading"><div><p className="allowance-eyebrow">STAFF OPERATIONS</p><h2>Allowances & Requisitions</h2><p>Track meeting spending, check evidence, and replenish the staff float.</p></div><div className="allowance-heading-actions"><button type="button" aria-haspopup="dialog" onClick={() => { setError(''); setModal({ kind: 'guide' }); }}><BookOpen size={18} aria-hidden="true" /> Guide</button><LoadingButton loading={loading} loadingLabel="Refreshing…" onClick={() => { allowanceState.refresh(); data.refresh(); }}><ArrowClockwise size={18} /> Refresh</LoadingButton></div></header>
     {(error || data.error || allowanceState.error) && <div className="allowance-error" role="alert">{error || data.error || allowanceState.error}</div>}
     {notice && <p className="allowance-notice" role="status">{notice}</p>}
     {allowanceState.loading && <div className="allowance-skeleton" aria-label="Loading allowance access" />}
@@ -160,8 +163,9 @@ export default function AdminAllowances({ firebaseUser, allowanceState, isSuperA
       {section === 'history' && <><div className="allowance-controls">{can('reports') && <button disabled={loading} onClick={() => exportAllowanceCsv(ledger.filter(x => x.accountId === account?.id))}><DownloadSimple size={16} /> Export loaded ledger</button>}</div>{list(ledger.filter(x => x.accountId === account?.id), row => <article className="allowance-row" key={row.id}><div><strong>{statusLabel(row.kind)}</strong><small>{row.date} · {row.staffName} · {row.sourceId}</small></div><strong>{peso(row.amountCentavos)}</strong></article>)}{more('allowanceLedger')}<h3>Action history</h3>{list(audits.filter(x => x.accountId === account?.id), event => <article className="allowance-row" key={event.id}><div><strong>{statusLabel(event.command)}</strong><small>{timestampLabel(event.createdAt)} · {event.actorUid}</small><p>{event.before} → {event.after} {event.reason}</p></div></article>)}{more('allowanceAuditEvents')}</>}
       {section === 'settings' && manager && <div className="allowance-settings"><article><h3>Policy and activation</h3><p>Confirm the float, caps, replenishment threshold and meeting window.</p><button disabled={loading} onClick={() => open('policy')}>Configure policy</button></article><article><h3>Staff permissions</h3><p>Manage participant, Operations and Finance access in Staff Management → Create/Edit Staff → Page &amp; Action Permissions → Allowances &amp; Requisitions.</p>{onOpenStaff ? <button disabled={loading} onClick={onOpenStaff}>Open Staff Management</button> : <p>Ask an administrator with Staff Management access to update staff permissions.</p>}</article><article><h3>Allowance accounts</h3><p>Create an account with its scheduled replenishment date, then record funding.</p><button disabled={loading || !context.enabled} onClick={() => open('account')}>Create allowance account</button></article></div>}
     </>}
-    {modal && <div className="allowance-overlay"><div className="allowance-dialog" role="dialog" aria-modal="true" aria-labelledby="allowance-dialog-title" tabIndex={-1} ref={modalRef}><header><h3 id="allowance-dialog-title">{TITLES[modal.kind] || 'Cancel requisition'}</h3><button aria-label="Close dialog" disabled={busy} onClick={() => setModal(null)}><X size={20} /></button></header>
+    {modal && <div className="allowance-overlay"><div className={`allowance-dialog${modal.kind === 'guide' ? ' allowance-guide-dialog' : modal.kind === 'detail' ? ' allowance-detail-dialog' : ''}`} role="dialog" aria-modal="true" aria-labelledby="allowance-dialog-title" tabIndex={-1} ref={modalRef}><header><h3 id="allowance-dialog-title">{TITLES[modal.kind] || 'Cancel requisition'}</h3><button aria-label="Close dialog" disabled={busy} onClick={() => setModal(null)}><X size={20} /></button></header>
       {error && <p className="allowance-error" role="alert">{error}</p>}
+      {modal.kind === 'guide' && <AllowanceWorkflowGuide access={context?.access} enabled={context?.enabled} policy={context?.policy} onNavigate={nextSection => { setModal(null); selectSection(nextSection); }} onOpenStaff={onOpenStaff ? () => { setModal(null); onOpenStaff(); } : undefined} onClose={() => setModal(null)} />}
       {modal.kind === 'meeting' && <MeetingForm account={targetAccount} meeting={modal.meeting} clients={aux.clients} busy={busy} onSave={save} />}
       {modal.kind === 'liquidation' && <LiquidationForm account={targetAccount} meeting={modal.meeting} slip={modal.slip} evidence={modal.evidence} busy={busy} onSave={save} onCommand={command} />}
       {modal.kind === 'requisition' && <RequisitionForm account={targetAccount} request={modal.request} meetings={meetings} busy={busy} onSave={save} />}
@@ -170,8 +174,8 @@ export default function AdminAllowances({ firebaseUser, allowanceState, isSuperA
       {modal.kind === 'policy' && <PolicyForm policy={context.policy} enabled={context.enabled} busy={busy} onSave={save} />}
       {modal.kind === 'account' && <AccountForm staff={aux.staff} grants={aux.grants} account={modal.account} busy={busy} onSave={save} />}
       {['reconcile', 'return', 'correct'].includes(modal.kind) && <CorrectionForm mode={modal.kind} account={targetAccount} slip={modal.slip} busy={busy} onSave={save} />}
-      {modal.kind === 'cancel' && <form onSubmit={e => { e.preventDefault(); save('cancelRequisition', { accountId: modal.request.accountId, id: modal.request.id, reason: new FormData(e.currentTarget).get('reason') }); }}><label className="allowance-field"><span>Reason for cancellation</span><textarea name="reason" required maxLength={1000} /></label><button className="allowance-primary" disabled={busy}>Confirm cancellation</button></form>}
-      {modal.kind === 'detail' && <><p><strong>{modal.slip.staffName}</strong> · {modal.slip.clientName} · {modal.slip.date}</p><p>{modal.slip.slipNumber} · {statusLabel(modal.slip.status)} · {peso(modal.slip.correctedTotalCentavos ?? modal.slip.totalCentavos)}</p>{modal.slip.lines.map((line, i) => <p key={i}>{line.description} · {line.category} · {peso(line.amountCentavos)}</p>)}<h4>Receipts and vouchers</h4>{modal.evidence.filter(file => modal.slip.attachmentIds.includes(file.id)).map(file => <button key={file.id} disabled={busy || file.kind === 'reference' && !file.referenceUri} onClick={() => openAllowanceEvidence(file).catch(err => setError(allowanceError(err)))}>{file.name} · {file.kind === 'reference' ? `Reference: ${file.reference}${file.referenceUri ? ' · Open evidence' : ''}` : 'Download privately'}</button>)}<h4>Action history</h4>{audits.filter(event => event.entityId === modal.slip.id).map(event => <p key={event.id}>{timestampLabel(event.createdAt)} · {event.command} · {event.after} {event.reason}</p>)}<button onClick={() => print(modal.slip, 'liquidation')}><Printer size={16} /> Print slip</button></>}
+      {modal.kind === 'cancel' && <form onSubmit={e => { e.preventDefault(); save('cancelRequisition', { accountId: modal.request.accountId, id: modal.request.id, reason: new FormData(e.currentTarget).get('reason') }); }}><label className="allowance-field"><span>Reason for cancellation</span><textarea name="reason" required maxLength={1000} /></label><LoadingButton className="allowance-primary" loading={busy} loadingLabel="Cancelling…">Confirm cancellation</LoadingButton></form>}
+      {modal.kind === 'detail' && <AllowanceSlipDetail slip={modal.slip} evidence={modal.evidence} history={audits.filter(event => event.entityId === modal.slip.id)} busy={busy} onOpenEvidence={file => openAllowanceEvidence(file).catch(err => setError(allowanceError(err)))} onPrint={() => print(modal.slip, 'liquidation')} />}
     </div></div>}
   </section>;
 }
