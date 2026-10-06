@@ -445,7 +445,7 @@ const emptyForm = () => ({ billTo: '', project: '', date: today(), paymentTerms:
 
 const emptyExpenseForm = () => ({ title: '', category: 'Salaries', amount: '', date: today(), payee: '', referenceNumber: '', status: 'paid', notes: '', isRecurring: false });
 
-export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
+export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initialSubTab = 'invoices', onSubTabChange }) {
   // Permission checks
   const canCreateInvoice = can ? can('invoices:create') : isSuperAdmin;
   const canEditInvoice = can ? can('invoices:edit') : isSuperAdmin;
@@ -572,7 +572,18 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
   const [selectedInvoices, setSelectedInvoices] = useState([]);
 
   // Sub-Navigation State
-  const [activeSubTab, setActiveSubTab] = useState('invoices'); // 'invoices' | 'expenses' | 'summary'
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'invoices' | 'expenses' | 'summary'
+
+  useEffect(() => {
+    if (['invoices', 'expenses', 'summary'].includes(initialSubTab)) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  const selectSubTab = (id) => {
+    setActiveSubTab(id);
+    onSubTabChange?.(id);
+  };
 
   // Global Month Filter & Pagination
   const [globalMonthFilter, setGlobalMonthFilter] = useState('All'); // 'All' or 'YYYY-MM'
@@ -1241,7 +1252,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can }) {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveSubTab(tab.id)}
+              onClick={() => selectSubTab(tab.id)}
               style={{
                 cursor: 'pointer',
                 border: 'none',

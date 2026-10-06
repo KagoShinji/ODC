@@ -4,6 +4,7 @@ import { db, auth } from '../lib/firebase';
 import { ALL_ADMIN_NAVIGATIONS, getAllActionIds, getActionsForTabs } from '../utils/navigationConfig';
 import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authHelpers';
 import { useAllowanceContext } from '../hooks/useAllowanceContext';
+import { useDemoContext } from '../hooks/useDemoContext';
 import { PortalLogin } from '../components/ui/PortalLogin';
 import {
     signInWithEmailAndPassword,
@@ -39,6 +40,8 @@ import {
     ChevronDown,
     ChevronUp,
     Download,
+    Menu,
+    X,
 } from 'lucide-react';
 
 const AdminInvoices = lazy(() => import('./AdminInvoices'));
@@ -53,6 +56,7 @@ const AdminSalaries = lazy(() => import('./AdminSalaries'));
 const AdminDomains = lazy(() => import('./AdminDomains'));
 const AdminStaff = lazy(() => import('./AdminStaff'));
 const AdminAllowances = lazy(() => import('./AdminAllowances'));
+const AdminDemos = lazy(() => import('./AdminDemos'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -370,12 +374,22 @@ function SubmissionRow({ sub, isSuperAdmin, canDelete, onDelete }) {
 /* ─── Main Admin Dashboard ─── */
 function AdminDashboard({ firebaseUser }) {
     const allowanceState = useAllowanceContext(firebaseUser.uid);
+    const demoState = useDemoContext(firebaseUser.uid);
     const superAdmin = isSuperAdminEmail(firebaseUser.email);
     const [staffProfile, setStaffProfile] = useState(null);
     const [staffLoading, setStaffLoading] = useState(true);
     const [userAllowedTabs, setUserAllowedTabs] = useState([]);
     const [userAllowedActions, setUserAllowedActions] = useState([]);
     const [activeTab, setActiveTab] = useState('contacts');
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [expandedSystems, setExpandedSystems] = useState([]);
+    const [activeSubTabs, setActiveSubTabs] = useState({
+        demos: 'calendar',
+        allowances: 'overview',
+        invoices: 'invoices',
+        clients: 'masterlist',
+        salaries: 'payroll',
+    });
 
     // Contacts data state
     const [submissions, setSubmissions] = useState([]);
@@ -472,7 +486,10 @@ function AdminDashboard({ firebaseUser }) {
     // Calculate visible navigation tabs for current user
     const visibleTabs = ALL_ADMIN_NAVIGATIONS.filter(tab => tab.id === 'allowances'
         ? superAdmin || allowanceState.context?.access?.active
+        : tab.id === 'demos' ? superAdmin || demoState.context?.access?.active
         : superAdmin || userAllowedTabs.includes(tab.id));
+    const activeSystemHasSubTabs = visibleTabs.some(tab =>
+        tab.id === activeTab && tab.subTabs?.length > 0);
 
     // Ensure activeTab is always one of the permitted tabs
     useEffect(() => {
@@ -483,6 +500,40 @@ function AdminDashboard({ firebaseUser }) {
             }
         }
     }, [visibleTabs, activeTab, staffLoading]);
+
+    useEffect(() => {
+        if (activeSystemHasSubTabs) {
+            setExpandedSystems(current => current.includes(activeTab) ? current : [...current, activeTab]);
+        }
+    }, [activeTab, activeSystemHasSubTabs]);
+
+    const selectSystem = (id, hasSubTabs = false) => {
+        setActiveTab(id);
+        if (hasSubTabs) {
+            setExpandedSystems(current => current.includes(id) ? current : [...current, id]);
+        } else {
+            setSidebarOpen(false);
+        }
+    };
+
+    const toggleSystem = (id) => {
+        setExpandedSystems(current => current.includes(id)
+            ? current.filter(systemId => systemId !== id)
+            : [...current, id]);
+    };
+
+    const selectSubSystem = (systemId, subTabId) => {
+        setActiveTab(systemId);
+        setActiveSubTabs(current => ({ ...current, [systemId]: subTabId }));
+        setExpandedSystems(current => current.includes(systemId) ? current : [...current, systemId]);
+        setSidebarOpen(false);
+    };
+
+    const syncSubSystem = (systemId, subTabId) => {
+        setActiveSubTabs(current => current[systemId] === subTabId
+            ? current
+            : { ...current, [systemId]: subTabId });
+    };
 
     // Fetch Contact Submissions
     const fetchSubmissions = useCallback(async (showSpinner = true) => {
@@ -522,10 +573,11 @@ function AdminDashboard({ firebaseUser }) {
         );
     });
 
-    const hasPermission = (tabId) => tabId === 'allowances' ? superAdmin || allowanceState.context?.access?.active : superAdmin || userAllowedTabs.includes(tabId);
+    const hasPermission = (tabId) => tabId === 'allowances' ? superAdmin || allowanceState.context?.access?.active : tabId === 'demos' ? superAdmin || demoState.context?.access?.active : superAdmin || userAllowedTabs.includes(tabId);
 
     // Permission checker function passed down to child components
     const can = useCallback((actionId) => {
+        if (actionId?.startsWith('demos:')) return demoState.context?.access?.active === true && demoState.context.access.actions?.includes(actionId) && (actionId !== 'demos:present' || demoState.context.access.presenterEnabled);
         if (actionId?.startsWith('allowances:')) return allowanceState.context?.access?.active === true && allowanceState.context.access.actions?.includes(actionId);
         if (superAdmin) return true;
         if (!actionId) return false;
@@ -535,7 +587,10 @@ function AdminDashboard({ firebaseUser }) {
             return userAllowedActions.includes(actionId);
         }
         return true;
-    }, [superAdmin, userAllowedTabs, userAllowedActions, allowanceState.context]);
+    }, [superAdmin, userAllowedTabs, userAllowedActions, allowanceState.context, demoState.context]);
+
+    const visibleSubTabs = (tab) => (tab.subTabs || []).filter(subTab =>
+        !subTab.requiresAction || can(subTab.requiresAction));
 
     // If still resolving staff permissions
     if (staffLoading) {
@@ -624,10 +679,20 @@ function AdminDashboard({ firebaseUser }) {
                 padding: '0 24px',
             }}>
                 <div className="admin-header" style={{
-                    maxWidth: 1200, margin: '0 auto',
+                    width: '100%', margin: '0 auto',
                     height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                        <button
+                            type="button"
+                            className="admin-nav-toggle"
+                            onClick={() => setSidebarOpen((open) => !open)}
+                            aria-label={sidebarOpen ? 'Close systems navigation' : 'Open systems navigation'}
+                            aria-expanded={sidebarOpen}
+                            aria-controls="admin-system-navigation"
+                        >
+                            {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                        </button>
                         <div style={{
                             width: 36, height: 36, borderRadius: 10,
                             background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
@@ -653,8 +718,8 @@ function AdminDashboard({ firebaseUser }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+                    <div className="admin-account" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span className="admin-account-email" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
                             {formatDisplayIdentifier(firebaseUser.email)}
                         </span>
                         <button
@@ -673,32 +738,104 @@ function AdminDashboard({ firebaseUser }) {
                 </div>
             </header>
 
-            {/* Dynamic Tab bar (Displays only permitted tabs) */}
-            <div className="admin-tabs-wrapper" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(10,13,20,0.6)', backdropFilter: 'blur(10px)' }}>
-                <div className="admin-tabs-container" style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', display: 'flex', gap: 4, overflowX: 'auto' }}>
-                    {/* eslint-disable-next-line no-unused-vars */}
-                    {visibleTabs.map(({ id, label, icon: TabIcon }) => (
-                        <button
-                            key={id}
-                            onClick={() => setActiveTab(id)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: 7, padding: '14px 16px',
-                                background: 'none', border: 'none',
-                                borderBottom: `2px solid ${activeTab === id ? '#ff6a1a' : 'transparent'}`,
-                                color: activeTab === id ? '#ff9a4a' : 'rgba(255,255,255,0.45)',
-                                fontWeight: activeTab === id ? 600 : 400, fontSize: 14,
-                                cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
-                                marginBottom: -1, whiteSpace: 'nowrap'
-                            }}
-                        >
-                            <TabIcon size={15} />{label}
-                        </button>
-                    ))}
-                </div>
-            </div>
+            <div className="admin-shell">
+                <button
+                    type="button"
+                    className={`admin-sidebar-scrim ${sidebarOpen ? 'is-open' : ''}`}
+                    onClick={() => setSidebarOpen(false)}
+                    aria-label="Close systems navigation"
+                    tabIndex={sidebarOpen ? 0 : -1}
+                />
 
-            {/* Main content */}
-            <main className="admin-main" style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
+                <aside
+                    id="admin-system-navigation"
+                    className={`admin-sidebar ${sidebarOpen ? 'is-open' : ''}`}
+                    aria-label="Systems navigation"
+                >
+                    <div className="admin-sidebar-heading">
+                        <div>
+                            <span className="admin-sidebar-eyebrow">Workspace</span>
+                            <h2>Systems</h2>
+                        </div>
+                        <span className="admin-sidebar-count" aria-label={`${visibleTabs.length} available systems`}>
+                            {visibleTabs.length}
+                        </span>
+                    </div>
+
+                    <nav className="admin-sidebar-nav">
+                        {visibleTabs.map((tab) => {
+                            const { id, label, icon: TabIcon } = tab;
+                            const selected = activeTab === id;
+                            const subTabs = visibleSubTabs(tab);
+                            const hasSubTabs = subTabs.length > 0;
+                            const expanded = hasSubTabs && expandedSystems.includes(id);
+                            return (
+                                <div className={`admin-sidebar-item ${hasSubTabs ? 'has-children' : ''}`} key={id}>
+                                    <div className="admin-sidebar-row">
+                                        <button
+                                            type="button"
+                                            className={`admin-sidebar-link ${selected ? 'is-active' : ''}`}
+                                            onClick={() => selectSystem(id, hasSubTabs)}
+                                            aria-current={selected ? 'page' : undefined}
+                                        >
+                                            <span className="admin-sidebar-icon"><TabIcon size={17} /></span>
+                                            <span>{label}</span>
+                                            {id === 'demos' && demoState.unread > 0 && <span aria-label={`${demoState.unread} unread scheduling notifications`} style={{ color: '#d9a66a', fontSize: 11 }}>{demoState.unread}</span>}
+                                            <span className="admin-sidebar-indicator" aria-hidden="true" />
+                                        </button>
+                                        {hasSubTabs && (
+                                            <button
+                                                type="button"
+                                                className="admin-sidebar-expander"
+                                                onClick={() => toggleSystem(id)}
+                                                aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label} sections`}
+                                                aria-expanded={expanded}
+                                                aria-controls={`admin-subnav-${id}`}
+                                            >
+                                                <ChevronDown size={15} aria-hidden="true" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {hasSubTabs && (
+                                        <div
+                                            id={`admin-subnav-${id}`}
+                                            className={`admin-sidebar-subnav ${expanded ? 'is-open' : ''}`}
+                                            aria-hidden={!expanded}
+                                        >
+                                            <div className="admin-sidebar-subnav-inner">
+                                                {subTabs.map(subTab => {
+                                                    const subSelected = selected && activeSubTabs[id] === subTab.id;
+                                                    return (
+                                                        <button
+                                                            type="button"
+                                                            key={subTab.id}
+                                                            className={`admin-sidebar-sublink ${subSelected ? 'is-active' : ''}`}
+                                                            onClick={() => selectSubSystem(id, subTab.id)}
+                                                            aria-current={subSelected ? 'page' : undefined}
+                                                            tabIndex={expanded ? 0 : -1}
+                                                        >
+                                                            <span aria-hidden="true" />
+                                                            {subTab.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="admin-sidebar-footer">
+                        <span>Signed in as</span>
+                        <strong>{formatDisplayIdentifier(firebaseUser.email)}</strong>
+                    </div>
+                </aside>
+
+                {/* Main content */}
+                <main className="admin-main">
                 <Suspense key={activeTab} fallback={<p role="status">Loading module…</p>}>
 
                 {activeTab === 'contacts' && hasPermission('contacts') && (
@@ -820,7 +957,7 @@ function AdminDashboard({ firebaseUser }) {
                 )}
 
                 {activeTab === 'invoices' && hasPermission('invoices') && (
-                    <AdminInvoices firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                    <AdminInvoices firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} initialSubTab={activeSubTabs.invoices} onSubTabChange={(id) => syncSubSystem('invoices', id)} />
                 )}
 
                 {activeTab === 'moa' && hasPermission('moa') && (
@@ -836,7 +973,7 @@ function AdminDashboard({ firebaseUser }) {
                 )}
 
                 {activeTab === 'clients' && hasPermission('clients') && (
-                    <AdminClients firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                    <AdminClients firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} initialSubTab={activeSubTabs.clients} onSubTabChange={(id) => syncSubSystem('clients', id)} />
                 )}
 
                 {activeTab === 'maintenance' && hasPermission('maintenance') && (
@@ -848,7 +985,7 @@ function AdminDashboard({ firebaseUser }) {
                 )}
 
                 {activeTab === 'salaries' && hasPermission('salaries') && (
-                    <AdminSalaries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} />
+                    <AdminSalaries firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} initialSubTab={activeSubTabs.salaries} onSubTabChange={(id) => syncSubSystem('salaries', id)} />
                 )}
 
                 {activeTab === 'domains' && hasPermission('domains') && (
@@ -856,13 +993,17 @@ function AdminDashboard({ firebaseUser }) {
                 )}
 
                 {activeTab === 'staff' && hasPermission('staff') && (
-                    <AdminStaff firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} onOpenAllowances={hasPermission('allowances') ? () => setActiveTab('allowances') : undefined} />
+                    <AdminStaff firebaseUser={firebaseUser} isSuperAdmin={superAdmin} can={can} onOpenAllowances={hasPermission('allowances') ? () => selectSubSystem('allowances', 'overview') : undefined} onOpenDemos={hasPermission('demos') ? () => selectSubSystem('demos', 'settings') : undefined} />
                 )}
                 {activeTab === 'allowances' && hasPermission('allowances') && (
-                    <AdminAllowances firebaseUser={firebaseUser} allowanceState={allowanceState} isSuperAdmin={superAdmin} />
+                    <AdminAllowances firebaseUser={firebaseUser} allowanceState={allowanceState} isSuperAdmin={superAdmin} initialSection={activeSubTabs.allowances} onSectionChange={(id) => syncSubSystem('allowances', id)} onOpenStaff={hasPermission('staff') ? () => selectSystem('staff') : undefined} />
+                )}
+                {activeTab === 'demos' && hasPermission('demos') && (
+                    <AdminDemos firebaseUser={firebaseUser} demoState={demoState} initialSection={activeSubTabs.demos} onSectionChange={(id) => syncSubSystem('demos', id)} onOpenStaff={hasPermission('staff') ? () => selectSystem('staff') : undefined} />
                 )}
                 </Suspense>
-            </main>
+                </main>
+            </div>
 
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>

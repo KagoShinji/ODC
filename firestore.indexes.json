@@ -1,5 +1,12 @@
 {
   "indexes": [
+    { "collectionGroup": "demoAccess", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "presenterEnabled", "order": "ASCENDING" }] },
+    { "collectionGroup": "demoBookings", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "recipientUids", "arrayConfig": "CONTAINS" }, { "fieldPath": "date", "order": "ASCENDING" }] },
+    { "collectionGroup": "demoBookings", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "presenterUid", "order": "ASCENDING" }, { "fieldPath": "status", "order": "ASCENDING" }, { "fieldPath": "endAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "demoNotifications", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "recipientUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "demoNotifications", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "recipientUid", "order": "ASCENDING" }, { "fieldPath": "read", "order": "ASCENDING" }] },
+    { "collectionGroup": "demoAuditEvents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "bookingId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "demoReminders", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "active", "order": "ASCENDING" }, { "fieldPath": "dueAt", "order": "ASCENDING" }] },
     { "collectionGroup": "allowanceAttachments", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "cleanupCandidate", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
     { "collectionGroup": "allowanceLiquidations", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "allowanceRequisitions", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },

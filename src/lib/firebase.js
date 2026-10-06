@@ -22,7 +22,7 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, import.meta.env.VITE_FIREBASE_FUNCTIONS_REGION || 'asia-southeast1');
-const emulatorMode = import.meta.env.DEV && import.meta.env.VITE_ALLOWANCE_EMULATORS === 'true';
+const emulatorMode = import.meta.env.DEV && (import.meta.env.VITE_FIREBASE_EMULATORS === 'true' || import.meta.env.VITE_ALLOWANCE_EMULATORS === 'true');
 if (emulatorMode) {
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);

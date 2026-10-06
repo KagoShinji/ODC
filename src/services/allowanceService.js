@@ -1,15 +1,20 @@
-import { httpsCallable } from 'firebase/functions';
 import { getBlob, ref, uploadBytesResumable } from 'firebase/storage';
-import { functions, storage } from '../lib/firebase';
+import { storage } from '../lib/firebase';
+import { operationsBackend, operationsCapabilities } from './operations/backend';
 import { FILE_TYPES, DEFAULT_POLICY } from '../../functions/src/domain.js';
 
-const contextCall = httpsCallable(functions, 'allowanceContext');
-const commandCall = httpsCallable(functions, 'allowanceCommand');
-export const getAllowanceContext = async () => (await contextCall()).data;
+export const getAllowanceContext = () => operationsBackend().allowanceContext();
 export const newAllowanceId = () => crypto.randomUUID();
-export const runAllowanceCommand = async (command, payload, commandId = newAllowanceId()) => (await commandCall({ command, payload, commandId })).data;
+export const runAllowanceCommand = (command, payload, commandId = newAllowanceId()) => operationsBackend().allowanceCommand(command, payload, commandId);
+export const allowanceCapabilities = operationsCapabilities;
+export const registerAllowanceReference = async (accountId, liquidationId, reference, name, referenceUri, purchaseCentavos = 0) => {
+  const id = newAllowanceId();
+  await runAllowanceCommand('registerEvidenceReference', { accountId, liquidationId, id, reference, name, referenceUri, purchaseCentavos });
+  return { id, name: name || reference, reference: reference.toUpperCase(), referenceUri, purchaseCentavos, finalized: true, kind: 'reference' };
+};
 
 export function allowanceError(error, { checkingAccess = false } = {}) {
+  if (error?.code === 'permission-denied') return 'Your allowance access could not be verified. Ask an administrator to check your permissions and the deployed Firestore rules.';
   if (error?.code === 'functions/not-found' && checkingAccess) return 'The allowance service was not found. An administrator must check its deployment and configured region.';
   if (error?.code === 'functions/unavailable') return 'The allowance service could not be reached. Check your connection and retry.';
   if (error?.code === 'functions/internal') return 'The allowance service could not complete this request. Retry, or ask an administrator to check feature setup.';
@@ -18,6 +23,7 @@ export function allowanceError(error, { checkingAccess = false } = {}) {
 }
 
 export async function uploadAllowanceEvidence(accountId, liquidationId, file, onProgress, policy = DEFAULT_POLICY, purchaseCentavos = 0) {
+  if (!operationsCapabilities.evidenceUploads) throw new Error('Use a receipt or voucher reference in this version.');
   if (!FILE_TYPES.includes(file.type)) throw new Error('Choose a JPEG, PNG, WebP, or PDF.');
   if (file.size <= 0 || file.size > policy.maxFileBytes) throw new Error(`Files must be smaller than ${policy.maxFileBytes / 1048576} MB.`);
   const id = newAllowanceId();
@@ -31,6 +37,12 @@ export async function uploadAllowanceEvidence(accountId, liquidationId, file, on
 }
 
 export async function openAllowanceEvidence(file) {
+  if (file.kind === 'reference') {
+    if (!file.referenceUri) throw new Error(`Review receipt or voucher ${file.reference} using your team’s existing evidence records.`);
+    const url = new URL(file.referenceUri);
+    if (url.protocol !== 'https:') throw new Error('Evidence links must use HTTPS.');
+    window.open(url.href, '_blank', 'noopener,noreferrer'); return;
+  }
   // Authenticated Storage download; never publish a persistent download-token URL.
   const blob = await getBlob(ref(storage, file.objectPath), DEFAULT_POLICY.maxFileBytes);
   const url = URL.createObjectURL(blob);

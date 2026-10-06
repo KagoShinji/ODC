@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { db, auth, secondaryAuth } from '../lib/firebase';
 import {
-  ALL_ADMIN_NAVIGATIONS as NAVIGATION_REGISTRY,
+  ALL_ADMIN_NAVIGATIONS,
+  getAllActionIds,
   getActionsForTabs,
 } from '../utils/navigationConfig';
 import { normalizeAuthIdentifier, formatDisplayIdentifier } from '../utils/authHelpers';
-// Allowance authority is managed by the verified backend, not legacy staff fields.
-const ALL_ADMIN_NAVIGATIONS = NAVIGATION_REGISTRY.filter(nav => nav.id !== 'allowances');
-const getAllActionIds = () => ALL_ADMIN_NAVIGATIONS.flatMap(nav => nav.actions.map(action => action.id));
+import { getStaffModulePermissions, saveStaffModulePermissions, registerStaffLoginIdentity } from '../services/staffPermissionService';
+import { TRUSTED_STAFF_MODULES, hydrateStaffPermissions, staffModuleChanges } from '../utils/staffModulePermissions';
 import {
   collection,
   getDocs,
@@ -83,8 +83,8 @@ const PRESETS = [
   },
   {
     name: 'Finance & Operations',
-    desc: 'Invoices, Payroll, MOA & Acceptance (No Deletion)',
-    tabs: ['invoices', 'salaries', 'moa', 'acceptance', 'clients'],
+    desc: 'Invoices, Payroll, Allowances, MOA & Acceptance (No Deletion)',
+    tabs: ['invoices', 'salaries', 'moa', 'acceptance', 'clients', 'allowances'],
     actions: [
       'invoices:create',
       'invoices:edit',
@@ -100,7 +100,26 @@ const PRESETS = [
       'clients:billing',
       'clients:invoice',
       'salaries:payout',
+      'allowances:meeting',
+      'allowances:liquidate',
+      'allowances:request',
+      'allowances:review',
+      'allowances:approve',
+      'allowances:release',
+      'allowances:reports',
     ],
+  },
+  {
+    name: 'Sales',
+    desc: 'Client demonstrations and personal meeting expenses',
+    tabs: ['clients', 'demos', 'allowances'],
+    actions: ['clients:create', 'demos:book', 'allowances:meeting', 'allowances:liquidate', 'allowances:request'],
+  },
+  {
+    name: 'Demo Presenter',
+    desc: 'Publish available hours and manage assigned demonstrations',
+    tabs: ['demos'],
+    actions: ['demos:present'],
   },
   {
     name: 'Minimal / Read Only',
@@ -151,7 +170,7 @@ const S = {
   },
 };
 
-export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllowances }) {
+export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllowances, onOpenDemos }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -167,6 +186,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
   const [editingStaffId, setEditingStaffId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [modulePermissions, setModulePermissions] = useState(null);
+  const [modulePermissionError, setModulePermissionError] = useState('');
+  const [modulePermissionLoading, setModulePermissionLoading] = useState(true);
   const [resetSending, setResetSending] = useState(false);
 
   // Form State
@@ -181,12 +203,31 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
     password: '',
     allowedTabs: ['contacts', 'tickets'], // default minimal access
     allowedActions: getActionsForTabs(['contacts', 'tickets']),
+    demoPresenterEnabled: false,
   });
 
   const canCreateStaff = can ? can('staff:create') : isSuperAdmin;
   const canEditStaff = can ? can('staff:edit') : isSuperAdmin;
   const canToggleStaffStatus = can ? can('staff:status') : isSuperAdmin;
   const canDeleteStaff = can ? can('staff:delete') : isSuperAdmin;
+  const canEditModule = (module) => !TRUSTED_STAFF_MODULES.includes(module) || modulePermissions?.[module]?.editable === true;
+  const loadModulePermissions = useCallback(async () => {
+    setModulePermissionLoading(true);
+    setModulePermissionError('');
+    try {
+      const context = await getStaffModulePermissions();
+      setModulePermissions(context);
+      return context;
+    } catch (error) {
+      setModulePermissions(null);
+      setModulePermissionError(error.code === 'functions/not-found' || error.code === 'functions/unavailable'
+        ? 'Demo and allowance permissions are unavailable. Check the connection and feature setup, then retry.'
+        : error.message || 'Unable to load demo and allowance permissions.');
+      return null;
+    } finally {
+      setModulePermissionLoading(false);
+    }
+  }, []);
 
   // Fetch Staff from Firestore
   const loadStaff = useCallback(async (showIndicator = true) => {
@@ -205,7 +246,8 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
 
   useEffect(() => {
     loadStaff(false);
-  }, [loadStaff]);
+    loadModulePermissions();
+  }, [loadStaff, loadModulePermissions]);
 
   // Toast auto-clear
   useEffect(() => {
@@ -230,13 +272,15 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       password: '',
       allowedTabs: defaultTabs,
       allowedActions: getActionsForTabs(defaultTabs),
+      demoPresenterEnabled: false,
     });
     setErrorMsg('');
     setShowModal(true);
   };
 
   // Open Edit Modal
-  const handleOpenEdit = (member) => {
+  const handleOpenEdit = async (member) => {
+    const context = await loadModulePermissions();
     setEditingStaffId(member.id);
     const displayId = formatDisplayIdentifier(member.email);
     const tabs = Array.isArray(member.allowedTabs) ? member.allowedTabs : ['contacts'];
@@ -253,8 +297,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       status: member.status || 'active',
       createLogin: !member.hasLoginAccess,
       password: '',
-      allowedTabs: tabs,
-      allowedActions: actions,
+      ...hydrateStaffPermissions(tabs, actions, context, member.id),
     });
     setErrorMsg('');
     setShowModal(true);
@@ -262,6 +305,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
 
   // Checkbox Toggle for Navigations (Parent Tab)
   const handleToggleTab = (tabId) => {
+    if (!canEditModule(tabId) || saving) return;
     setForm((prev) => {
       const currentTabs = prev.allowedTabs || [];
       const currentActions = prev.allowedActions || [];
@@ -273,6 +317,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
           ...prev,
           allowedTabs: currentTabs.filter((id) => id !== tabId),
           allowedActions: currentActions.filter((actId) => !tabActions.includes(actId)),
+          demoPresenterEnabled: tabId === 'demos' ? false : prev.demoPresenterEnabled,
         };
       } else {
         // Checking parent tab adds the tab AND enables all its sub-actions by default
@@ -280,6 +325,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
           ...prev,
           allowedTabs: [...currentTabs, tabId],
           allowedActions: Array.from(new Set([...currentActions, ...tabActions])),
+          demoPresenterEnabled: tabId === 'demos' ? true : prev.demoPresenterEnabled,
         };
       }
     });
@@ -287,6 +333,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
 
   // Checkbox Toggle for Granular Actions
   const handleToggleAction = (actionId, tabId) => {
+    if (!canEditModule(tabId) || saving) return;
     setForm((prev) => {
       const currentTabs = prev.allowedTabs || [];
       const currentActions = prev.allowedActions || [];
@@ -309,12 +356,14 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
         ...prev,
         allowedTabs: nextTabs,
         allowedActions: nextActions,
+        demoPresenterEnabled: actionId === 'demos:present' ? !isActionChecked : prev.demoPresenterEnabled,
       };
     });
   };
 
   // Select all actions for a specific module
   const handleSelectAllActionsForTab = (tabId) => {
+    if (!canEditModule(tabId) || saving) return;
     setForm((prev) => {
       const currentTabs = prev.allowedTabs || [];
       const currentActions = prev.allowedActions || [];
@@ -324,12 +373,14 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
         ...prev,
         allowedTabs: currentTabs.includes(tabId) ? currentTabs : [...currentTabs, tabId],
         allowedActions: Array.from(new Set([...currentActions, ...tabActions])),
+        demoPresenterEnabled: tabId === 'demos' ? true : prev.demoPresenterEnabled,
       };
     });
   };
 
   // Clear all actions for a specific module (read-only access)
   const handleClearAllActionsForTab = (tabId) => {
+    if (!canEditModule(tabId) || saving) return;
     setForm((prev) => {
       const currentActions = prev.allowedActions || [];
       const tabActions = getActionsForTabs([tabId]);
@@ -337,34 +388,23 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       return {
         ...prev,
         allowedActions: currentActions.filter((actId) => !tabActions.includes(actId)),
+        demoPresenterEnabled: tabId === 'demos' ? false : prev.demoPresenterEnabled,
       };
     });
   };
 
   // Select / Deselect All Navigations & Actions
-  const handleSelectAllTabs = () => {
-    setForm((prev) => ({
-      ...prev,
-      allowedTabs: ALL_ADMIN_NAVIGATIONS.map((n) => n.id),
-      allowedActions: getAllActionIds(),
-    }));
-  };
-
-  const handleClearAllTabs = () => {
-    setForm((prev) => ({
-      ...prev,
-      allowedTabs: [],
-      allowedActions: [],
-    }));
-  };
-
   const handleApplyPreset = (preset) => {
-    setForm((prev) => ({
+    if (saving) return;
+    setForm(prev => ({
       ...prev,
-      allowedTabs: [...preset.tabs],
-      allowedActions: [...preset.actions],
+      allowedTabs: [...preset.tabs.filter(canEditModule), ...prev.allowedTabs.filter(tab => !canEditModule(tab))],
+      allowedActions: [...preset.actions.filter(action => canEditModule(action.split(':')[0])), ...prev.allowedActions.filter(action => !canEditModule(action.split(':')[0]))],
+      demoPresenterEnabled: canEditModule('demos') ? preset.actions.includes('demos:present') : prev.demoPresenterEnabled,
     }));
   };
+  const handleSelectAllTabs = () => handleApplyPreset(PRESETS[0]);
+  const handleClearAllTabs = () => handleApplyPreset({ tabs: [], actions: [] });
 
   // Trigger Password Reset Email
   const handleSendResetEmail = async (targetEmail) => {
@@ -405,11 +445,16 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
     }
 
     setSaving(true);
+    let detailsSaved = false;
     try {
       // Normalize username or non-standard email to a valid Firebase email
       const normalizedEmail = normalizeAuthIdentifier(form.email);
       const displayUser = formatDisplayIdentifier(normalizedEmail);
       const existingMember = staffList.find((s) => s.id === editingStaffId);
+      let verifiedLogin;
+      if (modulePermissionError && form.allowedTabs.some(tab => TRUSTED_STAFF_MODULES.includes(tab))) {
+        throw new Error('Demo and allowance permissions could not be verified. Reopen the editor after the permission service is available.');
+      }
 
       // 1. If password is provided, ensure it is set directly in Firebase Auth
       if (form.password) {
@@ -424,6 +469,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
             normalizedEmail,
             form.password
           );
+          verifiedLogin = { uid: userCred.user.uid, email: userCred.user.email };
           await updateProfile(userCred.user, { displayName: form.name.trim() });
           await secondarySignOut(secondaryAuth);
         } catch (authErr) {
@@ -452,6 +498,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
             }
 
             if (signedIn && secondaryAuth.currentUser) {
+              verifiedLogin = { uid: secondaryAuth.currentUser.uid, email: secondaryAuth.currentUser.email };
               try {
                 await updatePassword(secondaryAuth.currentUser, form.password);
               } catch (updateErr) {
@@ -488,13 +535,52 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
         payload.password = existingMember.password;
       }
 
-      if (editingStaffId) {
+      let savedStaffId = editingStaffId;
+      if (savedStaffId) {
         await updateDoc(doc(db, 'staff', editingStaffId), payload);
       } else {
-        await addDoc(collection(db, 'staff'), {
+        const created = await addDoc(collection(db, 'staff'), {
           ...payload,
           createdAt: serverTimestamp(),
           createdBy: firebaseUser.email,
+        });
+        savedStaffId = created.id;
+        // Keep this record on a permission-service failure so retry cannot create a duplicate.
+        setEditingStaffId(savedStaffId);
+      }
+      detailsSaved = true;
+      if (verifiedLogin && Object.values(modulePermissions).some(module => module.editable)) await registerStaffLoginIdentity(savedStaffId, verifiedLogin);
+      const changes = staffModuleChanges(form, modulePermissions, savedStaffId);
+      if (Object.keys(changes).length) {
+        let grants;
+        try {
+          grants = await saveStaffModulePermissions(savedStaffId, changes);
+        } catch (permissionError) {
+          // Older accounts can predate the immutable Firebase UID link.
+          // Verify their existing login before registering it; email alone is insufficient.
+          const canLinkExisting = permissionError.code === 'staff/login-not-linked'
+            && !verifiedLogin && typeof existingMember?.password === 'string' && existingMember.password
+            && normalizeAuthIdentifier(existingMember.email) === normalizedEmail;
+          if (!canLinkExisting) throw permissionError;
+          let identity;
+          try {
+            const credential = await signInWithEmailAndPassword(secondaryAuth, normalizedEmail, existingMember.password);
+            identity = { uid: credential.user.uid, email: credential.user.email };
+          } catch (loginError) {
+            if (['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found', 'auth/user-disabled'].includes(loginError.code)) {
+              throw new Error('The existing staff login could not be verified automatically. Have the staff member sign out and sign back in at /odc, then reopen this record and save the permissions again.');
+            }
+            throw loginError;
+          } finally {
+            await secondarySignOut(secondaryAuth);
+          }
+          await registerStaffLoginIdentity(savedStaffId, identity);
+          grants = await saveStaffModulePermissions(savedStaffId, changes);
+        }
+        setModulePermissions(previous => {
+          const next = { ...previous };
+          for (const [module, grant] of Object.entries(grants)) next[module] = { ...previous[module], grants: { ...previous[module].grants, [savedStaffId]: grant } };
+          return next;
         });
       }
 
@@ -509,14 +595,15 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
       } else {
         setToast({
           type: 'success',
-          text: `Staff details & permissions successfully updated for "${displayUser}".`,
+        text: `Staff details & permissions successfully updated for "${displayUser}".`,
         });
       }
     } catch (err) {
       console.error('Error saving staff:', err);
       const friendlyMsg =
         err.message || 'Failed to save staff member. Please check details and try again.';
-      setErrorMsg(friendlyMsg);
+      setErrorMsg(detailsSaved ? `Staff details were saved, but demo/allowance permissions were not saved. ${friendlyMsg} Retry Save, or reopen the editor if access changed elsewhere.` : friendlyMsg);
+      if (detailsSaved) loadStaff(false);
     } finally {
       setSaving(false);
     }
@@ -596,8 +683,12 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
   return (
     <div>
       {onOpenAllowances && <div style={{ marginBottom: 16, color: '#aaa', fontSize: 13 }}>
-        Allowance access uses verified staff permissions.{' '}
+        Manage Allowances &amp; Requisitions permissions here when creating or editing staff.{' '}
         <button type="button" onClick={onOpenAllowances} style={{ ...S.btn, display: 'inline-flex', color: '#d9a66a', background: 'rgba(217,166,106,0.08)' }}>Open Allowances & Requisitions</button>
+      </div>}
+      {onOpenDemos && <div style={{ marginBottom: 16, color: '#aaa', fontSize: 13 }}>
+        Manage Demo Scheduling permissions and bookable presenters here when creating or editing staff.{' '}
+        <button type="button" onClick={onOpenDemos} style={{ ...S.btn, display: 'inline-flex', color: '#d9a66a', background: 'rgba(217,166,106,0.08)' }}>Open Demo Scheduling</button>
       </div>}
       {/* ─── Toast Notification Banner ─── */}
       {toast && (
@@ -1663,6 +1754,12 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                   </div>
                 </div>
 
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, margin: '0 0 12px' }}>
+                  Demo Scheduling and Allowances &amp; Requisitions are saved here with the other permissions. Staff need an active account and portal login to use them.
+                </p>
+                {modulePermissionLoading && <p role="status" style={{ color: '#d9a66a', fontSize: 12 }}>Checking demo and allowance permissions…</p>}
+                {modulePermissionError && <p role="alert" style={{ color: '#fca5a5', fontSize: 12 }}>{modulePermissionError} Other staff permissions can still be edited.</p>}
+
                 {/* Preset Chips */}
                 <div
                   style={{
@@ -1705,6 +1802,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                   {ALL_ADMIN_NAVIGATIONS.map((nav) => {
                     const isTabChecked = (form.allowedTabs || []).includes(nav.id);
                     const NavIcon = nav.icon;
+                    const locked = !canEditModule(nav.id) || saving;
                     const actions = nav.actions || [];
                     const activeActionCount = actions.filter((a) =>
                       (form.allowedActions || []).includes(a.id)
@@ -1737,11 +1835,17 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                         >
                           <div
                             onClick={() => handleToggleTab(nav.id)}
+                            role="checkbox"
+                            aria-label={nav.label}
+                            aria-checked={isTabChecked}
+                            aria-disabled={locked}
+                            tabIndex={locked ? -1 : 0}
+                            onKeyDown={event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); handleToggleTab(nav.id); } }}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
                               gap: 12,
-                              cursor: 'pointer',
+                              cursor: locked ? 'not-allowed' : 'pointer',
                               flex: 1,
                               userSelect: 'none',
                             }}
@@ -1820,6 +1924,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                                 }}
                               >
                                 {nav.desc}
+                                {TRUSTED_STAFF_MODULES.includes(nav.id) && !canEditModule(nav.id) && <span style={{ display: 'block', marginTop: 4, color: '#d9a66a' }}>{modulePermissionLoading ? 'Checking access…' : modulePermissionError ? 'Permission service unavailable' : 'A module administrator can edit these permissions.'}</span>}
                               </p>
                             </div>
                           </div>
@@ -1830,6 +1935,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                               <button
                                 type="button"
                                 onClick={() => handleSelectAllActionsForTab(nav.id)}
+                                disabled={locked}
                                 style={{
                                   background: 'rgba(255,255,255,0.06)',
                                   border: '1px solid rgba(255,255,255,0.1)',
@@ -1845,6 +1951,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                               <button
                                 type="button"
                                 onClick={() => handleClearAllActionsForTab(nav.id)}
+                                disabled={locked}
                                 style={{
                                   background: 'rgba(255,255,255,0.04)',
                                   border: '1px solid rgba(255,255,255,0.08)',
@@ -1860,6 +1967,11 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                             </div>
                           )}
                         </div>
+
+                        {nav.id === 'demos' && isTabChecked && form.allowedActions.includes('demos:present') && <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: '#ddd', marginTop: 12 }}>
+                          <input type="checkbox" style={{ flexShrink: 0, marginTop: 2 }} checked={form.demoPresenterEnabled === true} disabled={locked} onChange={event => setForm(previous => ({ ...previous, demoPresenterEnabled: event.target.checked }))} />
+                          <span>Available for sales bookings<small style={{ display: 'block', color: '#aaa', marginTop: 3 }}>Publish available hours in Demo Scheduling.</small></span>
+                        </label>}
 
                         {/* Nested Sub-Actions Checkboxes */}
                         {isTabChecked && actions.length > 0 && (
@@ -1880,6 +1992,12 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                                 <div
                                   key={act.id}
                                   onClick={() => handleToggleAction(act.id, nav.id)}
+                                  role="checkbox"
+                                  aria-label={act.label}
+                                  aria-checked={isActionChecked}
+                                  aria-disabled={locked}
+                                  tabIndex={locked ? -1 : 0}
+                                  onKeyDown={event => { if (event.key === ' ' || event.key === 'Enter') { event.preventDefault(); handleToggleAction(act.id, nav.id); } }}
                                   style={{
                                     background: isActionChecked
                                       ? 'rgba(255,255,255,0.06)'
@@ -1889,7 +2007,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                                       : '1px solid rgba(255,255,255,0.04)',
                                     borderRadius: 8,
                                     padding: '7px 10px',
-                                    cursor: 'pointer',
+                                    cursor: locked ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'flex-start',
                                     gap: 8,
@@ -1980,7 +2098,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || modulePermissionLoading}
                   style={{
                     ...S.btn,
                     background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',

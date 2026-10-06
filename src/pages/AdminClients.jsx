@@ -112,7 +112,7 @@ const MAST_STATUS_COLORS = {
   cancelled: { color: '#f87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)', label: 'Cancelled' },
 };
 
-export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
+export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialSubTab = 'masterlist', onSubTabChange }) {
   const canCreateClient = can ? can('clients:create') : isSuperAdmin !== false;
   const canBillingClient = can ? can('clients:billing') : isSuperAdmin !== false;
   const canInvoiceClient = can ? can('clients:invoice') : isSuperAdmin !== false;
@@ -125,11 +125,22 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
   const [maintenancePlans, setMaintenancePlans] = useState([]);
   
   // Sub-tabs navigation
-  const [activeSubTab, setActiveSubTab] = useState('masterlist'); // 'masterlist' | 'directory' | 'billing' | 'feedback'
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'masterlist' | 'directory' | 'billing' | 'feedback'
   const [feedbacks, setFeedbacks] = useState([]);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkModalClientId, setLinkModalClientId] = useState('');
   const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    if (['masterlist', 'directory', 'billing', 'feedback'].includes(initialSubTab)) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  const selectSubTab = (id) => {
+    setActiveSubTab(id);
+    onSubTabChange?.(id);
+  };
 
   // Registration form
   const [form, setForm] = useState({ name: '', business: '', email: '', password: '' });
@@ -912,7 +923,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can }) {
           return (
             <button
               key={subTab.id}
-              onClick={() => setActiveSubTab(subTab.id)}
+              onClick={() => selectSubTab(subTab.id)}
               style={{
                 cursor: 'pointer',
                 border: 'none',

@@ -82,7 +82,11 @@ service cloud.firestore {
     }
 
     match /staff/{docId} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow create: if operationsRoot() || staffAction('staff:create');
+      allow update: if operationsRoot() || staffAction('staff:edit') ||
+        (staffAction('staff:status') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt']));
+      allow delete: if operationsRoot() || staffAction('staff:delete');
     }
 
     match /salaryPayouts/{docId} {
@@ -98,33 +102,516 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    function allowanceActive() {
-      return request.auth != null && exists(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid))
-        && get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.active == true
-        && (get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.get('staffId', '') == ''
-          || get(/databases/$(database)/documents/staff/$(get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.staffId)).data.status == 'active');
+    // Spark-compatible operations. Public UI configuration never grants authority.
+    function operationsRoot() { return request.auth != null && request.auth.uid == 'USkc70WnqpUV4Oq0ppPpdm2E4Fa2'; }
+    function record(name, id) { return get(/databases/$(database)/documents/$(name)/$(id)).data; }
+    function afterRecord(name, id) { return getAfter(/databases/$(database)/documents/$(name)/$(id)).data; }
+    function staffAction(action) {
+      let identity = record('staffLoginIdentities', request.auth.uid);
+      let staff = record('staff', identity.staffId);
+      return request.auth != null && staff.status == 'active' && staff.allowedActions.hasAny([action]);
     }
-    function allowanceReviewer() {
-      return allowanceActive() && get(/databases/$(database)/documents/allowanceAccess/$(request.auth.uid)).data.actions.hasAny([
-        'allowances:manage', 'allowances:review', 'allowances:approve', 'allowances:release', 'allowances:reports', 'allowances:reverse'
-      ]);
+    function grantName(module) { return module == 'demos' ? 'demoAccess' : 'allowanceAccess'; }
+    function activeGrant(grant) {
+      let staff = record('staff', grant.staffId);
+      return grant.active && !grant.get('bootstrapAdmin', false) && staff.status == 'active' && staff.email.lower() == request.auth.token.email.lower() && grant.get('email', staff.email).lower() == staff.email.lower();
     }
-    function allowanceRead() { return allowanceActive() && (resource.data.ownerUid == request.auth.uid || allowanceReviewer()); }
+    function active(module) { return operationsRoot() || request.auth != null && activeGrant(record(grantName(module), request.auth.uid)); }
+    function action(module, permission) { return operationsRoot() || (active(module) && record(grantName(module), request.auth.uid).actions.hasAny([module + ':' + permission])); }
+    function hasAction(module, permission) { return operationsRoot() || record(grantName(module), request.auth.uid).actions.hasAny([module + ':' + permission]); }
+    function allowanceReviewer() { return operationsRoot() || (active('allowances') && record('allowanceAccess', request.auth.uid).actions.hasAny(['allowances:manage', 'allowances:review', 'allowances:approve', 'allowances:release', 'allowances:reports', 'allowances:reverse'])); }
+    function allowanceRead() { return active('allowances') && (resource == null || resource.data.ownerUid == request.auth.uid || allowanceReviewer()); }
+    function money(value) { return value is int && value >= 0 && value <= 100000000; }
+    function pad(value) { return value < 10 ? '0' + string(value) : string(value); }
+    function dateKey(value) { return string(value.year()) + '-' + pad(value.month()) + '-' + pad(value.day()); }
+    function today() { return dateKey(request.time + duration.value(8, 'h')); }
+    function isoTime(value) { return dateKey(value) + 'T' + pad(value.hours()) + ':' + pad(value.minutes()) + ':00.000Z'; }
+    function validDate(value) { return value is string && value.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}'); }
+    function recent(value) { return value is timestamp && value >= request.time - duration.value(2, 'm') && value <= request.time + duration.value(2, 'm'); }
+    function operation(module, data) { return afterRecord(module == 'demos' ? 'demoCommandResults' : 'allowanceCommandResults', data.lastOperationId); }
+    function currentOperation(module, data) { let op = operation(module, data); return op.actorUid == request.auth.uid && op.createdAt == request.time; }
+    function validCommand(module, command) {
+      let allowanceActions = {'savePolicy': 'manage', 'grantAccess': 'manage', 'configureAccount': 'manage', 'reconcileCash': 'manage', 'initialRelease': 'release', 'cashReturn': 'release', 'saveMeeting': 'meeting', 'saveLiquidation': 'liquidate', 'registerEvidenceReference': 'liquidate', 'reviewLiquidation': 'review', 'saveRequisition': 'request', 'reviewRequisition': 'approve', 'releaseRequisition': 'release', 'cancelRequisition': 'request', 'correctLiquidation': 'reverse'};
+      let demoActions = {'saveSettings': 'manage', 'grantAccess': 'manage', 'setMyPresenter': 'manage', 'saveAvailability': 'present', 'book': 'book', 'reschedule': 'book', 'cancel': 'book', 'complete': 'present', 'noShow': 'present', 'markRead': 'present'};
+      return module == 'allowances' ? allowanceActions.get(command, '') != '' && action(module, allowanceActions[command]) :
+        command in demoActions && (action(module, 'manage') || action(module, demoActions[command]) ||
+          (command in ['reschedule', 'cancel', 'markRead'] && active(module) && (command == 'markRead' || action(module, 'present'))));
+    }
+    function identityMatches(uid, staffId) { let identity = record('staffLoginIdentities', uid); return identity.uid == uid && identity.staffId == staffId && identity.email == record('staff', staffId).email.lower(); }
+    match /staffLoginIdentities/{uid} {
+      allow get: if request.auth != null && (request.auth.uid == uid || action('demos', 'manage') || action('allowances', 'manage'));
+      allow list: if action('demos', 'manage') || action('allowances', 'manage');
+      allow create: if request.auth != null && request.resource.data.keys().hasOnly(['uid', 'staffId', 'email', 'createdAt']) && request.resource.data.uid == uid &&
+        request.resource.data.email == record('staff', request.resource.data.staffId).email.lower() && request.resource.data.createdAt == request.time &&
+        (operationsRoot() || action('demos', 'manage') || action('allowances', 'manage') || (request.auth.uid == uid && request.auth.token.email.lower() == request.resource.data.email));
+      allow update, delete: if false;
+    }
+    function validGrant(module, uid) {
+      let data = request.resource.data;
+      let allowed = module == 'demos' ? ['demos:book', 'demos:present', 'demos:view_all', 'demos:manage'] : ['allowances:manage', 'allowances:meeting', 'allowances:liquidate', 'allowances:review', 'allowances:request', 'allowances:approve', 'allowances:release', 'allowances:reports', 'allowances:reverse'];
+      return data.active is bool && data.actions is list && data.actions.hasOnly(allowed) &&
+        (uid == 'USkc70WnqpUV4Oq0ppPpdm2E4Fa2' ? operationsRoot() && data.active && data.bootstrapAdmin == true && data.staffId == '' && data.actions.hasAll(allowed) :
+          data.get('bootstrapAdmin', false) == false && identityMatches(uid, data.staffId) && data.email.lower() == record('staff', data.staffId).email.lower() && (!data.active || record('staff', data.staffId).status == 'active')) &&
+        (module != 'demos' || (data.uid == uid && data.presenterEnabled is bool && (!data.presenterEnabled || data.active && data.actions.hasAny(['demos:present'])) &&
+          (resource == null || !resource.data.get('presenterEnabled', false) || data.presenterEnabled || !exists(/databases/$(database)/documents/demoPresenterState/$(uid)) || record('demoPresenterState', uid).confirmedCount == 0)));
+    }
+    match /demoAccess/{uid} {
+      allow get: if request.auth != null && (uid == request.auth.uid || active('demos'));
+      allow list: if action('demos', 'manage') || active('demos') && resource.data.active && resource.data.presenterEnabled;
+      allow create, update: if action('demos', 'manage') && validGrant('demos', uid);
+      allow delete: if false;
+    }
     match /allowanceAccess/{uid} {
-      allow get: if request.auth != null && (request.auth.uid == uid || allowanceReviewer());
+      allow get: if request.auth != null && (uid == request.auth.uid || allowanceReviewer());
       allow list: if allowanceReviewer();
-      allow write: if false;
+      allow create, update: if action('allowances', 'manage') && request.resource.data.ownerUid == uid && validGrant('allowances', uid);
+      allow delete: if false;
     }
-    match /allowanceSettings/{id} { allow read: if allowanceActive(); allow write: if false; }
-    match /allowancePolicies/{id} { allow read: if allowanceActive(); allow write: if false; }
-    match /{collection}/{id} {
-      allow read: if collection in ['allowanceAccounts', 'allowanceMeetings', 'allowanceLiquidations', 'allowanceRequisitions', 'allowanceLedger', 'allowanceAuditEvents', 'allowanceDailyFuel', 'allowanceAttachments', 'allowanceReleases'] && allowanceRead();
-      allow write: if false;
+    match /staffPermissionAuditEvents/{id} {
+      allow read: if operationsRoot();
+      allow create: if request.resource.data.actorUid == request.auth.uid && request.resource.data.createdAt == request.time &&
+        request.resource.data.modules.hasOnly(['demos', 'allowances']) && request.resource.data.modules.size() > 0 &&
+        (!request.resource.data.modules.hasAny(['demos']) || action('demos', 'manage')) && (!request.resource.data.modules.hasAny(['allowances']) || action('allowances', 'manage'));
+      allow update, delete: if false;
     }
-    match /allowanceLiquidations/{id}/revisions/{revision} {
-      allow read: if allowanceActive() && (resource.data.ownerUid == request.auth.uid || allowanceReviewer());
-      allow write: if false;
+    match /demoCommandResults/{id} {
+      allow get: if active('demos') && (resource == null || resource.data.actorUid == request.auth.uid);
+      allow create: if id.matches(request.auth.uid + '_.+') && request.resource.data.actorUid == request.auth.uid && request.resource.data.createdAt == request.time && validCommand('demos', request.resource.data.command) &&
+        (request.resource.data.command == 'markRead' || afterRecord('demoAuditEvents', id).lastOperationId == id);
+      allow update, delete, list: if false;
     }
+    match /allowanceCommandResults/{id} {
+      allow get: if active('allowances') && (resource == null || resource.data.actorUid == request.auth.uid);
+      allow create: if id.matches(request.auth.uid + '_.+') && request.resource.data.actorUid == request.auth.uid && request.resource.data.createdAt == request.time && validCommand('allowances', request.resource.data.command) &&
+        (request.resource.data.command in ['savePolicy', 'grantAccess'] || record('allowanceSettings', 'current').enabled) && afterRecord('allowanceAuditEvents', id).lastOperationId == id;
+      allow update, delete, list: if false;
+    }
+    function bookingVisible(data) { return hasAction('demos', 'manage') || hasAction('demos', 'view_all') || data.get('presenterUid', '') == request.auth.uid || data.get('bookedByUid', '') == request.auth.uid || data.get('recipientUids', []).hasAny([request.auth.uid]); }
+    function bookingEditor(data) { return hasAction('demos', 'manage') || data.bookedByUid == request.auth.uid || data.presenterUid == request.auth.uid; }
+    function presenterReady(uid) {
+      let grant = record('demoAccess', uid);
+      return grant.active && grant.presenterEnabled && grant.actions.hasAny(['demos:present']) &&
+        (uid == 'USkc70WnqpUV4Oq0ppPpdm2E4Fa2' || record('staff', grant.staffId).status == 'active');
+    }
+    function slotEntry(data, i) { return data.slotKeys.size() <= i || data.slotKeys[i] == string(int(data.startMinute / 15) + i); }
+    function slotList(data) {
+      let s = int(data.startMinute / 15);
+      let slots = [string(s), string(s + 1), string(s + 2), string(s + 3), string(s + 4), string(s + 5), string(s + 6), string(s + 7), string(s + 8), string(s + 9), string(s + 10), string(s + 11)];
+      return data.slotKeys is list && data.slotKeys.size() == (data.duration + data.bufferMinutes) / 15 && data.slotKeys.size() <= 12 && data.slotKeys == slots[0:data.slotKeys.size()];
+    }
+    function claimedSlot(data, claims, i) { return data.slotKeys.size() <= i || claims.get(data.slotKeys[i], '') == data.id; }
+    function claimsHeld(data) {
+      let claims = afterRecord('demoDays', data.presenterUid + '_' + data.date).claims;
+      return claimedSlot(data, claims, 0) && claimedSlot(data, claims, 1) && claimedSlot(data, claims, 2) && claimedSlot(data, claims, 3) && claimedSlot(data, claims, 4) && claimedSlot(data, claims, 5) &&
+        claimedSlot(data, claims, 6) && claimedSlot(data, claims, 7) && claimedSlot(data, claims, 8) && claimedSlot(data, claims, 9) && claimedSlot(data, claims, 10) && claimedSlot(data, claims, 11);
+    }
+    function releasedSlot(before, data, day, i) {
+      return before.slotKeys.size() <= i || (data.status == 'confirmed' && data.presenterUid == before.presenterUid && data.date == before.date && data.slotKeys.hasAny([before.slotKeys[i]])) || !day.claims.keys().hasAny([before.slotKeys[i]]);
+    }
+    function claimsReleased(before, data) {
+      let day = afterRecord('demoDays', before.presenterUid + '_' + before.date);
+      let retained = data.status == 'confirmed' && data.presenterUid == before.presenterUid && data.date == before.date ? data.slotKeys.toSet() : [].toSet();
+      return day.claims.keys().toSet().intersection(before.slotKeys.toSet().difference(retained)).size() == 0;
+    }
+    function bookingTimeShape(data) {
+      return data.startsAt is timestamp && data.endsAt is timestamp && data.dayAt is timestamp && data.dayAt == data.dayAt.date() && data.date == dateKey(data.dayAt) &&
+        data.weekday == data.dayAt.dayOfWeek() % 7 && data.startMinute is int && data.startMinute >= 0 && data.startMinute % 15 == 0 &&
+        data.endMinute == data.startMinute + data.duration && data.occupiedEndMinute == data.endMinute + data.bufferMinutes && data.occupiedEndMinute < 1440 &&
+        data.startsAt == data.dayAt + duration.value(data.startMinute - 480, 'm') && data.endsAt == data.startsAt + duration.value(data.duration, 'm') &&
+        data.time == pad(int(data.startMinute / 60)) + ':' + pad(data.startMinute % 60) &&
+        data.recipientUids.toSet() == [data.bookedByUid, data.presenterUid].toSet() && data.updatedByUid == request.auth.uid && slotList(data);
+    }
+    function bookingShape(data) {
+      return bookingTimeShape(data) && data.clientName is string && data.clientName.size() > 0 && data.clientName.size() <= 200 &&
+        data.contactName is string && data.contactName.size() > 0 && data.contactName.size() <= 200 && (data.contactEmail.size() > 0 || data.contactPhone.size() > 0) &&
+        data.topic is string && data.topic.size() > 0 && data.topic.size() <= 300 && data.mode in ['online', 'onsite'] && data.location is string && data.location.size() > 0 &&
+        (data.mode != 'online' || data.location.matches('https://.+'));
+    }
+    function schedulingAllowed(data) {
+      let settings = record('demoSettings', 'current');
+      let day = afterRecord('demoDays', data.presenterUid + '_' + data.date);
+      let available = day.override ? day.availableSlots : record('demoAvailability', data.presenterUid).weeklySlots[string(data.weekday)];
+      return settings.enabled && settings.policy.durations.hasAny([data.duration]) && data.bufferMinutes == settings.policy.bufferMinutes && presenterReady(data.presenterUid) &&
+        data.startsAt >= request.time + duration.value(settings.policy.minimumNoticeMinutes, 'm') && data.dayAt <= (request.time + duration.value(8, 'h')).date() + duration.value(settings.policy.bookingWindowDays, 'd') &&
+        available.hasAll(data.slotKeys) && claimsHeld(data) && afterRecord('demoPresenterState', data.presenterUid).lastOperationId == data.lastOperationId;
+    }
+    function bookingTransition(before, data) {
+      let command = operation('demos', data).command;
+      return command == 'reschedule' ? before.startsAt > request.time && data.status == 'confirmed' && bookingTimeShape(data) && schedulingAllowed(data) :
+        data.diff(before).affectedKeys().hasOnly(['status', 'version', 'updatedAt', 'updatedByUid', 'outcomeNotes', 'lastOperationId']) && data.updatedByUid == request.auth.uid &&
+        (command == 'cancel' ? data.status == 'cancelled' : command in ['complete', 'noShow'] && before.endsAt <= request.time && (hasAction('demos', 'manage') || before.presenterUid == request.auth.uid) && data.status == (command == 'complete' ? 'completed' : 'no_show'));
+    }
+    match /demoBookings/{id} {
+      allow get: if active('demos') && (resource == null || bookingVisible(resource.data));
+      allow list: if active('demos') && bookingVisible(resource.data);
+      allow create: if currentOperation('demos', request.resource.data) && operation('demos', request.resource.data).command == 'book' && request.resource.data.id == id &&
+        request.resource.data.bookedByUid == request.auth.uid && request.resource.data.version == 1 && request.resource.data.status == 'confirmed' && bookingShape(request.resource.data) && schedulingAllowed(request.resource.data);
+      allow update: if currentOperation('demos', request.resource.data) && bookingEditor(resource.data) && resource.data.status == 'confirmed' &&
+        request.resource.data.version == resource.data.version + 1 && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date', 'time', 'duration', 'bufferMinutes', 'presenterUid', 'presenterName', 'recipientUids', 'status', 'version', 'updatedAt', 'updatedByUid', 'outcomeNotes', 'startMinute', 'endMinute', 'occupiedEndMinute', 'startAt', 'endAt', 'startsAt', 'endsAt', 'dayAt', 'weekday', 'slotKeys', 'lastOperationId']) &&
+        claimsReleased(resource.data, request.resource.data) && afterRecord('demoPresenterState', resource.data.presenterUid).lastOperationId == request.resource.data.lastOperationId && bookingTransition(resource.data, request.resource.data);
+      allow delete: if false;
+    }
+    function bookingCount(data, uid) { return data != null && data.status == 'confirmed' && data.presenterUid == uid ? 1 : 0; }
+    match /demoPresenterState/{uid} {
+      allow get: if active('demos');
+      allow create, update: if currentOperation('demos', request.resource.data) && request.resource.data.keys().hasOnly(['confirmedCount', 'version', 'bookingId', 'lastOperationId']) &&
+        request.resource.data.lastOperationId == afterRecord('demoBookings', request.resource.data.bookingId).lastOperationId &&
+        request.resource.data.confirmedCount == (resource == null ? 0 : resource.data.confirmedCount) + bookingCount(afterRecord('demoBookings', request.resource.data.bookingId), uid) - (exists(/databases/$(database)/documents/demoBookings/$(request.resource.data.bookingId)) ? bookingCount(record('demoBookings', request.resource.data.bookingId), uid) : 0) &&
+        request.resource.data.confirmedCount >= 0 && request.resource.data.version == (resource == null ? 1 : resource.data.version + 1);
+      allow delete, list: if false;
+    }
+    function weeklySlots(data) {
+      return data.keys().hasOnly(['0', '1', '2', '3', '4', '5', '6']) && data.keys().hasAll(['0', '1', '2', '3', '4', '5', '6']) &&
+        data['0'].size() <= 96 && data['1'].size() <= 96 && data['2'].size() <= 96 && data['3'].size() <= 96 && data['4'].size() <= 96 && data['5'].size() <= 96 && data['6'].size() <= 96;
+    }
+    function weeklyExpanded(data, before) { return data['0'].hasAll(before['0']) && data['1'].hasAll(before['1']) && data['2'].hasAll(before['2']) && data['3'].hasAll(before['3']) && data['4'].hasAll(before['4']) && data['5'].hasAll(before['5']) && data['6'].hasAll(before['6']); }
+    match /demoAvailability/{uid} {
+      allow get: if active('demos');
+      allow create, update: if currentOperation('demos', request.resource.data) && operation('demos', request.resource.data).command == 'saveAvailability' && (hasAction('demos', 'manage') || uid == request.auth.uid) && presenterReady(uid) &&
+        request.resource.data.weekly is map && request.resource.data.overrides is map && request.resource.data.overrides.size() <= 120 && weeklySlots(request.resource.data.weeklySlots) &&
+        (resource == null || !exists(/databases/$(database)/documents/demoPresenterState/$(uid)) || record('demoPresenterState', uid).confirmedCount == 0 || weeklyExpanded(request.resource.data.weeklySlots, resource.data.weeklySlots));
+      allow delete, list: if false;
+    }
+    function dayBooking(data, before) {
+      let booking = afterRecord('demoBookings', data.changedBookingId);
+      let old = exists(/databases/$(database)/documents/demoBookings/$(data.changedBookingId)) ? record('demoBookings', data.changedBookingId) : null;
+      let keys = booking.slotKeys.concat(old == null ? [] : old.slotKeys);
+      return booking.lastOperationId == data.lastOperationId && (data.presenterUid + '_' + data.date == booking.presenterUid + '_' + booking.date || old != null && data.presenterUid + '_' + data.date == old.presenterUid + '_' + old.date) &&
+        data.claims.diff(before.get('claims', {})).affectedKeys().hasOnly(keys) && data.reservations.diff(before.get('reservations', {})).affectedKeys().hasOnly([booking.id]) &&
+        (booking.status == 'confirmed' && booking.presenterUid == data.presenterUid && booking.date == data.date ? data.reservations.get(booking.id, {}) == {'startMinute': booking.startMinute, 'occupiedEndMinute': booking.occupiedEndMinute} : !data.reservations.keys().hasAny([booking.id])) &&
+        data.get('override', false) == before.get('override', false) && data.get('availableSlots', []) == before.get('availableSlots', []);
+    }
+    match /demoDays/{id} {
+      allow get: if active('demos');
+      allow create, update: if currentOperation('demos', request.resource.data) && id == request.resource.data.presenterUid + '_' + request.resource.data.date && request.resource.data.claims is map && request.resource.data.reservations is map && request.resource.data.dayAt is timestamp && request.resource.data.date == dateKey(request.resource.data.dayAt) &&
+        (operation('demos', request.resource.data).command == 'saveAvailability' ?
+          (hasAction('demos', 'manage') || request.resource.data.presenterUid == request.auth.uid) && request.resource.data.claims == (resource == null ? {} : resource.data.claims) && request.resource.data.reservations == (resource == null ? {} : resource.data.reservations) &&
+            request.resource.data.availableSlots is list && request.resource.data.availableSlots.size() <= 96 && request.resource.data.availableSlots.hasAll(request.resource.data.claims.keys()) &&
+            (request.resource.data.override || request.resource.data.availableSlots == afterRecord('demoAvailability', request.resource.data.presenterUid).weeklySlots[string(request.resource.data.dayAt.dayOfWeek() % 7)]) :
+          dayBooking(request.resource.data, resource == null ? {} : resource.data));
+      allow delete, list: if false;
+    }
+    match /demoSettings/{id} {
+      allow read: if active('demos');
+      allow create, update: if id == 'current' && currentOperation('demos', request.resource.data) && operation('demos', request.resource.data).command == 'saveSettings' &&
+        request.resource.data.enabled is bool && request.resource.data.policy.durations.hasOnly([30, 45, 60, 90, 120]) && request.resource.data.policy.durations.size() > 0 &&
+        request.resource.data.policy.bufferMinutes is int && request.resource.data.policy.bufferMinutes >= 0 && request.resource.data.policy.bufferMinutes <= 60 && request.resource.data.policy.bufferMinutes % 15 == 0 &&
+        request.resource.data.policy.minimumNoticeMinutes is int && request.resource.data.policy.minimumNoticeMinutes >= 0 && request.resource.data.policy.minimumNoticeMinutes <= 10080 &&
+        request.resource.data.policy.bookingWindowDays is int && request.resource.data.policy.bookingWindowDays >= 1 && request.resource.data.policy.bookingWindowDays <= 90;
+      allow delete: if false;
+    }
+    match /demoNotifications/{id} {
+      allow read: if active('demos') && resource.data.recipientUid == request.auth.uid;
+      allow create: if currentOperation('demos', request.resource.data) && afterRecord('demoBookings', request.resource.data.bookingId).lastOperationId == request.resource.data.lastOperationId &&
+        (afterRecord('demoBookings', request.resource.data.bookingId).recipientUids.hasAny([request.resource.data.recipientUid]) || get(/databases/$(database)/documents/demoBookings/$(request.resource.data.bookingId)).data.recipientUids.hasAny([request.resource.data.recipientUid])) && request.resource.data.read == false;
+      allow update: if currentOperation('demos', request.resource.data) && resource.data.recipientUid == request.auth.uid && operation('demos', request.resource.data).command == 'markRead' && request.resource.data.read == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'lastOperationId']);
+      allow delete: if false;
+    }
+    match /demoAuditEvents/{id} {
+      allow read: if active('demos') && (action('demos', 'manage') || resource.data.bookingId != '' && bookingVisible(record('demoBookings', resource.data.bookingId)));
+      allow create: if currentOperation('demos', request.resource.data) && request.resource.data.actorUid == request.auth.uid && request.resource.data.command == operation('demos', request.resource.data).command;
+      allow update, delete: if false;
+    }
+    // Each write must belong to a new, immutable command in this transaction.
+    // The command grants no authority by itself: every record also validates its
+    // ownership, transition and dependent records, including the cash ledger.
+    function financial(data, command) { return currentOperation('allowances', data) && operation('allowances', data).command == command; }
+    function account(data) { return record('allowanceAccounts', data.accountId); }
+    function nextAccount(data) { return afterRecord('allowanceAccounts', data.accountId); }
+    function ownedActive(data) { let a = account(data); return data.ownerUid == request.auth.uid && a.ownerUid == request.auth.uid && a.status == 'active' && record('allowanceSettings', 'current').enabled; }
+    function policyShape(p) {
+      return money(p.targetCentavos) && p.targetCentavos > 0 && money(p.meetingCapCentavos) && p.meetingCapCentavos > 0 && p.meetingCapCentavos <= p.targetCentavos &&
+        money(p.singleFuelCentavos) && p.singleFuelCentavos > 0 && p.singleFuelCentavos <= p.dailyFuelCentavos && money(p.dailyFuelCentavos) && p.dailyFuelCentavos <= p.targetCentavos &&
+        p.thresholdPercent is int && p.thresholdPercent >= 1 && p.thresholdPercent <= 100 && p.impendingDays is int && p.impendingDays >= 0 && p.impendingDays <= 90 &&
+        p.maxAttachments is int && p.maxAttachments >= 1 && p.maxAttachments <= 50 && p.maxFileBytes is int && p.maxFileBytes > 0 && p.maxFileBytes <= 10485760 && p.fuelIncluded && p.timezone == 'Asia/Manila';
+    }
+    match /allowancePolicies/{id} {
+      allow read: if active('allowances');
+      allow create: if financial(request.resource.data, 'savePolicy') && policyShape(request.resource.data) && request.resource.data.version == id && request.resource.data.createdBy == request.auth.uid && recent(request.resource.data.createdAt);
+      allow update, delete: if false;
+    }
+    match /allowanceSettings/{id} {
+      allow read: if active('allowances');
+      allow create, update: if id == 'current' && financial(request.resource.data, 'savePolicy') && operation('allowances', request.resource.data).payload.confirmed == true && request.resource.data.enabled is bool &&
+        policyShape(request.resource.data.policy) && afterRecord('allowancePolicies', request.resource.data.policyVersion).lastOperationId == request.resource.data.lastOperationId &&
+        afterRecord('allowancePolicies', request.resource.data.policyVersion).diff(request.resource.data.policy).unchangedKeys().hasAll(request.resource.data.policy.keys());
+      allow delete: if false;
+    }
+    function accountShape(a) { return money(a.reviewedBalanceCentavos) && money(a.unreviewedCentavos) && a.unreviewedCentavos <= a.reviewedBalanceCentavos && a.reviewedBalanceCentavos <= a.policy.targetCentavos && a.unresolvedCount is int && a.unresolvedCount >= 0 && a.unresolvedCount <= 500 && a.activeRequestId is string && a.reconciliationHold is bool && a.funded is bool && a.status in ['pending_setup', 'active', 'suspended', 'closed'] && validDate(a.nextScheduledDate) && recent(a.updatedAt); }
+    function cashPost(a, kind, amount, sourceId, suffix) {
+      let entry = afterRecord('allowanceLedger', a.lastOperationId + suffix);
+      return entry.lastOperationId == a.lastOperationId && entry.accountId == a.id && entry.ownerUid == a.ownerUid && entry.kind == kind && entry.amountCentavos == amount && entry.sourceId == sourceId;
+    }
+    function liquidationBalance(before, a, op) {
+      let slip = afterRecord('allowanceLiquidations', op.payload.meetingId);
+      let old = get(/databases/$(database)/documents/allowanceLiquidations/$(op.payload.meetingId)).data;
+      let previous = old != null && old.status == 'returned' ? old.totalCentavos : 0;
+      return op.payload.submit == true && before.status == 'active' && before.ownerUid == request.auth.uid && slip.lastOperationId == a.lastOperationId && slip.accountId == a.id && slip.status == 'submitted' &&
+        a.reviewedBalanceCentavos == before.reviewedBalanceCentavos && a.unreviewedCentavos == before.unreviewedCentavos - previous + slip.totalCentavos && a.unresolvedCount == before.unresolvedCount + (old != null && old.status == 'returned' ? 0 : 1) &&
+        a.reconciliationHold == (before.reconciliationHold || slip.declaredCashCentavos != a.reviewedBalanceCentavos - a.unreviewedCentavos) && a.diff(before).affectedKeys().hasOnly(['unreviewedCentavos', 'unresolvedCount', 'reconciliationHold', 'updatedAt', 'lastOperationId']);
+    }
+    function approvedBalance(before, a, op) {
+      let slip = record('allowanceLiquidations', op.payload.id);
+      let next = afterRecord('allowanceLiquidations', op.payload.id);
+      return before.status == 'active' && slip.ownerUid != request.auth.uid && slip.accountId == a.id && slip.status == 'submitted' && next.status == 'approved' && next.lastOperationId == a.lastOperationId &&
+        op.payload.decision == 'approve' && op.payload.verified == true && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos - slip.totalCentavos && a.unreviewedCentavos == before.unreviewedCentavos - slip.totalCentavos && a.unresolvedCount == before.unresolvedCount - 1 &&
+        (slip.totalCentavos == 0 || cashPost(a, 'approved_expense', -slip.totalCentavos, op.payload.id, '') && afterRecord('expenses', 'allowance_liquidation_' + op.payload.id).lastOperationId == a.lastOperationId) &&
+        a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'unreviewedCentavos', 'unresolvedCount', 'updatedAt', 'lastOperationId']);
+    }
+    function requestEligible(a, r) {
+      return a.status == 'active' && !a.reconciliationHold && (r.type == 'scheduled' ? a.nextScheduledDate <= today() :
+        r.type == 'early' && (a.policy.targetCentavos - a.reviewedBalanceCentavos) * 100 >= a.policy.targetCentavos * a.policy.thresholdPercent &&
+        record('allowanceMeetings', r.meetingId).accountId == a.id && record('allowanceMeetings', r.meetingId).status == 'planned' && record('allowanceMeetings', r.meetingId).date >= today() &&
+        record('allowanceMeetings', r.meetingId).date <= dateKey(request.time + duration.value(8, 'h') + duration.value(a.policy.impendingDays, 'd')));
+    }
+    function requestBalance(before, a, op) {
+      let r = afterRecord('allowanceRequisitions', op.result.id);
+      return before.status == 'active' && before.ownerUid == request.auth.uid && op.payload.submit == true && r.status == 'submitted' && r.accountId == a.id && r.lastOperationId == a.lastOperationId &&
+        (before.activeRequestId == '' || before.activeRequestId == op.result.id) && a.activeRequestId == op.result.id && a.diff(before).affectedKeys().hasOnly(['activeRequestId', 'updatedAt', 'lastOperationId']);
+    }
+    function clearRequest(before, a, op) {
+      let r = record('allowanceRequisitions', op.payload.id);
+      let next = afterRecord('allowanceRequisitions', op.payload.id);
+      return r.accountId == a.id && next.lastOperationId == a.lastOperationId && a.diff(before).affectedKeys().hasOnly(['activeRequestId', 'updatedAt', 'lastOperationId']) &&
+        (op.command == 'cancelRequisition' ? r.ownerUid == request.auth.uid && next.status == 'cancelled' && a.activeRequestId == (before.activeRequestId == op.payload.id ? '' : before.activeRequestId) :
+          r.ownerUid != request.auth.uid && op.payload.decision == 'reject' && next.status == 'rejected' && before.activeRequestId == op.payload.id && a.activeRequestId == '');
+    }
+    function releaseBalance(before, a, op) {
+      let r = record('allowanceRequisitions', op.payload.id);
+      let next = afterRecord('allowanceRequisitions', op.payload.id);
+      return before.activeRequestId == op.payload.id && r.accountId == a.id && r.status == 'approved' && r.approvedBy != r.ownerUid && next.status == 'released' && next.lastOperationId == a.lastOperationId &&
+        before.unresolvedCount == 0 && before.reviewedBalanceCentavos == r.balanceSnapshotCentavos && requestEligible(before, r) && op.payload.amountCentavos == r.amountCentavos &&
+        a.reviewedBalanceCentavos == before.reviewedBalanceCentavos + r.amountCentavos && a.activeRequestId == '' && a.nextScheduledDate > today() && cashPost(a, 'replenishment', r.amountCentavos, op.payload.id, '') &&
+        a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'activeRequestId', 'nextScheduledDate', 'updatedAt', 'lastOperationId']);
+    }
+    function correctionBalance(before, a, op) {
+      let slip = record('allowanceLiquidations', op.payload.id);
+      let next = afterRecord('allowanceLiquidations', op.payload.id);
+      return before.status == 'active' && before.unresolvedCount == 0 && before.activeRequestId == '' && slip.accountId == a.id && slip.ownerUid != request.auth.uid && slip.status == 'approved' && next.status == 'voided' && next.lastOperationId == a.lastOperationId &&
+        op.payload.cashRecovered == true && money(op.payload.amountCentavos) && op.payload.amountCentavos < slip.totalCentavos && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos + slip.totalCentavos - op.payload.amountCentavos &&
+        cashPost(a, 'expense_reversal', slip.totalCentavos, op.payload.id, '_reversal') && cashPost(a, 'corrected_expense', -op.payload.amountCentavos, op.payload.id, '_replacement') && afterRecord('expenses', slip.expenseId).lastOperationId == a.lastOperationId &&
+        a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']);
+    }
+    function accountTransition(before, a) {
+      let op = operation('allowances', a);
+      return accountShape(a) && a.id == before.id && a.ownerUid == before.ownerUid && a.staffId == before.staffId && a.policy == before.policy && a.policyVersion == before.policyVersion &&
+        (op.command == 'configureAccount' ? a.diff(before).affectedKeys().hasOnly(['status', 'nextScheduledDate', 'updatedAt', 'lastOperationId']) && (a.status != 'closed' || a.reviewedBalanceCentavos == 0 && a.unresolvedCount == 0 && a.activeRequestId == '') && (a.status != 'active' || a.funded) && (a.status != 'pending_setup' || !a.funded) :
+        op.command == 'initialRelease' ? !before.funded && before.status == 'pending_setup' && money(op.payload.amountCentavos) && op.payload.amountCentavos > 0 && a.funded && a.status == 'active' && a.reviewedBalanceCentavos == op.payload.amountCentavos && cashPost(a, 'initial_release', op.payload.amountCentavos, a.id, '') && afterRecord('allowanceReleases', a.lastOperationId).lastOperationId == a.lastOperationId && a.diff(before).affectedKeys().hasOnly(['funded', 'status', 'reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']) :
+        op.command == 'cashReturn' ? before.status != 'closed' && before.unresolvedCount == 0 && before.activeRequestId == '' && money(op.payload.amountCentavos) && op.payload.amountCentavos > 0 && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos - op.payload.amountCentavos && cashPost(a, 'cash_return', -op.payload.amountCentavos, a.id, '') && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']) :
+        op.command == 'reconcileCash' ? before.status != 'closed' && before.unresolvedCount == 0 && op.payload.declaredCashCentavos == before.reviewedBalanceCentavos && !a.reconciliationHold && a.diff(before).affectedKeys().hasOnly(['reconciliationHold', 'updatedAt', 'lastOperationId']) :
+        op.command == 'saveLiquidation' ? liquidationBalance(before, a, op) : op.command == 'reviewLiquidation' ? approvedBalance(before, a, op) :
+        op.command == 'saveRequisition' ? requestBalance(before, a, op) : op.command in ['reviewRequisition', 'cancelRequisition'] ? clearRequest(before, a, op) : op.command == 'releaseRequisition' ? releaseBalance(before, a, op) : op.command == 'correctLiquidation' && correctionBalance(before, a, op));
+    }
+    match /allowanceAccounts/{id} {
+      allow create: if financial(request.resource.data, 'configureAccount') && accountShape(request.resource.data) && request.resource.data.id == id && request.resource.data.staffId == id &&
+        request.resource.data.ownerUid == record('allowanceAccess', request.resource.data.ownerUid).ownerUid && record('allowanceAccess', request.resource.data.ownerUid).staffId == id && record('allowanceAccess', request.resource.data.ownerUid).active &&
+        request.resource.data.status == 'pending_setup' && !request.resource.data.funded && request.resource.data.reviewedBalanceCentavos == 0 && request.resource.data.unreviewedCentavos == 0 && request.resource.data.unresolvedCount == 0 && request.resource.data.activeRequestId == '' && !request.resource.data.reconciliationHold &&
+        request.resource.data.policy == record('allowanceSettings', 'current').policy && request.resource.data.policyVersion == record('allowanceSettings', 'current').policyVersion && record('allowanceSettings', 'current').enabled;
+      allow update: if currentOperation('allowances', request.resource.data) && accountTransition(resource.data, request.resource.data);
+      allow delete: if false;
+    }
+    // A new operation tag proves the account is written in this transaction.
+    // Its own rule validates the balance once; dependent records need this
+    // atomic link rather than recursively repeating the whole ledger proof.
+    function changedAccount(data) { return nextAccount(data).lastOperationId == data.lastOperationId; }
+    function textField(value, maximum) { return value is string && value.size() > 0 && value.size() <= maximum; }
+    function meetingShape(data) { return ownedActive(data) && validDate(data.date) && data.status in ['planned', 'held', 'cancelled'] && (data.status != 'held' || data.date <= today()) && textField(data.clientName, 200) && textField(data.purpose, 500); }
+    match /allowanceMeetings/{id} {
+      allow create: if financial(request.resource.data, 'saveMeeting') && meetingShape(request.resource.data) && !request.resource.data.keys().hasAny(['liquidationId']) && afterRecord('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).lastOperationId == request.resource.data.lastOperationId;
+      allow update: if currentOperation('allowances', request.resource.data) && request.resource.data.accountId == resource.data.accountId && request.resource.data.ownerUid == resource.data.ownerUid &&
+        (operation('allowances', request.resource.data).command == 'saveMeeting' ? !resource.data.get('liquidationId', '').matches('.+') && meetingShape(request.resource.data) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date', 'status', 'clientId', 'clientName', 'purpose', 'updatedAt', 'lastOperationId']) &&
+          afterRecord('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).lastOperationId == request.resource.data.lastOperationId && (resource.data.date == request.resource.data.date || afterRecord('allowanceDailyFuel', resource.data.accountId + '_' + resource.data.date).lastOperationId == request.resource.data.lastOperationId) :
+          operation('allowances', request.resource.data).command == 'saveLiquidation' && ownedActive(request.resource.data) && request.resource.data.id == id && request.resource.data.liquidationId == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'liquidationId', 'updatedAt', 'lastOperationId']) && afterRecord('allowanceLiquidations', id).lastOperationId == request.resource.data.lastOperationId);
+      allow delete: if false;
+    }
+    function amountAt(lines, i, fuel) { return lines.size() <= i || fuel && lines[i].category != 'Fuel' ? 0 : lines[i].amountCentavos; }
+    function sumLines(lines, fuel) { return amountAt(lines, 0, fuel) + amountAt(lines, 1, fuel) + amountAt(lines, 2, fuel) + amountAt(lines, 3, fuel) + amountAt(lines, 4, fuel); }
+    function purchaseAt(lines, id, i) { return lines.size() <= i || lines[i].category != 'Fuel' || lines[i].fuelPurchaseId != id ? 0 : lines[i].amountCentavos; }
+    function purchaseAmount(lines, id) { return purchaseAt(lines, id, 0) + purchaseAt(lines, id, 1) + purchaseAt(lines, id, 2) + purchaseAt(lines, id, 3) + purchaseAt(lines, id, 4); }
+    function expenseLineShape(slip, line) {
+      return money(line.amountCentavos) && line.amountCentavos > 0 && textField(line.description, 200) && line.date == slip.date && line.category in ['Fuel', 'Meals', 'Transport', 'Other'] && line.attachmentIds is list && line.attachmentIds.size() == 1;
+    }
+    function expenseEvidence(slip, line) {
+      let file = record('allowanceAttachments', line.attachmentIds[0]);
+      return file.finalized && file.kind == 'reference' && file.ownerUid == slip.ownerUid && file.accountId == slip.accountId &&
+        (line.category == 'Fuel' ? line.fuelPurchaseId == line.attachmentIds[0] && file.date == slip.date && file.purchaseCentavos > 0 && line.amountCentavos <= file.purchaseCentavos : file.liquidationId == slip.meetingId);
+    }
+    function checkedLine(slip, i) { return slip.lines.size() <= i || expenseLineShape(slip, slip.lines[i]); }
+    function checkedEvidence(slip, i) { return slip.lines.size() <= i || expenseEvidence(slip, slip.lines[i]); }
+    function submittedSlip(slip) {
+      let a = account(slip);
+      return slip.lines is list && slip.lines.size() <= 3 && checkedLine(slip, 0) && checkedLine(slip, 1) && checkedLine(slip, 2) && checkedLine(slip, 3) && checkedLine(slip, 4) &&
+        slip.totalCentavos == sumLines(slip.lines, false) && slip.totalCentavos <= a.policy.meetingCapCentavos && money(slip.declaredCashCentavos) && slip.policyVersion == a.policyVersion &&
+        (slip.lines.size() > 0 || operation('allowances', slip).payload.noExpense == true) && nextAccount(slip).lastOperationId == slip.lastOperationId &&
+        afterRecord('allowanceDailyFuel', slip.accountId + '_' + slip.date).lastOperationId == slip.lastOperationId && getAfter(/databases/$(database)/documents/allowanceLiquidations/$(slip.meetingId)/revisions/$(string(slip.revision))).data.lastOperationId == slip.lastOperationId;
+    }
+    function savedSlip(id, before, data) {
+      let meeting = record('allowanceMeetings', id);
+      let submit = operation('allowances', data).payload.submit;
+      return data.ownerUid == request.auth.uid && (submit == true || ownedActive(data)) && data.meetingId == id && meeting.ownerUid == data.ownerUid && meeting.accountId == data.accountId && meeting.status == 'held' && data.date == meeting.date &&
+        (before == null || before.status in ['draft', 'returned']) && data.lines is list && data.lines.size() <= 3 && data.preparedAttachmentIds == (before == null ? [] : before.preparedAttachmentIds) &&
+        data.revision == (before == null ? 0 : before.revision) + (submit == true ? 1 : 0) && data.status == (submit == true ? 'submitted' : before == null ? 'draft' : before.status) &&
+        (submit == true ? submittedSlip(data) : data.totalCentavos == (before != null && before.status == 'returned' ? before.totalCentavos : 0) && data.fuelCentavos == (before != null && before.status == 'returned' ? before.fuelCentavos : 0)) &&
+        !data.keys().hasAny(['expenseId', 'reviewedBy', 'reviewedAt', 'correctedTotalCentavos', 'correctedFuelCentavos']) && money(data.declaredCashCentavos) && (submit == true || data.policyVersion == account(data).policyVersion);
+    }
+    function reviewedSlip(before, data, op) {
+      return before.status == 'submitted' && before.ownerUid != request.auth.uid && account(data).status == 'active' && data.reviewedBy == request.auth.uid && recent(data.reviewedAt) &&
+        data.get('id', op.payload.id) == op.payload.id && data.diff(before).affectedKeys().hasOnly(['id', 'status', 'preparedAttachmentIds', 'reviewNote', 'reviewedBy', 'reviewedAt', 'expenseId', 'updatedAt', 'lastOperationId']) &&
+        (op.payload.decision == 'return' ? data.status == 'returned' && textField(data.reviewNote, 1000) && data.preparedAttachmentIds == [] && !data.keys().hasAny(['expenseId']) :
+          op.payload.decision == 'approve' && op.payload.verified == true && data.status == 'approved' && changedAccount(data) && (data.totalCentavos == 0 || data.expenseId == 'allowance_liquidation_' + op.payload.id));
+    }
+    function correctedSlip(before, data, op) {
+      return before.ownerUid != request.auth.uid && before.status == 'approved' && data.status == 'voided' && op.payload.cashRecovered == true && data.correctedTotalCentavos == op.payload.amountCentavos && money(data.correctedTotalCentavos) && data.correctedTotalCentavos < before.totalCentavos &&
+        data.correctedFuelCentavos == op.payload.fuelCentavos && money(data.correctedFuelCentavos) && data.correctedFuelCentavos <= before.fuelCentavos && data.correctedFuelCentavos <= data.correctedTotalCentavos && before.fuelCentavos - data.correctedFuelCentavos <= before.totalCentavos - data.correctedTotalCentavos &&
+        textField(data.correctionReason, 1000) && data.diff(before).affectedKeys().hasOnly(['status', 'correctedTotalCentavos', 'correctedFuelCentavos', 'correctionReason', 'updatedAt', 'lastOperationId']) && changedAccount(data) &&
+        afterRecord('allowanceDailyFuel', data.accountId + '_' + data.date).lastOperationId == data.lastOperationId;
+    }
+    match /allowanceLiquidations/{id} {
+      allow create: if financial(request.resource.data, 'saveLiquidation') && savedSlip(id, null, request.resource.data);
+      allow update: if currentOperation('allowances', request.resource.data) && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId && request.resource.data.meetingId == resource.data.meetingId &&
+        (operation('allowances', request.resource.data).command == 'saveLiquidation' ? savedSlip(id, resource.data, request.resource.data) :
+        operation('allowances', request.resource.data).command == 'registerEvidenceReference' ? ownedActive(request.resource.data) && request.resource.data.id == id && resource.data.status in ['draft', 'returned'] && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'preparedAttachmentIds', 'updatedAt', 'lastOperationId']) && request.resource.data.preparedAttachmentIds == resource.data.preparedAttachmentIds.concat([operation('allowances', request.resource.data).result.id]) && request.resource.data.preparedAttachmentIds.size() <= 3 && afterRecord('allowanceAttachments', operation('allowances', request.resource.data).result.id).lastOperationId == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'reviewLiquidation' ? reviewedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)) : operation('allowances', request.resource.data).command == 'correctLiquidation' && correctedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)));
+      allow delete: if false;
+      match /revisions/{revision} {
+        allow create: if financial(request.resource.data, 'saveLiquidation') && request.resource.data.status == 'submitted' && revision == string(request.resource.data.revision) &&
+          request.resource.data.diff(afterRecord('allowanceLiquidations', id)).affectedKeys().hasOnly(['frozenAt']) && recent(request.resource.data.frozenAt) && request.resource.data.fuelCentavos == sumLines(request.resource.data.lines, true) &&
+          checkedEvidence(request.resource.data, 0) && checkedEvidence(request.resource.data, 1) && checkedEvidence(request.resource.data, 2) && checkedEvidence(request.resource.data, 3) && checkedEvidence(request.resource.data, 4);
+        allow update, delete: if false;
+      }
+    }
+    function payment(data) { return data.paymentMethod in ['cash', 'bank'] && validDate(data.paymentDate) && data.paymentDate <= today() && textField(data.referenceNumber, 200); }
+    function savedRequest(id, before, r) {
+      let a = account(r);
+      let submit = operation('allowances', r).payload.submit == true;
+      return ownedActive(r) && (before == null || before.status in ['draft', 'returned']) && r.status == (submit ? 'submitted' : before == null ? 'draft' : before.status) &&
+        money(r.amountCentavos) && r.amountCentavos > 0 && r.amountCentavos <= a.policy.targetCentavos - a.reviewedBalanceCentavos && r.balanceSnapshotCentavos == a.reviewedBalanceCentavos && r.policyVersion == a.policyVersion && money(r.declaredCashCentavos) && textField(r.reason, 1000) && r.type in ['early', 'scheduled'] &&
+        !r.keys().hasAny(['approvedBy', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber']) &&
+        (!submit || requestEligible(a, r) && r.declaredCashCentavos == a.reviewedBalanceCentavos - a.unreviewedCentavos && nextAccount(r).lastOperationId == r.lastOperationId && nextAccount(r).activeRequestId == id);
+    }
+    function reviewedRequest(before, r, op) {
+      let a = account(r);
+      return before.ownerUid != request.auth.uid && before.status in ['submitted', 'approved'] && a.activeRequestId == op.payload.id &&
+        r.get('id', op.payload.id) == op.payload.id && r.diff(before).affectedKeys().hasOnly(['id', 'status', 'reviewNote', 'approvedBy', 'reviewedAt', 'updatedAt', 'lastOperationId']) && recent(r.reviewedAt) &&
+        (op.payload.decision == 'approve' ? r.status == 'approved' && r.approvedBy == request.auth.uid && a.unresolvedCount == 0 && a.reviewedBalanceCentavos == r.balanceSnapshotCentavos && requestEligible(a, r) :
+          r.approvedBy == '' && textField(r.reviewNote, 1000) && (op.payload.decision == 'return' ? r.status == 'returned' : op.payload.decision == 'reject' && r.status == 'rejected' && changedAccount(r)));
+    }
+    match /allowanceRequisitions/{id} {
+      allow create: if financial(request.resource.data, 'saveRequisition') && savedRequest(id, null, request.resource.data);
+      allow update: if currentOperation('allowances', request.resource.data) && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId &&
+        (operation('allowances', request.resource.data).command == 'saveRequisition' ? savedRequest(id, resource.data, request.resource.data) :
+        operation('allowances', request.resource.data).command == 'reviewRequisition' ? reviewedRequest(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+        operation('allowances', request.resource.data).command == 'releaseRequisition' ? resource.data.status == 'approved' && request.resource.data.status == 'released' && request.resource.data.releasedBy == request.auth.uid && recent(request.resource.data.releasedAt) && payment(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data) :
+        operation('allowances', request.resource.data).command == 'cancelRequisition' && resource.data.ownerUid == request.auth.uid && resource.data.status in ['draft', 'submitted', 'returned'] && request.resource.data.status == 'cancelled' && request.resource.data.get('id', id) == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'status', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data));
+      allow delete: if false;
+    }
+    match /allowanceAttachments/{id} {
+      allow create: if financial(request.resource.data, 'registerEvidenceReference') && ownedActive(request.resource.data) && request.resource.data.kind == 'reference' && request.resource.data.finalized && !request.resource.data.uploadAllowed && !request.resource.data.cleanupCandidate &&
+        request.resource.data.reference.matches('[A-Z0-9_-]{1,64}') && request.resource.data.referenceUri is string && request.resource.data.referenceUri.size() <= 1000 && (request.resource.data.referenceUri == '' || request.resource.data.referenceUri.matches('https://.+')) && textField(request.resource.data.name, 200) &&
+        money(request.resource.data.purchaseCentavos) && request.resource.data.purchaseCentavos <= account(request.resource.data).policy.dailyFuelCentavos &&
+        record('allowanceLiquidations', request.resource.data.liquidationId).status in ['draft', 'returned'] && record('allowanceLiquidations', request.resource.data.liquidationId).accountId == request.resource.data.accountId && record('allowanceLiquidations', request.resource.data.liquidationId).date == request.resource.data.date &&
+        afterRecord('allowanceLiquidations', request.resource.data.liquidationId).lastOperationId == request.resource.data.lastOperationId && afterRecord('allowanceLiquidations', request.resource.data.liquidationId).preparedAttachmentIds.hasAny([id]) &&
+        (request.resource.data.purchaseCentavos == 0 || afterRecord('allowanceFuelReceipts', request.resource.data.accountId + '_' + request.resource.data.date + '_' + request.resource.data.reference).fileId == id);
+      allow update: if financial(request.resource.data, 'saveLiquidation') && ownedActive(request.resource.data) && request.resource.data.get('id', id) == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'cleanupCandidate', 'uploadAllowed', 'updatedAt', 'lastOperationId']) && !request.resource.data.cleanupCandidate && !request.resource.data.uploadAllowed;
+      allow delete: if false;
+    }
+    match /allowanceFuelReceipts/{id} {
+      allow create: if financial(request.resource.data, 'registerEvidenceReference') && ownedActive(request.resource.data) && afterRecord('allowanceAttachments', request.resource.data.fileId).lastOperationId == request.resource.data.lastOperationId &&
+        id == request.resource.data.accountId + '_' + afterRecord('allowanceAttachments', request.resource.data.fileId).date + '_' + afterRecord('allowanceAttachments', request.resource.data.fileId).reference;
+      allow update, delete: if false;
+    }
+    function fuelClaim(slip, day, i) {
+      let line = slip.lines.size() > i ? slip.lines[i] : {};
+      return slip.lines.size() <= i || line.category != 'Fuel' || afterRecord('allowanceReferenceFuelClaims', line.fuelPurchaseId).lastOperationId == slip.lastOperationId;
+    }
+    function fuelClaims(slip, day) { return fuelClaim(slip, day, 0) && fuelClaim(slip, day, 1) && fuelClaim(slip, day, 2) && fuelClaim(slip, day, 3) && fuelClaim(slip, day, 4); }
+    function earlierPurchase(slip, i, j) { return j < i && slip.lines[j].category == 'Fuel' && slip.lines[j].fuelPurchaseId == slip.lines[i].fuelPurchaseId; }
+    function allocationAmount(slip, day, i) {
+      return slip.lines.size() <= i || slip.lines[i].category != 'Fuel' || earlierPurchase(slip, i, 0) || earlierPurchase(slip, i, 1) || earlierPurchase(slip, i, 2) || earlierPurchase(slip, i, 3) ? 0 : day.allocations[slip.meetingId].get(slip.lines[i].fuelPurchaseId, 0);
+    }
+    function meetingFuel(before, d, op) {
+      let m = afterRecord('allowanceMeetings', op.result.id);
+      let old = get(/databases/$(database)/documents/allowanceMeetings/$(op.result.id)).data;
+      return m.lastOperationId == d.lastOperationId && (m.date == d.date || old != null && old.date == d.date) && d.fuelCentavos == before.get('fuelCentavos', 0) && d.get('allocations', {}) == before.get('allocations', {}) &&
+        d.heldMeetingIds == before.get('heldMeetingIds', []).removeAll([op.result.id]).concat(m.status == 'held' && m.date == d.date ? [op.result.id] : []);
+    }
+    function slipFuel(before, d, op) {
+      let id = op.command == 'saveLiquidation' ? op.payload.meetingId : op.payload.id;
+      let slip = afterRecord('allowanceLiquidations', id);
+      let old = get(/databases/$(database)/documents/allowanceLiquidations/$(id)).data;
+      let oldFuel = op.command == 'correctLiquidation' || old != null && old.status == 'returned' ? old.fuelCentavos : 0;
+      return slip.lastOperationId == d.lastOperationId && slip.date == d.date && slip.accountId == d.accountId && slip.status in ['submitted', 'voided'] &&
+        d.heldMeetingIds == before.heldMeetingIds && d.fuelCentavos == before.fuelCentavos - oldFuel + (slip.status == 'voided' ? slip.correctedFuelCentavos : slip.fuelCentavos) &&
+        d.allocations.diff(before.get('allocations', {})).affectedKeys().hasOnly([id]) && fuelClaims(slip, d) &&
+        (slip.status != 'voided' || allocationAmount(slip, d, 0) + allocationAmount(slip, d, 1) + allocationAmount(slip, d, 2) + allocationAmount(slip, d, 3) + allocationAmount(slip, d, 4) == slip.correctedFuelCentavos);
+    }
+    match /allowanceDailyFuel/{id} {
+      allow create, update: if currentOperation('allowances', request.resource.data) && id == request.resource.data.accountId + '_' + request.resource.data.date &&
+        (operation('allowances', request.resource.data).command == 'correctLiquidation' || ownedActive(request.resource.data)) && request.resource.data.heldMeetingIds is list && request.resource.data.heldMeetingIds.toSet().size() == request.resource.data.heldMeetingIds.size() && money(request.resource.data.fuelCentavos) &&
+        request.resource.data.fuelCentavos <= (request.resource.data.heldMeetingIds.size() >= 2 ? account(request.resource.data).policy.dailyFuelCentavos : account(request.resource.data).policy.singleFuelCentavos) &&
+        (resource == null || request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId && request.resource.data.date == resource.data.date) &&
+        (operation('allowances', request.resource.data).command == 'saveMeeting' ? meetingFuel(resource == null ? {} : resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+          operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation'] && resource != null && slipFuel(resource.data, request.resource.data, operation('allowances', request.resource.data)));
+      allow delete: if false;
+    }
+    match /allowanceReferenceFuelClaims/{id} {
+      allow create, update: if currentOperation('allowances', request.resource.data) && operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation'] && money(request.resource.data.allocatedCentavos) &&
+        request.resource.data.ownerUid == record('allowanceAttachments', id).ownerUid && request.resource.data.accountId == record('allowanceAttachments', id).accountId && request.resource.data.date == record('allowanceAttachments', id).date && request.resource.data.allocatedCentavos <= record('allowanceAttachments', id).purchaseCentavos &&
+        request.resource.data.allocatedCentavos == (resource == null ? 0 : resource.data.allocatedCentavos) - (exists(/databases/$(database)/documents/allowanceDailyFuel/$(request.resource.data.accountId + '_' + request.resource.data.date)) ? record('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).get('allocations', {}).get(request.resource.data.slipId, {}).get(id, 0) : 0) + afterRecord('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).allocations[request.resource.data.slipId].get(id, 0) &&
+        allocationProof(request.resource.data, id);
+      allow delete: if false;
+    }
+    function allocationProof(data, id) {
+      let slip = afterRecord('allowanceLiquidations', data.slipId);
+      let day = afterRecord('allowanceDailyFuel', data.accountId + '_' + data.date);
+      let amount = day.allocations[data.slipId].get(id, 0);
+      return slip.lastOperationId == data.lastOperationId && day.lastOperationId == data.lastOperationId && slip.accountId == data.accountId && slip.ownerUid == data.ownerUid &&
+        (slip.status == 'submitted' ? amount == purchaseAmount(slip.lines, id) : slip.status == 'voided' && amount >= 0 && amount <= purchaseAmount(slip.lines, id));
+    }
+    match /allowanceLedger/{id} {
+      allow create: if currentOperation('allowances', request.resource.data) && request.resource.data.actorUid == request.auth.uid && request.resource.data.accountId == operation('allowances', request.resource.data).accountId && request.resource.data.ownerUid == account(request.resource.data).ownerUid &&
+        id in [request.resource.data.lastOperationId, request.resource.data.lastOperationId + '_reversal', request.resource.data.lastOperationId + '_replacement'] && recent(request.resource.data.createdAt) &&
+        changedAccount(request.resource.data) && cashPost(nextAccount(request.resource.data), request.resource.data.kind, request.resource.data.amountCentavos, request.resource.data.sourceId, id == request.resource.data.lastOperationId ? '' : id == request.resource.data.lastOperationId + '_reversal' ? '_reversal' : '_replacement') &&
+        (operation('allowances', request.resource.data).command == 'initialRelease' ? request.resource.data.kind == 'initial_release' && id == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'cashReturn' ? request.resource.data.kind == 'cash_return' && id == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'reviewLiquidation' ? request.resource.data.kind == 'approved_expense' && id == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'releaseRequisition' ? request.resource.data.kind == 'replenishment' && id == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'correctLiquidation' && id != request.resource.data.lastOperationId && request.resource.data.kind == (id == request.resource.data.lastOperationId + '_reversal' ? 'expense_reversal' : 'corrected_expense'));
+      allow update, delete: if false;
+    }
+    function linkedExpense(data, id, before) {
+      let slip = afterRecord('allowanceLiquidations', data.liquidationId);
+      let op = operation('allowances', data);
+      return currentOperation('allowances', data) && id == 'allowance_liquidation_' + data.liquidationId && data.source == 'allowance_liquidation' && data.allowanceAccountId == slip.accountId && slip.lastOperationId == data.lastOperationId && slip.ownerUid != request.auth.uid &&
+        (before == null ? op.command == 'reviewLiquidation' && slip.status == 'approved' && slip.totalCentavos > 0 && data.amount == slip.totalCentavos / 100 && data.status == 'paid' && data.approvedLines == slip.lines :
+          op.command == 'correctLiquidation' && slip.status == 'voided' && data.amount == slip.correctedTotalCentavos / 100 && data.correctedBy == request.auth.uid && data.get('id', id) == id && data.diff(before).affectedKeys().hasOnly(['id', 'amount', 'correctionReason', 'correctedAt', 'correctedBy', 'updatedAt', 'lastOperationId']));
+    }
+    match /expenses/{id} {
+      allow create: if linkedExpense(request.resource.data, id, null);
+      allow update: if linkedExpense(request.resource.data, id, resource.data);
+    }
+    match /allowanceReleases/{id} {
+      allow create: if financial(request.resource.data, 'initialRelease') && id == request.resource.data.lastOperationId && request.resource.data.ownerUid == account(request.resource.data).ownerUid && request.resource.data.actorUid == request.auth.uid && payment(request.resource.data) && request.resource.data.amountCentavos == operation('allowances', request.resource.data).payload.amountCentavos && changedAccount(request.resource.data);
+      allow update, delete: if false;
+    }
+    match /allowanceAuditEvents/{id} {
+      allow create: if currentOperation('allowances', request.resource.data) && id == request.resource.data.lastOperationId && request.resource.data.actorUid == request.auth.uid && request.resource.data.command == operation('allowances', request.resource.data).command && recent(request.resource.data.createdAt) &&
+        (operation('allowances', request.resource.data).command in ['savePolicy', 'grantAccess', 'configureAccount'] ? request.resource.data.ownerUid == request.auth.uid : request.resource.data.ownerUid == account(request.resource.data).ownerUid);
+      allow update, delete: if false;
+    }
+    match /allowanceAccounts/{id} { allow read: if allowanceRead(); }
+    match /allowanceMeetings/{id} { allow read: if allowanceRead(); }
+    match /allowanceLiquidations/{id} { allow read: if allowanceRead(); }
+    match /allowanceRequisitions/{id} { allow read: if allowanceRead(); }
+    match /allowanceLedger/{id} { allow read: if allowanceRead(); }
+    match /allowanceAuditEvents/{id} { allow read: if allowanceRead(); }
+    match /allowanceDailyFuel/{id} { allow read: if allowanceRead(); }
+    match /allowanceAttachments/{id} { allow read: if allowanceRead(); }
+    match /allowanceReleases/{id} { allow read: if allowanceRead(); }
+    match /allowanceFuelReceipts/{id} { allow read: if allowanceRead(); }
+    match /allowanceReferenceFuelClaims/{id} { allow read: if allowanceRead(); }
+    match /allowanceLiquidations/{id}/revisions/{revision} { allow read: if active('allowances') && (resource.data.ownerUid == request.auth.uid || allowanceReviewer()); }
     match /{document=**} {
       allow read, write: if false;
     }

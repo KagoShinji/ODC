@@ -62,12 +62,23 @@ const MONTHS_LIST = (() => {
   return list;
 })();
 
-export default function AdminSalaries({ firebaseUser, isSuperAdmin, can }) {
+export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initialSubTab = 'payroll', onSubTabChange }) {
   const canManageStaff = can ? can('salaries:manage_staff') : isSuperAdmin;
   const canPayout = can ? can('salaries:payout') : isSuperAdmin;
   const canDeleteSalary = can ? can('salaries:delete') : isSuperAdmin;
 
-  const [activeSubTab, setActiveSubTab] = useState('payroll'); // 'payroll' | 'roster' | 'history'
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'payroll' | 'roster' | 'history'
+
+  useEffect(() => {
+    if (['payroll', 'roster', 'history'].includes(initialSubTab)) {
+      setActiveSubTab(initialSubTab);
+    }
+  }, [initialSubTab]);
+
+  const selectSubTab = (id) => {
+    setActiveSubTab(id);
+    onSubTabChange?.(id);
+  };
   
   // Data State
   const [staff, setStaff] = useState([]);
@@ -477,7 +488,7 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can }) {
             <button
               key={tab.id}
               onClick={() => {
-                setActiveSubTab(tab.id);
+                selectSubTab(tab.id);
                 setSearchQuery('');
               }}
               style={{

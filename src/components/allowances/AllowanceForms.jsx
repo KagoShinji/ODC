@@ -1,7 +1,7 @@
 import { useState, useId, cloneElement } from 'react';
 import { Plus, Trash, UploadSimple } from '@phosphor-icons/react';
-import { ACTIONS, DEFAULT_POLICY, toCentavos, estimatedCash, topUp, eligible, manilaDate } from '../../../functions/src/domain.js';
-import { newAllowanceId, uploadAllowanceEvidence, openAllowanceEvidence } from '../../services/allowanceService';
+import { DEFAULT_POLICY, toCentavos, estimatedCash, topUp, eligible, manilaDate } from '../../../functions/src/domain.js';
+import { newAllowanceId, uploadAllowanceEvidence, openAllowanceEvidence, registerAllowanceReference, allowanceCapabilities } from '../../services/allowanceService';
 import { peso } from '../../utils/allowanceDocuments';
 
 export function Field({ label, children, hint }) {
@@ -53,6 +53,18 @@ export function LiquidationForm({ account, meeting, slip, evidence, busy, onSave
     finally { setUploading(false); setProgress(0); }
   };
   const updateLine = (index, key, value) => setLines(current => current.map((line, i) => i === index ? { ...line, [key]: value } : line));
+  const registerReference = async index => {
+    setUploading(true); setError('');
+    try {
+      const line = lines[index];
+      await onCommand('saveLiquidation', payload(false));
+      const purchase = line.category === 'Fuel' ? toCentavos(line.purchaseAmount || line.amount || '0') : 0;
+      const file = await registerAllowanceReference(account.id, meeting.id, line.referenceInput || '', line.referenceLabel || line.referenceInput || '', line.referenceUri || '', purchase);
+      setFiles(current => [...current, file]);
+      setLines(current => current.map((value, i) => i === index ? { ...value, attachmentIds: [file.id], fuelPurchaseId: purchase ? file.id : '' } : value));
+    } catch (error) { setError(error.message); }
+    finally { setUploading(false); }
+  };
   const total = lines.reduce((sum, x) => sum + Math.round(Number(x.amount || 0) * 100), 0);
   return <form onSubmit={e => { e.preventDefault(); save(true); }}>
     <p className="allowance-helper">{meeting.clientName} · {meeting.date}. Submit after the meeting. Limit {peso(account.policy.meetingCapCentavos)}, including fuel.</p>
@@ -62,19 +74,25 @@ export function LiquidationForm({ account, meeting, slip, evidence, busy, onSave
         <div className="allowance-line-header"><strong>Expense {index + 1}</strong><button type="button" aria-label={`Remove expense ${index + 1}`} onClick={() => setLines(current => current.filter((_, i) => i !== index))}><Trash size={16} /></button></div>
         <Field label="Description"><input required maxLength={200} value={line.description} onChange={e => updateLine(index, 'description', e.target.value)} /></Field>
         <div className="allowance-form-grid"><Field label="Category"><select value={line.category} onChange={e => updateLine(index, 'category', e.target.value)}>{['Fuel', 'Meals', 'Transport', 'Other'].map(x => <option key={x}>{x}</option>)}</select></Field><Field label="Amount (PHP)"><MoneyInput value={line.amount} onChange={e => updateLine(index, 'amount', e.target.value)} /></Field></div>
-        {line.category === 'Fuel' && <><Field label="Full fuel receipt amount (PHP)" hint="Before uploading, enter the total purchase. The expense amount above is only this meeting's share."><MoneyInput value={line.purchaseAmount || line.amount} onChange={e => updateLine(index, 'purchaseAmount', e.target.value)} /></Field><Field label="Fuel purchase receipt"><select required value={line.fuelPurchaseId || ''} onChange={e => { const id = e.target.value; setLines(current => current.map((item, i) => i === index ? { ...item, fuelPurchaseId: id, attachmentIds: [...new Set([...(item.attachmentIds || []), id])].filter(Boolean) } : item)); }}><option value="">Upload or select a fuel receipt</option>{files.filter(file => file.finalized && file.purchaseCentavos > 0).map(file => <option key={file.id} value={file.id}>{file.name} · Full purchase {peso(file.purchaseCentavos)}</option>)}</select></Field></>}
-        <Field label="Receipts / vouchers" hint="JPEG, PNG, WebP or PDF. Select an existing receipt to allocate one shared fuel purchase across meetings; enter only this meeting's share.">
+        {line.category === 'Fuel' && <><Field label="Full fuel receipt amount (PHP)" hint="Enter the total purchase before registering its evidence. The expense amount above is only this meeting's share."><MoneyInput value={line.purchaseAmount || line.amount} onChange={e => updateLine(index, 'purchaseAmount', e.target.value)} /></Field><Field label="Fuel purchase receipt"><select required value={line.fuelPurchaseId || ''} onChange={e => { const id = e.target.value; setLines(current => current.map((item, i) => i === index ? { ...item, fuelPurchaseId: id, attachmentIds: allowanceCapabilities.evidenceUploads ? [...new Set([...(item.attachmentIds || []), id])].filter(Boolean) : [id].filter(Boolean) } : item)); }}><option value="">Register or select a fuel receipt</option>{files.filter(file => file.finalized && file.purchaseCentavos > 0).map(file => <option key={file.id} value={file.id}>{file.name} · Full purchase {peso(file.purchaseCentavos)}</option>)}</select></Field></>}
+        {allowanceCapabilities.evidenceUploads ? <Field label="Receipts / vouchers" hint="JPEG, PNG, WebP or PDF. Select an existing receipt to allocate one shared fuel purchase across meetings; enter only this meeting's share.">
           <input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={e => { const selected = [...e.target.files]; e.target.value = ''; upload(index, selected); }} />
-        </Field>
-        <div className="allowance-evidence-list">{files.filter(file => file.finalized).map(file => <label key={file.id}><input type="checkbox" checked={line.attachmentIds?.includes(file.id) || false} onChange={e => updateLine(index, 'attachmentIds', e.target.checked ? [...(line.attachmentIds || []), file.id] : (line.attachmentIds || []).filter(x => x !== file.id))} />{file.name}</label>)}</div>
+        </Field> : <>
+          <Field label="Receipt / voucher reference" hint="Use its existing reference number. Keep the original evidence in your team’s records."><input maxLength={64} pattern="[a-zA-Z0-9_-]+" value={line.referenceInput || ''} onChange={e => updateLine(index, 'referenceInput', e.target.value)} /></Field>
+          <Field label="Evidence label (optional)"><input maxLength={200} value={line.referenceLabel || ''} onChange={e => updateLine(index, 'referenceLabel', e.target.value)} /></Field>
+          <Field label="Evidence link (optional)" hint="Use an HTTPS link with access limited to your reviewers."><input type="url" value={line.referenceUri || ''} onChange={e => updateLine(index, 'referenceUri', e.target.value)} /></Field>
+          <button type="button" disabled={!line.referenceInput} onClick={() => registerReference(index)}>Register reference</button>
+        </>}
+        <div className="allowance-evidence-list">{files.filter(file => file.finalized).map(file => <label key={file.id}><input type="checkbox" checked={line.attachmentIds?.includes(file.id) || false} onChange={e => updateLine(index, 'attachmentIds', e.target.checked ? allowanceCapabilities.evidenceUploads ? [...(line.attachmentIds || []), file.id] : [file.id] : (line.attachmentIds || []).filter(x => x !== file.id))} />{file.name}</label>)}</div>
       </div>)}
-      <button type="button" onClick={() => { setNoExpense(false); setLines(current => [...current, { description: '', category: 'Other', amount: '', attachmentIds: [] }]); }}><Plus size={16} /> Add expense</button>
+      <button type="button" disabled={lines.length >= allowanceCapabilities.maxExpenseLines} onClick={() => { setNoExpense(false); setLines(current => [...current, { description: '', category: 'Other', amount: '', attachmentIds: [] }]); }}><Plus size={16} /> Add expense</button>
+      {!allowanceCapabilities.evidenceUploads && <p className="allowance-helper">Use up to three expense lines with one evidence reference per line. Combine related items on the same receipt.</p>}
       {lines.length === 0 && <label className="allowance-check"><input type="checkbox" required checked={noExpense} onChange={e => setNoExpense(e.target.checked)} />This meeting had no expenses.</label>}
       <p className="allowance-total">Total spent <strong>{peso(total)}</strong></p>
       <Field label="Money left on hand (PHP)" hint="Count the physical cash after this meeting. A mismatch requires Operations reconciliation."><MoneyInput value={declared} onChange={e => setDeclared(e.target.value)} /></Field>
       <Field label="Notes"><textarea maxLength={1000} value={notes} onChange={e => setNotes(e.target.value)} /></Field>
     </fieldset>
-    {uploading && <div role="status" className="allowance-upload-status"><UploadSimple size={18} /> Uploading evidence: {progress}%</div>}
+    {uploading && <div role="status" className="allowance-upload-status"><UploadSimple size={18} /> {allowanceCapabilities.evidenceUploads ? `Uploading evidence: ${progress}%` : 'Registering evidence reference…'}</div>}
     {error && <p className="allowance-error" role="alert">{error}</p>}
     <Controls busy={busy || uploading} draft={() => save(false)} submitLabel="Submit liquidation" />
   </form>;
@@ -109,7 +127,7 @@ export function ReviewForm({ slip, type, evidence, busy, onSave }) {
     {type === 'liquidation' && <div className="allowance-detail-lines">{slip.lines.map((line, i) => <p key={i}>{line.description} <span>{line.category} · {peso(line.amountCentavos)}</span></p>)}</div>}
     <p className="allowance-total">{type === 'liquidation' ? 'Total spent' : 'Requested amount'} <strong>{peso(type === 'liquidation' ? slip.totalCentavos : slip.amountCentavos)}</strong></p>
     <p>Declared cash: {peso(slip.declaredCashCentavos)}</p>
-    <div className="allowance-evidence-list">{evidence.map(file => <button type="button" key={file.id} onClick={() => openAllowanceEvidence(file).catch(err => setError(err.message))}>{file.name} · Download privately</button>)}</div>
+    <div className="allowance-evidence-list">{evidence.map(file => file.kind === 'reference' && !file.referenceUri ? <p key={file.id}>{file.name} · Reference: {file.reference}</p> : <button type="button" key={file.id} onClick={() => openAllowanceEvidence(file).catch(err => setError(err.message))}>{file.name} · {file.kind === 'reference' ? `Open evidence (${file.reference})` : 'Download privately'}</button>)}</div>
     <Field label="Decision"><select value={decision} onChange={e => setDecision(e.target.value)}><option value="approve">Approve</option><option value="return">Return for correction</option>{type === 'requisition' && <option value="reject">Reject</option>}</select></Field>
     <Field label="Review comments"><textarea required={decision !== 'approve'} maxLength={1000} value={reason} onChange={e => setReason(e.target.value)} /></Field>
     {type === 'liquidation' && decision === 'approve' && <label className="allowance-check"><input type="checkbox" required checked={verified} onChange={e => setVerified(e.target.checked)} />I checked the receipt allocations, totals, and declared cash.</label>}
@@ -148,19 +166,6 @@ export function PolicyForm({ policy, enabled, busy, onSave }) {
     <label className="allowance-check"><input type="checkbox" checked={activate} onChange={e => setActivate(e.target.checked)} />Enable allowance actions for authorized staff.</label>
     <label className="allowance-check"><input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />I confirm this policy, including fuel treatment and the upcoming meeting window.</label>
     <Controls busy={busy} submitLabel="Save policy" />
-  </form>;
-}
-
-export function GrantForm({ staff, grants, busy, onSave }) {
-  const [staffId, setStaffId] = useState('');
-  const [active, setActive] = useState(true);
-  const [actions, setActions] = useState(['allowances:meeting', 'allowances:liquidate', 'allowances:request']);
-  return <form onSubmit={e => { e.preventDefault(); onSave('grantAccess', { staffId, active, actions }); }}>
-    <Field label="Staff member with an existing login"><select required value={staffId} onChange={e => { setStaffId(e.target.value); const grant = grants.find(g => g.staffId === e.target.value); setActive(grant?.active ?? true); setActions(grant?.actions || ['allowances:meeting', 'allowances:liquidate', 'allowances:request']); }}><option value="">Select staff</option>{staff.map(s => <option key={s.id} value={s.id}>{s.name} · {s.email || 'No login email'}</option>)}</select></Field>
-    <p className="allowance-helper">The staff login is verified before access is granted. These permissions are managed separately from legacy module checkboxes.</p>
-    <label className="allowance-check"><input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />Active feature access</label>
-    <div className="allowance-permissions">{ACTIONS.map(action => <label className="allowance-check" key={action}><input type="checkbox" checked={actions.includes(action)} onChange={e => setActions(current => e.target.checked ? [...current, action] : current.filter(x => x !== action))} />{action.split(':')[1]}</label>)}</div>
-    <Controls busy={busy} submitLabel="Save verified access" />
   </form>;
 }
 

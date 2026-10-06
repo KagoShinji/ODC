@@ -5,17 +5,15 @@ import { getStorage } from 'firebase-admin/storage';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
-import { defineString } from 'firebase-functions/params';
+import { isAllowanceAdmin as isBootstrap, featureOptions as options } from './accessConfig.js';
 import { createHash } from 'node:crypto';
 import { ACTIONS, DEFAULT_POLICY, DomainError, check, idValue } from './domain.js';
 import { executeCommand } from './commands.js';
+export { demoContext, demoDashboard, demoAvailableSlots, demoBookingHistory, demoCommand, sendDemoReminders, revokeSuspendedDemoAccess } from './demos.js';
+export { staffModulePermissions } from './staffPermissions.js';
 
 initializeApp();
 const db = getFirestore();
-const adminUids = defineString('ALLOWANCE_ADMIN_UIDS', { default: '', description: 'Comma-separated Firebase Auth UIDs authorized to bootstrap allowance administration.' });
-// All feature endpoints share the same region and production App Check requirement.
-const options = { region: 'asia-southeast1', enforceAppCheck: process.env.FUNCTIONS_EMULATOR !== 'true', maxInstances: 10 };
-const isBootstrap = uid => adminUids.value().split(',').map(x => x.trim()).filter(Boolean).includes(uid);
 const toWire = value => value instanceof Timestamp ? value.toDate().toISOString() : Array.isArray(value) ? value.map(toWire) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, toWire(v)])) : value;
 const timestampKeys = new Set(['createdAt', 'updatedAt', 'submittedAt', 'reviewedAt', 'releasedAt', 'correctedAt', 'frozenAt']);
 function toFirestore(value) {
@@ -39,7 +37,7 @@ export const allowanceContext = onCall(options, async request => {
     let access = (await accessRef.get()).data();
     if (bootstrapAdmin) {
       // Rules and browser reads use the same trusted authority as backend commands.
-      access = { ...access, ownerUid: uid, active: true, actions: ACTIONS, bootstrapAdmin: true };
+      access = { ...access, ownerUid: uid, staffId: '', active: true, actions: ACTIONS, bootstrapAdmin: true };
       await accessRef.set(access, { merge: true });
     } else if (access?.bootstrapAdmin) {
       // Removing a bootstrap UID must revoke its old materialized administrator grant.

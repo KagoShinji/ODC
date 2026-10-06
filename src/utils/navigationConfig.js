@@ -12,10 +12,34 @@ import {
   MailSearch,
   ShieldCheck,
 } from 'lucide-react';
+import { CalendarBlank } from '@phosphor-icons/react';
 
 export const ALL_ADMIN_NAVIGATIONS = [
   {
+    id: 'demos', label: 'Demo Scheduling', desc: 'Sales bookings & presenter availability', icon: CalendarBlank, color: '#d9a66a',
+    subTabs: [
+      { id: 'calendar', label: 'Demonstrations' },
+      { id: 'availability', label: 'My availability', requiresAction: 'demos:present' },
+      { id: 'notifications', label: 'Notifications' },
+      { id: 'settings', label: 'Settings', requiresAction: 'demos:manage' },
+    ],
+    actions: [
+      { id: 'demos:book', label: 'Book Demonstrations', desc: 'Book and manage your client demonstrations' },
+      { id: 'demos:present', label: 'Present Demonstrations', desc: 'Publish availability and manage assigned meetings' },
+      { id: 'demos:view_all', label: 'View Team Calendar', desc: 'View all team demonstrations and details' },
+      { id: 'demos:manage', label: 'Manage Scheduling', desc: 'Configure rules, grant access and reassign meetings' },
+    ],
+  },
+  {
     id: 'allowances', label: 'Allowances & Requisitions', desc: 'Meeting expenses, liquidation & replenishment', icon: Wallet, color: '#d9a66a',
+    subTabs: [
+      { id: 'overview', label: 'Overview' },
+      { id: 'meetings', label: 'Meetings' },
+      { id: 'liquidations', label: 'Liquidations' },
+      { id: 'requisitions', label: 'Requisitions' },
+      { id: 'history', label: 'History' },
+      { id: 'settings', label: 'Settings', requiresAction: 'allowances:manage' },
+    ],
     actions: [
       { id: 'allowances:manage', label: 'Manage Allowances', desc: 'Configure policy, staff grants and accounts' },
       { id: 'allowances:meeting', label: 'Record Meetings', desc: 'Record your demos and client meetings' },
@@ -57,6 +81,11 @@ export const ALL_ADMIN_NAVIGATIONS = [
     desc: 'Billing & revenue',
     icon: TrendingUp,
     color: '#34d399',
+    subTabs: [
+      { id: 'invoices', label: 'Invoices' },
+      { id: 'expenses', label: 'Expenses' },
+      { id: 'summary', label: 'Financial summary' },
+    ],
     actions: [
       { id: 'invoices:create', label: 'Create Invoices', desc: 'Draft and issue new client invoices' },
       { id: 'invoices:edit', label: 'Edit Invoices', desc: 'Modify invoice line items and totals' },
@@ -112,6 +141,12 @@ export const ALL_ADMIN_NAVIGATIONS = [
     desc: 'Client accounts & billing',
     icon: Users,
     color: '#6366f1',
+    subTabs: [
+      { id: 'masterlist', label: 'Masterlist' },
+      { id: 'directory', label: 'Client directory' },
+      { id: 'billing', label: 'Billing tracker' },
+      { id: 'feedback', label: 'Client feedback' },
+    ],
     actions: [
       { id: 'clients:create', label: 'Create Clients', desc: 'Register new client accounts & portals' },
       { id: 'clients:billing', label: 'Configure Billing', desc: 'Setup monthly retainers and billing cycles' },
@@ -125,6 +160,11 @@ export const ALL_ADMIN_NAVIGATIONS = [
     desc: 'Payroll & payouts',
     icon: Wallet,
     color: '#10b981',
+    subTabs: [
+      { id: 'payroll', label: 'Monthly payroll' },
+      { id: 'roster', label: 'Staff roster' },
+      { id: 'history', label: 'Payout history' },
+    ],
     actions: [
       { id: 'salaries:manage_staff', label: 'Manage Staff Roster', desc: 'Add / edit staff salary configurations' },
       { id: 'salaries:payout', label: 'Record Payouts', desc: 'Process and record monthly payroll' },

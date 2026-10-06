@@ -180,6 +180,30 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     write('allowanceLiquidations', id, slip); audit(id, current?.status || '', slip.status); return { id };
   }
 
+  if (command === 'registerEvidenceReference') {
+    permit('liquidate'); owned(account);
+    const id = idValue(data.id || commandId);
+    const slip = await get('allowanceLiquidations', idValue(data.liquidationId)); owned(slip);
+    check(slip.accountId === accountId && ['draft', 'returned'].includes(slip.status), 'Only editable slips accept evidence references.');
+    check(!await repo.get('allowanceAttachments', id), 'This evidence reference already exists.');
+    const reference = textValue(data.reference, 'Receipt or voucher reference', 64).toUpperCase();
+    check(/^[A-Z0-9_-]+$/.test(reference), 'Use letters, numbers, dashes or underscores for the receipt reference.');
+    const referenceUri = String(data.referenceUri || '').trim();
+    check(!referenceUri || referenceUri.length <= 1000 && /^https:\/\//.test(referenceUri), 'Use an HTTPS evidence link.');
+    const purchaseCentavos = data.purchaseCentavos ? centavos(data.purchaseCentavos, 'Full fuel purchase') : 0;
+    check(purchaseCentavos <= account.policy.dailyFuelCentavos, 'Fuel purchase exceeds the daily limit.');
+    if (purchaseCentavos) {
+      const receiptId = `${accountId}_${slip.date}_${reference}`;
+      check(!await repo.get('allowanceFuelReceipts', receiptId), 'This fuel purchase is already registered. Select its existing reference.');
+      write('allowanceFuelReceipts', receiptId, { accountId, ownerUid: uid, fileId: id });
+    }
+    const preparedAttachmentIds = [...(slip.preparedAttachmentIds || []), id];
+    check(preparedAttachmentIds.length <= Math.min(account.policy.maxAttachments, actor.capabilities?.maxExpenseLines || 30), 'This slip has reached its evidence reference limit.');
+    write('allowanceAttachments', id, { ownerUid: uid, accountId, liquidationId: slip.id, date: slip.date, purchaseCentavos, revision: slip.revision + 1, name: textValue(data.name || reference, 'Evidence label', 200), reference, referenceUri, kind: 'reference', finalized: true, uploadAllowed: false, cleanupCandidate: false, createdAt: timestamp });
+    write('allowanceLiquidations', slip.id, { ...slip, preparedAttachmentIds });
+    audit(id, '', 'reference_registered'); return { id };
+  }
+
   if (command === 'prepareAttachment') {
     permit('liquidate'); owned(account);
     const id = idValue(data.id || commandId);
