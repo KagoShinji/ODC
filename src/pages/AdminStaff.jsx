@@ -129,6 +129,13 @@ const PRESETS = [
   },
 ];
 
+const ALLOWANCE_ROLE_BADGES = {
+  Staff: { color: '#8ed0ff', background: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)' },
+  Operations: { color: '#f4c878', background: 'rgba(217, 166, 106, 0.12)', border: 'rgba(217, 166, 106, 0.3)' },
+  Finance: { color: '#7ee2b8', background: 'rgba(52, 211, 153, 0.12)', border: 'rgba(52, 211, 153, 0.3)' },
+  Administrator: { color: '#d5b6ff', background: 'rgba(167, 139, 250, 0.12)', border: 'rgba(167, 139, 250, 0.3)' },
+};
+
 const S = {
   card: {
     background: 'rgba(255,255,255,0.04)',
@@ -1973,6 +1980,16 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                           <span>Available for sales bookings<small style={{ display: 'block', color: '#aaa', marginTop: 3 }}>Publish available hours in Demo Scheduling.</small></span>
                         </label>}
 
+                        {nav.id === 'allowances' && isTabChecked && (
+                          <div style={{ marginTop: 12, padding: '9px 10px', borderRadius: 8, background: 'rgba(217,166,106,0.07)', border: '1px solid rgba(217,166,106,0.18)', fontSize: 10, lineHeight: 1.5, color: 'rgba(255,255,255,0.63)' }}>
+                            <strong style={{ color: '#f4c878' }}>Role guide: </strong>
+                            <strong>Staff</strong> records meetings, submits liquidations, and requests replenishment.{' '}
+                            <strong>Operations</strong> reviews liquidations.{' '}
+                            <strong>Finance</strong> approves requests, records releases, reports, and corrections.{' '}
+                            <strong>Administrator</strong> manages allowance policy and accounts.
+                          </div>
+                        )}
+
                         {/* Nested Sub-Actions Checkboxes */}
                         {isTabChecked && actions.length > 0 && (
                           <div
@@ -1987,6 +2004,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                           >
                             {actions.map((act) => {
                               const isActionChecked = (form.allowedActions || []).includes(act.id);
+                              const roleBadge = ALLOWANCE_ROLE_BADGES[act.accessRole];
 
                               return (
                                 <div
@@ -2051,6 +2069,24 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                                       }}
                                     >
                                       {act.label}
+                                      {roleBadge && (
+                                        <span
+                                          style={{
+                                            marginLeft: 'auto',
+                                            padding: '1px 5px',
+                                            borderRadius: 999,
+                                            border: `1px solid ${roleBadge.border}`,
+                                            background: roleBadge.background,
+                                            color: roleBadge.color,
+                                            fontSize: 9,
+                                            fontWeight: 600,
+                                            lineHeight: 1.4,
+                                            whiteSpace: 'nowrap',
+                                          }}
+                                        >
+                                          {act.accessRole}
+                                        </span>
+                                      )}
                                     </div>
                                     <p
                                       style={{

@@ -3,6 +3,8 @@ import { CalendarBlank, ArrowRight, Clock } from '@phosphor-icons/react';
 import { getDemoSlots, demoError } from '../../services/demoService';
 import { demoToday, shiftDemoDate, formatDemoTime } from '../../utils/demoScheduling';
 
+const contactPhone = value => String(value || '').replace(/\D/g, '').slice(0, 11);
+
 export function DemoField({ label, helper, children }) {
   const id = useId();
   return <div className="demo-field"><label htmlFor={id}>{label}</label>{cloneElement(children, { id, 'aria-describedby': helper ? `${id}-helper` : undefined })}{helper && <small id={`${id}-helper`}>{helper}</small>}</div>;
@@ -35,12 +37,13 @@ export default function DemoBookingForm({ policy, presenters, clients, booking, 
   const set = (key, value) => setClient(c => ({ ...c, [key]: value }));
   const chooseClient = id => {
     const selected = clients.find(c => c.id === id);
-    setClient(c => ({ ...c, clientId: id, clientName: selected?.name || '', contactName: selected?.contactName || '', contactEmail: selected?.email || '', contactPhone: selected?.phone || '' }));
+    setClient(c => ({ ...c, clientId: id, clientName: selected?.name || '', contactName: selected?.contactName || '', contactEmail: selected?.email || '', contactPhone: contactPhone(selected?.phone) }));
   };
   const submit = event => {
     event.preventDefault(); setValidation('');
     if (!selection) { setValidation('Select an available time before confirming.'); return; }
     if (!booking && !client.contactEmail && !client.contactPhone) { setValidation('Provide a client contact email or phone.'); return; }
+    if (!booking && client.contactPhone && !/^\d{11}$/.test(client.contactPhone)) { setValidation('Contact phone must contain exactly 11 digits.'); return; }
     onSave(booking ? 'reschedule' : 'book', { ...(booking ? { id: booking.id, version: booking.version } : client), date, duration, time: selection.time, presenterUid: selection.presenterUid });
   };
   return <form onSubmit={submit}>
@@ -62,7 +65,7 @@ export default function DemoBookingForm({ policy, presenters, clients, booking, 
           <DemoField label="Client / company"><input value={client.clientName} onChange={e => set('clientName', e.target.value)} required maxLength={200} /></DemoField>
           <DemoField label="Contact person"><input value={client.contactName} onChange={e => set('contactName', e.target.value)} required maxLength={200} /></DemoField>
           <DemoField label="Contact email"><input type="email" value={client.contactEmail} onChange={e => set('contactEmail', e.target.value)} maxLength={254} /></DemoField>
-          <DemoField label="Contact phone"><input type="tel" value={client.contactPhone} onChange={e => set('contactPhone', e.target.value)} maxLength={60} /></DemoField>
+          <DemoField label="Contact phone" helper="11 digits"><input type="tel" inputMode="numeric" autoComplete="tel" value={client.contactPhone} onChange={e => set('contactPhone', contactPhone(e.target.value))} maxLength={11} pattern="[0-9]{11}" title="Enter an 11-digit contact phone number." /></DemoField>
         </div>
         <DemoField label="System / demonstration topic"><input value={client.topic} onChange={e => set('topic', e.target.value)} required maxLength={300} /></DemoField>
         <DemoField label="Meeting type"><select value={client.mode} onChange={e => setClient(c => ({ ...c, mode: e.target.value, location: '' }))}><option value="online">Online</option><option value="onsite">On-site</option></select></DemoField>

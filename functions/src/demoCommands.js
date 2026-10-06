@@ -137,7 +137,7 @@ export async function executeDemoCommand(repo, actor, command, payload, commandI
     clientName: demoText(payload.clientName, 'Client name'),
     contactName: demoText(payload.contactName, 'Contact person'),
     contactEmail: demoText(payload.contactEmail || '', 'Contact email', 254, false),
-    contactPhone: demoText(payload.contactPhone || '', 'Contact phone', 60, false),
+    contactPhone: demoText(payload.contactPhone || '', 'Contact phone', 11, false),
     topic: demoText(payload.topic, 'Demonstration topic', 300),
     mode: payload.mode,
     location: demoText(payload.location, 'Meeting link or location', 1000),
@@ -147,6 +147,7 @@ export async function executeDemoCommand(repo, actor, command, payload, commandI
   requireDemo(['online', 'onsite'].includes(client.mode), 'Choose online or on-site.', 'invalid-argument');
   requireDemo(client.contactEmail || client.contactPhone, 'Provide a contact email or phone.', 'invalid-argument');
   requireDemo(!client.contactEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.contactEmail), 'Enter a valid contact email.', 'invalid-argument');
+  requireDemo(!client.contactPhone || /^\d{11}$/.test(client.contactPhone), 'Contact phone must contain exactly 11 digits.', 'invalid-argument');
   if (client.mode === 'online') {
     let url;
     try { url = new URL(client.location); } catch { /* Validation reports a friendly message below. */ }
