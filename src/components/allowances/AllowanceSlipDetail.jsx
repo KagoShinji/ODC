@@ -1,5 +1,6 @@
 import { ArrowSquareOut, CalendarBlank, ClockCounterClockwise, FileText, Printer, Receipt } from '@phosphor-icons/react';
 import { peso, timestampLabel } from '../../utils/allowanceDocuments';
+import AllowanceStatusBadge from './AllowanceStatusBadge';
 
 const label = value => String(value || '').replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' ').trim();
 const title = value => {
@@ -20,7 +21,7 @@ export default function AllowanceSlipDetail({ slip, evidence = [], history = [],
   return <div className="allowance-slip-detail">
     <section className="allowance-slip-summary" aria-labelledby="allowance-slip-client">
       <div>
-        <span className="allowance-slip-kicker"><span aria-hidden="true" /> Liquidation · {label(slip.status)}</span>
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#d9a66a]">Liquidation <AllowanceStatusBadge status={slip.status} /></div>
         <h4 id="allowance-slip-client">{slip.clientName}</h4>
         <p>Submitted by <strong>{slip.staffName}</strong></p>
       </div>

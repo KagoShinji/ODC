@@ -690,20 +690,63 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
   const totalWithLogin = staffList.filter(
     (s) => s.hasLoginAccess || (s.allowedTabs && s.allowedTabs.length > 0)
   ).length;
+  const totalInactive = staffList.length - totalActive;
 
   return (
-    <div>
-      {onOpenAllowances && <div style={{ marginBottom: 16, color: '#aaa', fontSize: 13 }}>
-        Manage Allowances &amp; Requisitions permissions here when creating or editing staff.{' '}
-        <button type="button" onClick={onOpenAllowances} style={{ ...S.btn, display: 'inline-flex', color: '#d9a66a', background: 'rgba(217,166,106,0.08)' }}>Open Allowances & Requisitions</button>
-      </div>}
-      {onOpenDemos && <div style={{ marginBottom: 16, color: '#aaa', fontSize: 13 }}>
-        Manage Demo Scheduling permissions and bookable presenters here when creating or editing staff.{' '}
-        <button type="button" onClick={onOpenDemos} style={{ ...S.btn, display: 'inline-flex', color: '#d9a66a', background: 'rgba(217,166,106,0.08)' }}>Open Demo Scheduling</button>
-      </div>}
+    <div className="mx-auto w-full max-w-[1480px] text-[#f6f7f9]">
+      <header className="mb-6 flex items-end justify-between gap-7 max-[1080px]:items-start max-md:flex-col max-md:items-stretch max-md:gap-[18px]">
+        <div className="min-w-0">
+          <span className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.11em] text-[#ffad73]">
+            <ShieldCheck size={13} /> Team access
+          </span>
+          <h1 className="m-0 text-[clamp(26px,2.8vw,38px)] font-[720] leading-[1.05] tracking-[-0.045em] text-white">
+            Staff management
+          </h1>
+          <p className="mt-[9px] max-w-[560px] text-[13px] leading-[1.55] text-white/48">
+            Manage staff profiles, login access, and system permissions.
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-3 max-[1080px]:flex-col-reverse max-[1080px]:items-end max-md:items-stretch">
+          {(onOpenAllowances || onOpenDemos) && (
+            <div className="flex items-center gap-1 rounded-[10px] border border-white/7 bg-white/[0.035] p-1 max-md:flex-wrap" aria-label="Related tools">
+              <span className="px-[7px] text-[10px] font-semibold uppercase tracking-[0.06em] text-white/32 max-md:w-full max-md:pt-[5px]">
+                Related tools
+              </span>
+              {onOpenAllowances && (
+                <button
+                  type="button"
+                  onClick={onOpenAllowances}
+                  className="min-h-8 rounded-[7px] border-0 bg-transparent px-2.5 text-[11px] font-medium text-white/65 transition-colors duration-200 hover:bg-white/7 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
+                >
+                  Allowances
+                </button>
+              )}
+              {onOpenDemos && (
+                <button
+                  type="button"
+                  onClick={onOpenDemos}
+                  className="min-h-8 rounded-[7px] border-0 bg-transparent px-2.5 text-[11px] font-medium text-white/65 transition-colors duration-200 hover:bg-white/7 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
+                >
+                  Demo scheduling
+                </button>
+              )}
+            </div>
+          )}
+          {canCreateStaff && (
+            <button
+              id="add-staff-btn"
+              className="inline-flex min-h-[42px] items-center justify-center gap-[7px] rounded-[10px] border border-[#f17b3b] bg-[#ee6b24] px-4 text-[13px] font-semibold text-white shadow-[0_8px_22px_rgba(167,65,14,0.22)] transition-all duration-200 hover:-translate-y-px hover:bg-[#f27937] hover:shadow-[0_10px_28px_rgba(167,65,14,0.3)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
+              onClick={handleOpenCreate}
+            >
+              <UserPlus size={16} /> Add staff
+            </button>
+          )}
+        </div>
+      </header>
       {/* ─── Toast Notification Banner ─── */}
       {toast && (
         <div
+          role={toast.type === 'error' ? 'alert' : 'status'}
           style={{
             background:
               toast.type === 'error'
@@ -740,7 +783,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
             <span style={{ fontSize: 13, lineHeight: 1.4 }}>{toast.text}</span>
           </div>
           <button
+            type="button"
             onClick={() => setToast(null)}
+            aria-label="Dismiss notification"
             style={{
               background: 'none',
               border: 'none',
@@ -753,207 +798,127 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
         </div>
       )}
 
-      {/* ─── Header & Metrics ─── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-          marginBottom: 28,
-        }}
-      >
+      <section className="mb-[22px] grid grid-cols-4 overflow-hidden rounded-[14px] border border-white/[0.075] bg-white/[0.032] shadow-[0_18px_50px_rgba(1,4,12,0.12)] max-[1080px]:grid-cols-2 max-[480px]:grid-cols-1" aria-label="Staff overview">
         {[
-          { label: 'Total Team Members', value: staffList.length, icon: Users, color: '#ff6a1a' },
+          { label: 'Team members', value: staffList.length, icon: <Users size={20} /> },
           {
-            label: 'Active Staff Accounts',
+            label: 'Active accounts',
             value: totalActive,
-            icon: CheckCircle2,
-            color: '#34d399',
+            icon: <CheckCircle2 size={20} />,
           },
           {
-            label: 'Portal Access Enabled',
+            label: 'Login enabled',
             value: totalWithLogin,
-            icon: KeyRound,
-            color: '#38bdf8',
+            icon: <KeyRound size={20} />,
           },
           {
-            label: 'System Navigations',
-            value: ALL_ADMIN_NAVIGATIONS.length,
-            icon: Layers,
-            color: '#a78bfa',
+            label: 'Inactive accounts',
+            value: totalInactive,
+            icon: <AlertCircle size={20} />,
           },
-          // eslint-disable-next-line no-unused-vars
-        ].map(({ label, value, icon: _Icon, color }) => (
-          <div key={label} style={{ ...S.card, display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: `linear-gradient(135deg, ${color}20, ${color}08)`,
-                border: `1px solid ${color}35`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: color,
-                flexShrink: 0,
-              }}
-            >
-              <_Icon size={20} />
+        ].map(({ label, value, icon }) => (
+          <div
+            key={label}
+            className="flex min-w-0 items-center gap-3 border-l border-white/[0.065] px-5 py-[17px] first:border-l-0 max-[1080px]:nth-[3]:border-l-0 max-[1080px]:nth-[n+3]:border-t max-[480px]:border-l-0 max-[480px]:border-t max-[480px]:first:border-t-0"
+          >
+            <div className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-[#ee6b24]/9 text-[#f29356]" aria-hidden="true">
+              {icon}
             </div>
-            <div>
-              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 500 }}>
-                {label}
-              </div>
-              <div style={{ color: '#fff', fontSize: 24, fontWeight: 700, marginTop: 2 }}>
+            <div className="flex min-w-0 flex-col">
+              <strong className="text-[21px] font-semibold leading-[1.15] tracking-[-0.025em] text-white tabular-nums">
                 {value}
-              </div>
+              </strong>
+              <span className="mt-[3px] overflow-hidden text-ellipsis whitespace-nowrap text-[11px] text-white/40">
+                {label}
+              </span>
             </div>
           </div>
         ))}
-      </div>
+      </section>
 
       {/* ─── Control Bar ─── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 14,
-          marginBottom: 20,
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 260 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 360 }}>
-            <Search
-              size={15}
-              color="rgba(255,255,255,0.35)"
-              style={{
-                position: 'absolute',
-                left: 14,
-                top: '50%',
-                transform: 'translateY(-50%)',
-              }}
-            />
+      <div className="mb-[14px] grid grid-cols-[minmax(260px,520px)_auto_1fr] items-center gap-2.5 max-[1080px]:grid-cols-[minmax(260px,1fr)_auto] max-md:grid-cols-1">
+        <div className="relative min-w-0">
+            <Search className="pointer-events-none absolute top-1/2 left-[14px] -translate-y-1/2 text-white/35" size={16} aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search staff by username, name, or role..."
+              aria-label="Search staff"
+              placeholder="Search by name, login, role, or phone"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{
-                ...S.inp,
-                paddingLeft: 38,
-                borderRadius: 12,
-                fontSize: 13,
-              }}
+              className="h-[42px] w-full rounded-[10px] border border-white/9 bg-white/[0.045] pr-10 pl-10 text-xs text-white outline-none transition-all duration-200 placeholder:text-white/30 hover:border-white/14 hover:bg-white/6 focus:border-[#f29356]/65 focus:shadow-[0_0_0_3px_rgba(238,107,36,0.1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356]"
             />
-          </div>
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 grid size-7 -translate-y-1/2 place-items-center rounded-[7px] border-0 bg-transparent p-0 text-white/40 hover:bg-white/7 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356]"
+              >
+                <X size={14} />
+              </button>
+            )}
+        </div>
 
+        <div className="flex items-center gap-2 max-md:grid max-md:grid-cols-[1fr_auto]">
           <select
+            aria-label="Filter staff by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            style={{
-              ...S.inp,
-              width: 'auto',
-              borderRadius: 12,
-              cursor: 'pointer',
-              fontSize: 13,
-              background: 'rgba(255,255,255,0.06)',
-            }}
+            className="h-[42px] min-w-[142px] cursor-pointer rounded-[10px] border border-white/9 bg-white/[0.045] px-3 pr-[34px] text-xs text-white outline-none transition-all duration-200 hover:border-white/14 hover:bg-white/6 focus:border-[#f29356]/65 focus:shadow-[0_0_0_3px_rgba(238,107,36,0.1)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] max-md:w-full"
           >
             <option value="all" style={{ background: '#111827' }}>
-              All Status
+              All staff ({staffList.length})
             </option>
             <option value="active" style={{ background: '#111827' }}>
-              Active Only
+              Active ({totalActive})
             </option>
             <option value="inactive" style={{ background: '#111827' }}>
-              Inactive
+              Inactive ({totalInactive})
             </option>
           </select>
 
           <LoadingButton
+            className="inline-flex h-[42px] items-center justify-center gap-[7px] rounded-[10px] border border-transparent bg-transparent px-[13px] text-xs text-white/65 transition-all duration-200 hover:border-white/8 hover:bg-white/[0.055] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
             onClick={() => loadStaff(true)}
             loading={refreshing}
             loadingLabel="Refreshing…"
-            style={{
-              ...S.btn,
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.8)',
-              padding: '10px 14px',
-              borderRadius: 12,
-            }}
           >
             <RefreshCw size={14} />
             Refresh
           </LoadingButton>
         </div>
-
-        {canCreateStaff && (
-          <button
-            id="add-staff-btn"
-            onClick={handleOpenCreate}
-            style={{
-              ...S.btn,
-              background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
-              color: '#fff',
-              fontWeight: 600,
-              padding: '11px 18px',
-              borderRadius: 12,
-              boxShadow: '0 4px 14px rgba(255,106,26,0.35)',
-            }}
-          >
-            <UserPlus size={16} /> Add Staff Account
-          </button>
-        )}
+        <span className="justify-self-end text-[11px] text-white/35 tabular-nums max-[1080px]:hidden" aria-live="polite">
+          {filteredStaff.length} {filteredStaff.length === 1 ? 'result' : 'results'}
+        </span>
       </div>
 
       {/* ─── Staff List / Cards ─── */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '70px 0', color: 'rgba(255,255,255,0.3)' }}>
-          <RefreshCw
-            size={32}
-            style={{ animation: 'spin 1s linear infinite', margin: '0 auto 16px' }}
-          />
-          <p>Loading staff records...</p>
+        <div className="flex flex-col gap-2.5" aria-label="Loading staff records" aria-busy="true">
+          {[0, 1, 2].map((item) => <div className="h-[132px] animate-pulse rounded-[14px] border border-white/5 bg-white/[0.025] motion-reduce:animate-none" key={item} />)}
         </div>
       ) : filteredStaff.length === 0 ? (
-        <div style={{ ...S.card, textAlign: 'center', padding: '60px 20px' }}>
-          <Users size={44} color="rgba(255,255,255,0.15)" style={{ margin: '0 auto 14px' }} />
-          <h3 style={{ color: '#fff', fontSize: 16, margin: '0 0 6px' }}>
-            {search ? 'No staff matched your query' : 'No staff members found'}
-          </h3>
-          <p
-            style={{
-              color: 'rgba(255,255,255,0.4)',
-              fontSize: 13,
-              maxWidth: 420,
-              margin: '0 auto 18px',
-            }}
-          >
-            {search
-              ? 'Try adjusting your search terms or filters.'
-              : 'Add team members with a username or email and configure navigation and action permissions.'}
+        <div className="flex flex-col items-center rounded-[14px] border border-dashed border-white/10 bg-white/[0.022] px-6 pt-16 pb-[70px] text-center">
+          <div className="mb-[14px] grid size-12 place-items-center rounded-[13px] bg-white/4 text-white/30"><Users size={24} /></div>
+          <h3 className="m-0 text-base font-semibold text-white/90">{search || statusFilter !== 'all' ? 'No matching staff' : 'No staff members yet'}</h3>
+          <p className="mx-auto mt-[7px] mb-[18px] max-w-[430px] text-xs leading-[1.55] text-white/40">
+            {search || statusFilter !== 'all'
+              ? 'Clear the search and status filter to see the full team.'
+              : 'Add a team member, create their login, and choose what they can access.'}
           </p>
-          {canCreateStaff && !search && (
-            <button
-              onClick={handleOpenCreate}
-              style={{
-                ...S.btn,
-                background: 'rgba(255,106,26,0.15)',
-                border: '1px solid rgba(255,106,26,0.35)',
-                color: '#ff9a4a',
-                margin: '0 auto',
-              }}
-            >
-              <UserPlus size={14} /> Create First Staff Account
+          {search || statusFilter !== 'all' ? (
+            <button type="button" className="inline-flex min-h-[42px] items-center justify-center gap-[7px] rounded-[10px] border border-white/10 bg-white/6 px-4 text-[13px] font-semibold text-white/80 transition-all duration-200 hover:bg-white/9 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]" onClick={() => { setSearch(''); setStatusFilter('all'); }}>
+              Clear filters
             </button>
-          )}
+          ) : canCreateStaff ? (
+            <button type="button" className="inline-flex min-h-[42px] items-center justify-center gap-[7px] rounded-[10px] border border-[#f17b3b] bg-[#ee6b24] px-4 text-[13px] font-semibold text-white shadow-[0_8px_22px_rgba(167,65,14,0.22)] transition-all duration-200 hover:-translate-y-px hover:bg-[#f27937] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]" onClick={handleOpenCreate}>
+              <UserPlus size={14} /> Add first staff member
+            </button>
+          ) : null}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-2.5">
           {filteredStaff.map((member) => {
             const allowed = member.allowedTabs || [];
             const userActions = Array.isArray(member.allowedActions)
@@ -963,153 +928,60 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
             const displayUser = formatDisplayIdentifier(member.email);
             const isInternalHandle = member.email && member.email.endsWith('@odc.internal');
             const isExpanded = expandedDetailsId === member.id;
+            const visibleTabs = isExpanded ? allowed : allowed.slice(0, 4);
+            const hiddenTabCount = allowed.length - visibleTabs.length;
 
             return (
-    <div
+              <article
                 key={member.id}
-                style={{
-                  ...S.card,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 16,
-                  transition: 'all 0.2s ease',
-                  border: isActive
-                    ? '1px solid rgba(255,255,255,0.08)'
-                    : '1px solid rgba(239,68,68,0.2)',
-                  background: isActive ? 'rgba(255,255,255,0.03)' : 'rgba(239,68,68,0.03)',
-                }}
+                className={`relative flex flex-col gap-[15px] rounded-[14px] border px-5 pt-[18px] pb-4 transition-all duration-200 before:absolute before:inset-y-4 before:left-0 before:w-0.5 before:scale-y-50 before:rounded-r-full before:opacity-0 before:transition-all before:duration-200 hover:border-white/11 hover:bg-white/[0.043] hover:shadow-[0_16px_36px_rgba(1,4,12,0.12)] hover:before:scale-y-100 hover:before:opacity-100 max-md:p-4 ${
+                  isActive
+                    ? 'border-white/7 bg-white/[0.028] before:bg-[#ee6b24]'
+                    : 'border-[#e26565]/14 bg-[#b04141]/[0.035] before:bg-[#e36c6c]'
+                }`}
               >
                 {/* Top Row: Info + Status + Actions */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 16,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 240 }}>
+                <div className="flex items-center justify-between gap-5 max-[1080px]:flex-col max-[1080px]:items-start">
+                  <div className="flex min-w-[220px] items-center gap-[13px]">
                     {/* Avatar */}
                     <div
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 14,
-                        background: isActive
-                          ? 'linear-gradient(135deg, rgba(255,106,26,0.25), rgba(255,154,74,0.1))'
-                          : 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.05))',
-                        border: `1px solid ${
-                          isActive ? 'rgba(255,106,26,0.35)' : 'rgba(239,68,68,0.3)'
-                        }`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: isActive ? '#ff9a4a' : '#f87171',
-                        fontWeight: 700,
-                        fontSize: 17,
-                        flexShrink: 0,
-                      }}
+                      className={`grid size-11 shrink-0 place-items-center rounded-xl border text-[15px] font-bold ${
+                        isActive
+                          ? 'border-[#ee6b24]/22 bg-[#ee6b24]/10 text-[#ffad73]'
+                          : 'border-[#e26565]/18 bg-[#d65454]/8 text-[#e58b8b]'
+                      }`}
+                      aria-hidden="true"
                     >
                       {(member.name || '?')[0].toUpperCase()}
                     </div>
 
                     {/* Meta */}
-                    <div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>
-                          {member.name}
-                        </span>
-                        <span
-                          style={{
-                            background: 'rgba(255,255,255,0.08)',
-                            color: 'rgba(255,255,255,0.6)',
-                            fontSize: 11,
-                            fontWeight: 500,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                          }}
-                        >
-                          {member.role || 'Staff'}
-                        </span>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            background: isActive
-                              ? 'rgba(52,211,153,0.12)'
-                              : 'rgba(239,68,68,0.12)',
-                            color: isActive ? '#34d399' : '#f87171',
-                            border: `1px solid ${
-                              isActive ? 'rgba(52,211,153,0.25)' : 'rgba(239,68,68,0.25)'
-                            }`,
-                          }}
-                        >
-                          {isActive ? '● Active' : '○ Inactive'}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-[7px] max-[480px]:flex-col max-[480px]:items-start max-[480px]:gap-1">
+                        <h2 className="m-0 text-[15px] font-semibold tracking-[-0.012em] text-white/95">{member.name}</h2>
+                        <span className="rounded-[5px] bg-white/5 px-[7px] py-0.5 text-[10px] font-medium text-white/50">{member.role || 'Staff'}</span>
+                        <span className={`inline-flex items-center gap-[5px] text-[10px] font-semibold ${isActive ? 'text-[#66c99a]' : 'text-[#e08585]'}`}>
+                          <span className="size-[5px] rounded-full bg-current" aria-hidden="true" /> {isActive ? 'Active' : 'Inactive'}
                         </span>
                       </div>
 
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 14,
-                          marginTop: 5,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            color: '#ff9a4a',
-                            fontSize: 12,
-                          }}
-                        >
+                      <div className="mt-[5px] flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/40 max-[480px]:flex-col max-[480px]:items-start">
+                        <div className="inline-flex min-w-0 items-center gap-[5px] text-white/60">
                           {isInternalHandle ? (
-                            <User size={12} color="#ff9a4a" />
+                            <User size={13} />
                           ) : (
-                            <Mail size={12} color="rgba(255,255,255,0.4)" />
+                            <Mail size={13} />
                           )}
-                          <span>
+                          <span className="overflow-hidden text-ellipsis">
                             {displayUser}
                             {isInternalHandle && (
-                              <span
-                                style={{
-                                  marginLeft: 6,
-                                  color: 'rgba(255,255,255,0.3)',
-                                  fontSize: 11,
-                                }}
-                              >
-                                (login username)
-                              </span>
+                              <small className="ml-1.5 text-[9px] text-white/30 max-[480px]:hidden">login username</small>
                             )}
                           </span>
                         </div>
                         {member.phone && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 5,
-                              color: 'rgba(255,255,255,0.4)',
-                              fontSize: 12,
-                            }}
-                          >
-                            <Phone size={12} />
+                          <div className="inline-flex min-w-0 items-center gap-[5px]">
+                            <Phone size={13} />
                             <span>{member.phone}</span>
                           </div>
                         )}
@@ -1118,55 +990,39 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                   </div>
 
                   {/* Actions */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      flexWrap: 'wrap',
-                    }}
-                  >
+                  <div className="flex flex-wrap items-center justify-end gap-1.5 max-[1080px]:w-full max-[1080px]:justify-start max-md:grid max-md:grid-cols-2 max-[480px]:grid-cols-1">
                     {!isInternalHandle && canEditStaff && (
-                      <button
+                      <LoadingButton
+                        type="button"
+                        className="inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent px-2.5 text-[11px] font-medium text-white/60 transition-all duration-200 hover:border-white/9 hover:bg-white/6 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
                         onClick={() => handleSendResetEmail(member.email)}
-                        style={{
-                          ...S.btn,
-                          background: 'rgba(56,189,248,0.1)',
-                          border: '1px solid rgba(56,189,248,0.25)',
-                          color: '#38bdf8',
-                        }}
+                        loadingLabel="Sending…"
                         title="Send password reset link to email"
                       >
-                        <KeyRound size={13} /> Reset Link
-                      </button>
+                        <KeyRound size={14} /> Reset password
+                      </LoadingButton>
                     )}
 
                     {canEditStaff && (
-                      <button
+                      <LoadingButton
+                        type="button"
+                        className="inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-lg border border-[#ee6b24]/20 bg-[#ee6b24]/10 px-2.5 text-[11px] font-medium text-[#ffd0b1] transition-all duration-200 hover:border-[#ee6b24]/35 hover:bg-[#ee6b24]/17 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985]"
                         onClick={() => handleOpenEdit(member)}
-                        style={{
-                          ...S.btn,
-                          background: 'rgba(255,255,255,0.07)',
-                          border: '1px solid rgba(255,255,255,0.12)',
-                          color: '#fff',
-                        }}
+                        loadingLabel="Opening…"
                       >
-                        <Edit2 size={13} /> Edit Permissions
-                      </button>
+                        <Edit2 size={14} /> Edit access
+                      </LoadingButton>
                     )}
 
                     {canToggleStaffStatus && (
                       <LoadingButton
+                        className={`inline-flex min-h-[34px] items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent px-2.5 text-[11px] font-medium text-white/60 transition-all duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985] ${
+                          isActive
+                            ? 'hover:border-[#dc4a4a]/16 hover:bg-[#dc4a4a]/8 hover:text-[#f4a0a0]'
+                            : 'hover:border-[#4abb7f]/16 hover:bg-[#4abb7f]/8 hover:text-[#81d3aa]'
+                        }`}
                         onClick={() => handleToggleStatus(member)}
                         loadingLabel="Updating…"
-                        style={{
-                          ...S.btn,
-                          background: isActive ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)',
-                          border: `1px solid ${
-                            isActive ? 'rgba(239,68,68,0.2)' : 'rgba(52,211,153,0.2)'
-                          }`,
-                          color: isActive ? '#f87171' : '#34d399',
-                        }}
                       >
                         {isActive ? 'Deactivate' : 'Activate'}
                       </LoadingButton>
@@ -1174,116 +1030,62 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
 
                     {canDeleteStaff && (
                       <LoadingButton
+                        className="inline-flex size-[34px] min-h-[34px] items-center justify-center gap-1.5 rounded-lg border border-transparent bg-transparent p-0 text-[11px] font-medium text-white/60 transition-all duration-200 hover:border-[#dc4a4a]/16 hover:bg-[#dc4a4a]/8 hover:text-[#f4a0a0] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985] max-md:w-full"
                         onClick={() => handleDeleteStaff(member)}
                         loadingLabel="Removing staff"
                         spinnerOnly
-                        style={{
-                          ...S.btn,
-                          background: 'rgba(239,68,68,0.08)',
-                          border: '1px solid rgba(239,68,68,0.18)',
-                          color: '#f87171',
-                          padding: '8px 10px',
-                        }}
-                        title="Delete staff account"
+                        title={`Delete ${member.name}`}
+                        aria-label={`Delete ${member.name}`}
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={14} />
                       </LoadingButton>
                     )}
                   </div>
                 </div>
 
                 {/* Bottom Row: Permitted Tabs & Granular Actions */}
-                <div
-                  style={{
-                    paddingTop: 12,
-                    borderTop: '1px solid rgba(255,255,255,0.06)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                      <span
-                        style={{
-                          color: 'rgba(255,255,255,0.4)',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.06em',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 5,
-                        }}
-                      >
-                        <Lock size={12} /> Permitted Tabs ({allowed.length}) &bull; Actions (
-                        {userActions.length}):
+                <div className="flex flex-col gap-2.5 border-t border-white/[0.055] pt-3">
+                  <div className="flex items-center justify-between gap-[14px] max-md:flex-col max-md:items-start">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-[5px] text-[11px] font-semibold text-white/60">
+                        <Lock size={13} /> Access
+                      </span>
+                      <span className="text-[10px] text-white/30 tabular-nums">
+                        {allowed.length} {allowed.length === 1 ? 'system' : 'systems'} · {userActions.length} actions
                       </span>
 
                       {allowed.length === 0 ? (
-                        <span style={{ color: '#f87171', fontSize: 12, fontStyle: 'italic' }}>
-                          No navigations assigned (User cannot access any tabs)
+                        <span className="text-[11px] text-[#df8d8d]">
+                          No systems assigned
                         </span>
                       ) : (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {allowed.map((tabId) => {
+                        <div className="ml-[3px] flex min-w-0 flex-wrap items-center gap-[5px] max-[480px]:ml-0 max-[480px]:w-full">
+                          {visibleTabs.map((tabId) => {
                             const navInfo = ALL_ADMIN_NAVIGATIONS.find((n) => n.id === tabId);
                             const NavIcon = navInfo?.icon || Layers;
                             const label = navInfo?.label || tabId;
-                            const color = navInfo?.color || '#ff9a4a';
                             const tabTotalActions = (navInfo?.actions || []).length;
                             const tabEnabledActions = (navInfo?.actions || []).filter((a) =>
                               userActions.includes(a.id)
                             ).length;
 
                             return (
-                              <span
-                                key={tabId}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: 6,
-                                  padding: '4px 10px',
-                                  borderRadius: 8,
-                                  background: `${color}15`,
-                                  border: `1px solid ${color}35`,
-                                  color: '#fff',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                <NavIcon size={12} color={color} />
+                              <span key={tabId} className="inline-flex min-h-[25px] items-center gap-[5px] rounded-[7px] border border-white/[0.065] bg-white/4 px-[7px] text-[10px] font-medium text-white/65">
+                                <NavIcon className="text-[#da8a55]" size={12} />
                                 <span>{label}</span>
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    padding: '1px 5px',
-                                    borderRadius: 4,
-                                    background:
-                                      tabEnabledActions === 0
-                                        ? 'rgba(239,68,68,0.2)'
-                                        : `${color}30`,
-                                    color: tabEnabledActions === 0 ? '#fca5a5' : color,
-                                    fontWeight: 700,
-                                  }}
-                                >
+                                <span className={`border-l border-white/10 pl-[5px] text-[9px] font-bold ${tabEnabledActions === 0 ? 'text-white/35' : 'text-[#d89a71]'}`}>
                                   {tabEnabledActions === tabTotalActions
                                     ? 'Full'
                                     : tabEnabledActions === 0
-                                    ? 'View Only'
+                                    ? 'View only'
                                     : `${tabEnabledActions}/${tabTotalActions}`}
                                 </span>
                               </span>
                             );
                           })}
+                          {hiddenTabCount > 0 && (
+                            <span className="inline-flex min-h-[25px] items-center rounded-[7px] border border-dashed border-white/[0.065] px-[7px] text-[10px] font-medium text-white/35">+{hiddenTabCount} more</span>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1291,21 +1093,13 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                     {allowed.length > 0 && (
                       <button
                         type="button"
+                        className="inline-flex shrink-0 items-center gap-[5px] rounded-md border-0 bg-transparent py-[5px] pr-0.5 pl-2 text-[10px] font-medium text-white/45 transition-colors duration-200 hover:text-[#ffad73] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f29356] active:translate-y-px active:scale-[0.985] max-md:self-end"
                         onClick={() => setExpandedDetailsId(isExpanded ? null : member.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'rgba(255,255,255,0.45)',
-                          fontSize: 11,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontFamily: 'inherit',
-                        }}
+                        aria-expanded={isExpanded}
+                        aria-controls={`staff-access-${member.id}`}
                       >
-                        {isExpanded ? 'Hide Action Breakdown' : 'View Action Breakdown'}
-                        {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        {isExpanded ? 'Hide details' : 'Review access'}
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                     )}
                   </div>
@@ -1313,16 +1107,8 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                   {/* Expanded Granular Action Details */}
                   {isExpanded && allowed.length > 0 && (
                     <div
-                      style={{
-                        marginTop: 6,
-                        padding: '12px 16px',
-                        borderRadius: 12,
-                        background: 'rgba(0,0,0,0.25)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                        gap: 12,
-                      }}
+                      id={`staff-access-${member.id}`}
+                      className="grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-2 rounded-[10px] border border-white/[0.055] bg-[#04070d]/27 p-3"
                     >
                       {allowed.map((tabId) => {
                         const navInfo = ALL_ADMIN_NAVIGATIONS.find((n) => n.id === tabId);
@@ -1331,34 +1117,16 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                         const enabledForThis = actions.filter((a) => userActions.includes(a.id));
 
                         return (
-                          <div
-                            key={tabId}
-                            style={{
-                              background: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.05)',
-                              borderRadius: 8,
-                              padding: '8px 12px',
-                            }}
-                          >
-                            <div
-                              style={{
-                                color: navInfo.color,
-                                fontSize: 12,
-                                fontWeight: 700,
-                                marginBottom: 6,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                            >
+                          <div key={tabId} className="rounded-[7px] bg-white/[0.022] px-2.5 py-[9px]">
+                            <div className="mb-[7px] flex items-center gap-1.5 text-[11px] font-semibold text-[#e49a69]">
                               <navInfo.icon size={13} /> {navInfo.label}
                             </div>
                             {actions.length === 0 ? (
-                              <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>
+                              <div className="text-[10px] text-white/30">
                                 No sub-actions configured.
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div className="flex flex-col gap-[5px]">
                                 {actions.map((act) => {
                                   const isActEnabled = enabledForThis.some(
                                     (ea) => ea.id === act.id
@@ -1366,30 +1134,10 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                                   return (
                                     <div
                                       key={act.id}
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 6,
-                                        fontSize: 11,
-                                        color: isActEnabled ? '#fff' : 'rgba(255,255,255,0.35)',
-                                      }}
+                                      className={`flex items-center gap-[5px] text-[10px] ${isActEnabled ? 'font-medium text-white/70 [&>svg]:text-[#66c99a]' : 'text-white/30'}`}
                                     >
-                                      <div
-                                        style={{
-                                          width: 6,
-                                          height: 6,
-                                          borderRadius: '50%',
-                                          background: isActEnabled ? '#34d399' : 'rgba(255,255,255,0.2)',
-                                        }}
-                                      />
-                                      <span
-                                        style={{
-                                          fontWeight: isActEnabled ? 600 : 400,
-                                          textDecoration: isActEnabled ? 'none' : 'line-through',
-                                        }}
-                                      >
-                                        {act.label}
-                                      </span>
+                                      {isActEnabled ? <Check size={11} /> : <X size={11} />}
+                                      <span>{act.label}</span>
                                     </div>
                                   );
                                 })}
@@ -1401,7 +1149,7 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                     </div>
                   )}
                 </div>
-              </div>
+              </article>
             );
           })}
         </div>
@@ -1476,7 +1224,9 @@ export default function AdminStaff({ firebaseUser, isSuperAdmin, can, onOpenAllo
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowModal(false)}
+                aria-label="Close staff form"
                 style={{
                   background: 'rgba(255,255,255,0.06)',
                   border: 'none',

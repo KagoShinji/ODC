@@ -27,6 +27,7 @@ const S = {
 
 const EXPENSE_CATEGORIES = [
   'Salaries',
+  'Incentives',
   'Commission Expense',
   'Operating Expense',
   'Rent & Utilities',
@@ -38,6 +39,7 @@ const EXPENSE_CATEGORIES = [
 
 const EXPENSE_CATEGORY_COLORS = {
   'Salaries': '#3b82f6',
+  'Incentives': '#a855f7',
   'Commission Expense': '#14b8a6',
   'Operating Expense': '#06b6d4',
   'Rent & Utilities': '#8b5cf6',
