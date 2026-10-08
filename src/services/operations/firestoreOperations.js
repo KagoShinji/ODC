@@ -110,6 +110,7 @@ export function createFirestoreOperations({ auth, db }) {
       if (module === 'demos') await enrichDemoWrites(repo, name, operationId);
       else await enrichAllowanceWrites(repo, name, clean, operationId);
       for (const [path, value] of repo.writes) tx.set(doc(db, path), module === 'allowances' ? financialValue({ ...value, lastOperationId: operationId }) : { ...value, lastOperationId: operationId });
+      for (const path of repo.deletes) tx.delete(doc(db, path));
       tx.set(resultRef, { actorUid: current.uid, ownerUid: current.uid, command: name, payload: clean, signature, result, accountId: clean.accountId || clean.staffId || '', createdAt: serverTimestamp() });
       return result;
     });
@@ -169,12 +170,13 @@ export function createFirestoreOperations({ auth, db }) {
     for (const path of [...repo.writes.keys()]) if (path.startsWith('demoReminders/')) repo.writes.delete(path);
   }
   async function enrichAllowanceWrites(repo, name, payload, operationId) {
-    if (['saveLiquidation', 'correctLiquidation'].includes(name)) {
+    if (['saveLiquidation', 'correctLiquidation', 'deleteTestRecord'].includes(name) && (name !== 'deleteTestRecord' || payload.kind === 'liquidation')) {
       const slipId = name === 'saveLiquidation' ? payload.meetingId : payload.id;
       const before = await repo.get('allowanceLiquidations', slipId);
       const after = repo.writes.get(`allowanceLiquidations/${slipId}`);
-      if (after && (after.status === 'submitted' || name === 'correctLiquidation')) {
-        const oldPurchases = before?.status === 'returned' || name === 'correctLiquidation' ? fuelPurchases(before) : {};
+      if (after && (after.status === 'submitted' || name === 'correctLiquidation' || name === 'deleteTestRecord')) {
+        const dayBefore = name === 'deleteTestRecord' ? await repo.get('allowanceDailyFuel', `${after.accountId}_${after.date}`) : null;
+        const oldPurchases = name === 'deleteTestRecord' ? dayBefore?.allocations?.[slipId] || {} : before?.status === 'returned' || name === 'correctLiquidation' ? fuelPurchases(before) : {};
         const nextPurchases = repo.writes.get(`allowanceDailyFuel/${after.accountId}_${after.date}`)?.allocations?.[slipId] || {};
         for (const id of new Set([...Object.keys(oldPurchases), ...Object.keys(nextPurchases)])) {
           const reference = await repo.get('allowanceAttachments', id);

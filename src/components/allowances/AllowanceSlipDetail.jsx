@@ -1,5 +1,6 @@
 import { ArrowSquareOut, CalendarBlank, ClockCounterClockwise, FileText, Printer, Receipt } from '@phosphor-icons/react';
 import { peso, timestampLabel } from '../../utils/allowanceDocuments';
+import { allowanceBalanceTerms } from '../../../functions/src/domain.js';
 import AllowanceStatusBadge from './AllowanceStatusBadge';
 
 const label = value => String(value || '').replace(/([a-z])([A-Z])/g, '$1 $2').replaceAll('_', ' ').trim();
@@ -12,11 +13,12 @@ const dateLabel = value => {
   return new Date(`${value}T00:00:00+08:00`).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', year: 'numeric', month: 'long', day: 'numeric' });
 };
 
-export default function AllowanceSlipDetail({ slip, evidence = [], history = [], busy, onOpenEvidence, onPrint }) {
+export default function AllowanceSlipDetail({ slip, account, evidence = [], history = [], busy, onOpenEvidence, onPrint }) {
   const attachmentIds = slip.attachmentIds || [];
   const attachments = evidence.filter(file => attachmentIds.includes(file.id));
   const total = slip.correctedTotalCentavos ?? slip.totalCentavos;
   const corrected = slip.correctedTotalCentavos !== undefined && slip.correctedTotalCentavos !== slip.totalCentavos;
+  const terms = allowanceBalanceTerms(account);
 
   return <div className="allowance-slip-detail">
     <section className="allowance-slip-summary" aria-labelledby="allowance-slip-client">
@@ -35,7 +37,7 @@ export default function AllowanceSlipDetail({ slip, evidence = [], history = [],
     <dl className="allowance-slip-meta">
       <div><dt><FileText size={16} aria-hidden="true" /> Slip number</dt><dd>{slip.slipNumber}</dd></div>
       <div><dt><CalendarBlank size={16} aria-hidden="true" /> Meeting date</dt><dd>{dateLabel(slip.date)}</dd></div>
-      <div><dt>Cash declared</dt><dd>{peso(slip.declaredCashCentavos)}</dd></div>
+      <div><dt>{terms.declared}</dt><dd>{peso(slip.declaredCashCentavos)}</dd></div>
     </dl>
 
     {slip.reviewNote && <div className="allowance-slip-review-note"><span>Review note</span><p>{slip.reviewNote}</p></div>}

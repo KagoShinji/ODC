@@ -27,10 +27,29 @@ export function dateValue(value) {
 export function manilaDate(now = new Date()) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now); }
 export function withinWindow(date, today, days) { const diff = (Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000; return diff >= 0 && diff <= days; }
 export function estimatedCash(account) { return account.reviewedBalanceCentavos - account.unreviewedCentavos; }
+export function allowanceFundingMethod(account) { return account?.fundingMethod === 'cash' ? 'cash' : 'bank'; }
+export function allowanceBalanceTerms(account) {
+  const bank = allowanceFundingMethod(account) === 'bank';
+  return bank ? {
+    available: 'Available allowance balance',
+    expected: 'Expected bank balance',
+    declared: 'Reported bank balance',
+    verify: 'Verify bank balance',
+    discrepancy: 'Reported bank balance does not match the allowance ledger.',
+    returnAction: 'Return funds',
+  } : {
+    available: 'Reviewed balance',
+    expected: 'Estimated cash on hand',
+    declared: 'Money left on hand',
+    verify: 'Verify cash',
+    discrepancy: 'Cash discrepancy requires reconciliation before replenishment.',
+    returnAction: 'Record cash return',
+  };
+}
 export function topUp(account) { return Math.max(0, account.policy.targetCentavos - account.reviewedBalanceCentavos); }
 export function eligible(account, type, meeting, today) {
   if (account.status !== 'active') return 'This allowance is not active.';
-  if (account.reconciliationHold) return 'Resolve the cash discrepancy first.';
+  if (account.reconciliationHold) return 'Resolve the allowance balance discrepancy first.';
   if (type === 'scheduled') return account.nextScheduledDate && today >= account.nextScheduledDate ? '' : 'Wait for the scheduled replenishment date.';
   if (type !== 'early') return 'Select early or scheduled replenishment.';
   if ((account.policy.targetCentavos - account.reviewedBalanceCentavos) * 100 < account.policy.targetCentavos * account.policy.thresholdPercent) return `Wait until ${account.policy.thresholdPercent}% of the allowance is depleted.`;

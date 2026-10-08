@@ -131,9 +131,9 @@ service cloud.firestore {
     function operation(module, data) { return afterRecord(module == 'demos' ? 'demoCommandResults' : 'allowanceCommandResults', data.lastOperationId); }
     function currentOperation(module, data) { let op = operation(module, data); return op.actorUid == request.auth.uid && op.createdAt == request.time; }
     function validCommand(module, command) {
-      let allowanceActions = {'savePolicy': 'manage', 'grantAccess': 'manage', 'configureAccount': 'manage', 'reconcileCash': 'manage', 'initialRelease': 'release', 'cashReturn': 'release', 'saveMeeting': 'meeting', 'saveLiquidation': 'liquidate', 'registerEvidenceReference': 'liquidate', 'reviewLiquidation': 'review', 'saveRequisition': 'request', 'reviewRequisition': 'approve', 'releaseRequisition': 'release', 'cancelRequisition': 'request', 'correctLiquidation': 'reverse'};
+      let allowanceActions = {'savePolicy': 'manage', 'grantAccess': 'manage', 'configureAccount': 'manage', 'reconcileCash': 'manage', 'initialRelease': 'release', 'cashReturn': 'release', 'saveMeeting': 'meeting', 'saveLiquidation': 'liquidate', 'registerEvidenceReference': 'liquidate', 'reviewLiquidation': 'review', 'saveRequisition': 'request', 'reviewRequisition': 'approve', 'releaseRequisition': 'release', 'initiateTransfer': 'release', 'settleTransfer': 'release', 'failTransfer': 'release', 'cancelRequisition': 'request', 'correctLiquidation': 'reverse'};
       let demoActions = {'saveSettings': 'manage', 'grantAccess': 'manage', 'setMyPresenter': 'manage', 'saveAvailability': 'present', 'book': 'book', 'reschedule': 'book', 'cancel': 'book', 'complete': 'present', 'noShow': 'present', 'markRead': 'present'};
-      return module == 'allowances' ? allowanceActions.get(command, '') != '' && action(module, allowanceActions[command]) :
+      return module == 'allowances' ? (command == 'deleteTestRecord' ? operationsRoot() : allowanceActions.get(command, '') != '' && action(module, allowanceActions[command])) :
         command in demoActions && (action(module, 'manage') || action(module, demoActions[command]) ||
           (command in ['reschedule', 'cancel', 'markRead'] && active(module) && (command == 'markRead' || action(module, 'present'))));
     }
@@ -337,7 +337,8 @@ service cloud.firestore {
         afterRecord('allowancePolicies', request.resource.data.policyVersion).diff(request.resource.data.policy).unchangedKeys().hasAll(request.resource.data.policy.keys());
       allow delete: if false;
     }
-    function accountShape(a) { return money(a.reviewedBalanceCentavos) && money(a.unreviewedCentavos) && a.unreviewedCentavos <= a.reviewedBalanceCentavos && a.reviewedBalanceCentavos <= a.policy.targetCentavos && a.unresolvedCount is int && a.unresolvedCount >= 0 && a.unresolvedCount <= 500 && a.activeRequestId is string && a.reconciliationHold is bool && a.funded is bool && a.status in ['pending_setup', 'active', 'suspended', 'closed'] && validDate(a.nextScheduledDate) && recent(a.updatedAt); }
+    function accountShape(a) { return money(a.reviewedBalanceCentavos) && money(a.unreviewedCentavos) && a.unreviewedCentavos <= a.reviewedBalanceCentavos && a.reviewedBalanceCentavos <= a.policy.targetCentavos && a.unresolvedCount is int && a.unresolvedCount >= 0 && a.unresolvedCount <= 500 && a.activeRequestId is string && a.reconciliationHold is bool && a.funded is bool && a.status in ['pending_setup', 'active', 'suspended', 'closed'] && validDate(a.nextScheduledDate) && recent(a.updatedAt) &&
+      (!a.keys().hasAny(['fundingMethod']) || a.fundingMethod in ['bank', 'cash'] && a.bankName is string && a.bankName.size() <= 100 && a.bankAccountName is string && a.bankAccountName.size() <= 120 && a.bankAccountLast4 is string && (a.fundingMethod == 'cash' || a.bankName.size() > 0 && a.bankAccountName.size() > 0 && a.bankAccountLast4.matches('[0-9]{4}'))); }
     function cashPost(a, kind, amount, sourceId, suffix) {
       let entry = afterRecord('allowanceLedger', a.lastOperationId + suffix);
       return entry.lastOperationId == a.lastOperationId && entry.accountId == a.id && entry.ownerUid == a.ownerUid && entry.kind == kind && entry.amountCentavos == amount && entry.sourceId == sourceId;
@@ -379,10 +380,17 @@ service cloud.firestore {
     function releaseBalance(before, a, op) {
       let r = record('allowanceRequisitions', op.payload.id);
       let next = afterRecord('allowanceRequisitions', op.payload.id);
-      return before.activeRequestId == op.payload.id && r.accountId == a.id && r.status == 'approved' && r.approvedBy != r.ownerUid && next.status == 'released' && next.lastOperationId == a.lastOperationId &&
+      return before.activeRequestId == op.payload.id && a.get('fundingMethod', 'bank') == 'cash' && r.accountId == a.id && r.status == 'approved' && r.approvedBy != r.ownerUid && next.status == 'released' && next.lastOperationId == a.lastOperationId &&
         before.unresolvedCount == 0 && before.reviewedBalanceCentavos == r.balanceSnapshotCentavos && requestEligible(before, r) && op.payload.amountCentavos == r.amountCentavos &&
         a.reviewedBalanceCentavos == before.reviewedBalanceCentavos + r.amountCentavos && a.activeRequestId == '' && a.nextScheduledDate > today() && cashPost(a, 'replenishment', r.amountCentavos, op.payload.id, '') &&
         a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'activeRequestId', 'nextScheduledDate', 'updatedAt', 'lastOperationId']);
+    }
+    function transferBalance(before, a, op) {
+      let r = record('allowanceRequisitions', op.payload.id);
+      let next = afterRecord('allowanceRequisitions', op.payload.id);
+      return before.status == 'active' && before.activeRequestId == op.payload.id && r.accountId == a.id && a.get('fundingMethod', 'bank') == 'bank' &&
+        (op.command in ['initiateTransfer', 'failTransfer'] ? a.reviewedBalanceCentavos == before.reviewedBalanceCentavos && a.unreviewedCentavos == before.unreviewedCentavos && a.unresolvedCount == before.unresolvedCount && a.activeRequestId == before.activeRequestId && a.nextScheduledDate == before.nextScheduledDate && a.reconciliationHold == before.reconciliationHold && a.diff(before).affectedKeys().hasOnly(['updatedAt', 'lastOperationId']) :
+        op.command == 'settleTransfer' && r.status == 'transfer_pending' && next.status == 'released' && next.lastOperationId == a.lastOperationId && a.unresolvedCount == 0 && r.amountCentavos <= a.policy.targetCentavos - before.reviewedBalanceCentavos && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos + r.amountCentavos && a.unreviewedCentavos == before.unreviewedCentavos && a.activeRequestId == '' && a.nextScheduledDate == r.nextScheduledDate && a.reconciliationHold == before.reconciliationHold && cashPost(a, 'replenishment', r.amountCentavos, op.payload.id, '') && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'activeRequestId', 'nextScheduledDate', 'updatedAt', 'lastOperationId']));
     }
     function correctionBalance(before, a, op) {
       let slip = record('allowanceLiquidations', op.payload.id);
@@ -392,22 +400,37 @@ service cloud.firestore {
         cashPost(a, 'expense_reversal', slip.totalCentavos, op.payload.id, '_reversal') && cashPost(a, 'corrected_expense', -op.payload.amountCentavos, op.payload.id, '_replacement') && afterRecord('expenses', slip.expenseId).lastOperationId == a.lastOperationId &&
         a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']);
     }
+    function testDeleteBalance(before, a, op) {
+      let liquidation = op.payload.kind == 'liquidation' ? record('allowanceLiquidations', op.payload.id) : {};
+      let requisition = op.payload.kind == 'requisition' ? record('allowanceRequisitions', op.payload.id) : {};
+      let pending = op.payload.kind == 'liquidation' && liquidation.status in ['submitted', 'returned'];
+      let restored = op.payload.kind == 'liquidation' ? (liquidation.status == 'approved' ? liquidation.totalCentavos : liquidation.status == 'voided' ? liquidation.correctedTotalCentavos : 0) : 0;
+      let released = op.payload.kind == 'requisition' && requisition.status == 'released' ? requisition.amountCentavos : 0;
+      return operationsRoot() && op.command == 'deleteTestRecord' && op.accountId == a.id && accountShape(a) &&
+        a.id == before.id && a.ownerUid == before.ownerUid && a.staffId == before.staffId && a.policy == before.policy && a.policyVersion == before.policyVersion && a.status == before.status && a.funded == before.funded && a.nextScheduledDate == before.nextScheduledDate && a.get('fundingMethod', 'bank') == before.get('fundingMethod', 'bank') && a.get('bankName', '') == before.get('bankName', '') && a.get('bankAccountName', '') == before.get('bankAccountName', '') && a.get('bankAccountLast4', '') == before.get('bankAccountLast4', '') &&
+        (op.payload.kind == 'liquidation' && liquidation.accountId == a.id &&
+          a.reviewedBalanceCentavos == before.reviewedBalanceCentavos + restored && a.unreviewedCentavos == before.unreviewedCentavos - (pending ? liquidation.totalCentavos : 0) && a.unresolvedCount == before.unresolvedCount - (pending ? 1 : 0) && a.activeRequestId == before.activeRequestId &&
+          a.reconciliationHold == (pending && a.unresolvedCount == 0 ? false : before.reconciliationHold) && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'unreviewedCentavos', 'unresolvedCount', 'reconciliationHold', 'updatedAt', 'lastOperationId']) ||
+        op.payload.kind == 'requisition' && requisition.accountId == a.id && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos - released && a.unreviewedCentavos == before.unreviewedCentavos && a.unresolvedCount == before.unresolvedCount && a.reconciliationHold == before.reconciliationHold &&
+          a.activeRequestId == (before.activeRequestId == op.payload.id ? '' : before.activeRequestId) && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'activeRequestId', 'updatedAt', 'lastOperationId']));
+    }
     function accountTransition(before, a) {
       let op = operation('allowances', a);
       return accountShape(a) && a.id == before.id && a.ownerUid == before.ownerUid && a.staffId == before.staffId && a.policy == before.policy && a.policyVersion == before.policyVersion &&
-        (op.command == 'configureAccount' ? a.diff(before).affectedKeys().hasOnly(['status', 'nextScheduledDate', 'updatedAt', 'lastOperationId']) && (a.status != 'closed' || a.reviewedBalanceCentavos == 0 && a.unresolvedCount == 0 && a.activeRequestId == '') && (a.status != 'active' || a.funded) && (a.status != 'pending_setup' || !a.funded) :
+        (op.command == 'configureAccount' ? a.diff(before).affectedKeys().hasOnly(['status', 'nextScheduledDate', 'fundingMethod', 'bankName', 'bankAccountName', 'bankAccountLast4', 'updatedAt', 'lastOperationId']) && (a.fundingMethod == before.get('fundingMethod', 'bank') || before.activeRequestId == '') && (a.status != 'closed' || a.reviewedBalanceCentavos == 0 && a.unresolvedCount == 0 && a.activeRequestId == '') && (a.status != 'active' || a.funded) && (a.status != 'pending_setup' || !a.funded) :
+        a.get('fundingMethod', 'bank') == before.get('fundingMethod', 'bank') && a.get('bankName', '') == before.get('bankName', '') && a.get('bankAccountName', '') == before.get('bankAccountName', '') && a.get('bankAccountLast4', '') == before.get('bankAccountLast4', '') && (
         op.command == 'initialRelease' ? !before.funded && before.status == 'pending_setup' && money(op.payload.amountCentavos) && op.payload.amountCentavos > 0 && a.funded && a.status == 'active' && a.reviewedBalanceCentavos == op.payload.amountCentavos && cashPost(a, 'initial_release', op.payload.amountCentavos, a.id, '') && afterRecord('allowanceReleases', a.lastOperationId).lastOperationId == a.lastOperationId && a.diff(before).affectedKeys().hasOnly(['funded', 'status', 'reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']) :
-        op.command == 'cashReturn' ? before.status != 'closed' && before.unresolvedCount == 0 && before.activeRequestId == '' && money(op.payload.amountCentavos) && op.payload.amountCentavos > 0 && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos - op.payload.amountCentavos && cashPost(a, 'cash_return', -op.payload.amountCentavos, a.id, '') && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']) :
+        op.command == 'cashReturn' ? before.status != 'closed' && before.unresolvedCount == 0 && before.activeRequestId == '' && money(op.payload.amountCentavos) && op.payload.amountCentavos > 0 && (before.get('fundingMethod', 'bank') != 'bank' || op.payload.paymentMethod == 'bank' && payment(op.payload)) && a.reviewedBalanceCentavos == before.reviewedBalanceCentavos - op.payload.amountCentavos && cashPost(a, 'cash_return', -op.payload.amountCentavos, a.id, '') && a.diff(before).affectedKeys().hasOnly(['reviewedBalanceCentavos', 'updatedAt', 'lastOperationId']) :
         op.command == 'reconcileCash' ? before.status != 'closed' && before.unresolvedCount == 0 && op.payload.declaredCashCentavos == before.reviewedBalanceCentavos && !a.reconciliationHold && a.diff(before).affectedKeys().hasOnly(['reconciliationHold', 'updatedAt', 'lastOperationId']) :
         op.command == 'saveLiquidation' ? liquidationBalance(before, a, op) : op.command == 'reviewLiquidation' ? approvedBalance(before, a, op) :
-        op.command == 'saveRequisition' ? requestBalance(before, a, op) : op.command in ['reviewRequisition', 'cancelRequisition'] ? clearRequest(before, a, op) : op.command == 'releaseRequisition' ? releaseBalance(before, a, op) : op.command == 'correctLiquidation' && correctionBalance(before, a, op));
+        op.command == 'saveRequisition' ? requestBalance(before, a, op) : op.command in ['reviewRequisition', 'cancelRequisition'] ? clearRequest(before, a, op) : op.command == 'releaseRequisition' ? releaseBalance(before, a, op) : op.command in ['initiateTransfer', 'settleTransfer', 'failTransfer'] ? transferBalance(before, a, op) : op.command == 'correctLiquidation' && correctionBalance(before, a, op)));
     }
     match /allowanceAccounts/{id} {
       allow create: if financial(request.resource.data, 'configureAccount') && accountShape(request.resource.data) && request.resource.data.id == id && request.resource.data.staffId == id &&
         request.resource.data.ownerUid == record('allowanceAccess', request.resource.data.ownerUid).ownerUid && record('allowanceAccess', request.resource.data.ownerUid).staffId == id && record('allowanceAccess', request.resource.data.ownerUid).active &&
         request.resource.data.status == 'pending_setup' && !request.resource.data.funded && request.resource.data.reviewedBalanceCentavos == 0 && request.resource.data.unreviewedCentavos == 0 && request.resource.data.unresolvedCount == 0 && request.resource.data.activeRequestId == '' && !request.resource.data.reconciliationHold &&
         request.resource.data.policy == record('allowanceSettings', 'current').policy && request.resource.data.policyVersion == record('allowanceSettings', 'current').policyVersion && record('allowanceSettings', 'current').enabled;
-      allow update: if currentOperation('allowances', request.resource.data) && accountTransition(resource.data, request.resource.data);
+      allow update: if currentOperation('allowances', request.resource.data) && (accountTransition(resource.data, request.resource.data) || testDeleteBalance(resource.data, request.resource.data, operation('allowances', request.resource.data)));
       allow delete: if false;
     }
     // A new operation tag proves the account is written in this transaction.
@@ -422,7 +445,8 @@ service cloud.firestore {
         (operation('allowances', request.resource.data).command == 'saveMeeting' ? !resource.data.get('liquidationId', '').matches('.+') && meetingShape(request.resource.data) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['date', 'status', 'clientId', 'clientName', 'purpose', 'updatedAt', 'lastOperationId']) &&
           afterRecord('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).lastOperationId == request.resource.data.lastOperationId && (resource.data.date == request.resource.data.date || afterRecord('allowanceDailyFuel', resource.data.accountId + '_' + resource.data.date).lastOperationId == request.resource.data.lastOperationId) :
-          operation('allowances', request.resource.data).command == 'saveLiquidation' && ownedActive(request.resource.data) && request.resource.data.id == id && request.resource.data.liquidationId == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'liquidationId', 'updatedAt', 'lastOperationId']) && afterRecord('allowanceLiquidations', id).lastOperationId == request.resource.data.lastOperationId);
+          operation('allowances', request.resource.data).command == 'saveLiquidation' && ownedActive(request.resource.data) && request.resource.data.id == id && request.resource.data.liquidationId == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'liquidationId', 'updatedAt', 'lastOperationId']) && afterRecord('allowanceLiquidations', id).lastOperationId == request.resource.data.lastOperationId ||
+          operationsRoot() && operation('allowances', request.resource.data).command == 'deleteTestRecord' && operation('allowances', request.resource.data).payload.kind == 'liquidation' && operation('allowances', request.resource.data).payload.id == id && resource.data.liquidationId == id && request.resource.data.liquidationId == '' && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['liquidationId', 'updatedAt', 'lastOperationId']) && afterRecord('allowanceLiquidations', id).status == 'deleted');
       allow delete: if false;
     }
     function amountAt(lines, i, fuel) { return lines.size() <= i || fuel && lines[i].category != 'Fuel' ? 0 : lines[i].amountCentavos; }
@@ -472,7 +496,9 @@ service cloud.firestore {
       allow update: if currentOperation('allowances', request.resource.data) && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId && request.resource.data.meetingId == resource.data.meetingId &&
         (operation('allowances', request.resource.data).command == 'saveLiquidation' ? savedSlip(id, resource.data, request.resource.data) :
         operation('allowances', request.resource.data).command == 'registerEvidenceReference' ? ownedActive(request.resource.data) && request.resource.data.id == id && resource.data.status in ['draft', 'returned'] && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'preparedAttachmentIds', 'updatedAt', 'lastOperationId']) && request.resource.data.preparedAttachmentIds == resource.data.preparedAttachmentIds.concat([operation('allowances', request.resource.data).result.id]) && request.resource.data.preparedAttachmentIds.size() <= 3 && afterRecord('allowanceAttachments', operation('allowances', request.resource.data).result.id).lastOperationId == request.resource.data.lastOperationId :
-        operation('allowances', request.resource.data).command == 'reviewLiquidation' ? reviewedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)) : operation('allowances', request.resource.data).command == 'correctLiquidation' && correctedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)));
+        operation('allowances', request.resource.data).command == 'reviewLiquidation' ? reviewedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+        operation('allowances', request.resource.data).command == 'correctLiquidation' ? correctedSlip(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+        operationsRoot() && operation('allowances', request.resource.data).command == 'deleteTestRecord' && operation('allowances', request.resource.data).payload.kind == 'liquidation' && operation('allowances', request.resource.data).payload.id == id && request.resource.data.status == 'deleted' && request.resource.data.deletedBy == request.auth.uid && recent(request.resource.data.deletedAt) && textField(request.resource.data.deletionReason, 500) && changedAccount(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deletedAt', 'deletedBy', 'deletionReason', 'updatedAt', 'lastOperationId']));
       allow delete: if false;
       match /revisions/{revision} {
         allow create: if financial(request.resource.data, 'saveLiquidation') && request.resource.data.status == 'submitted' && revision == string(request.resource.data.revision) &&
@@ -481,13 +507,13 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
-    function payment(data) { return data.paymentMethod in ['cash', 'bank'] && validDate(data.paymentDate) && data.paymentDate <= today() && textField(data.referenceNumber, 200); }
+    function payment(data) { return data.paymentMethod in ['cash', 'bank'] && validDate(data.paymentDate) && data.paymentDate <= today() && textField(data.referenceNumber, 200) && data.get('transferProofUri', '') is string && data.get('transferProofUri', '').size() <= 1000 && (data.get('transferProofUri', '') == '' || data.get('transferProofUri', '').matches('https://.+')); }
     function savedRequest(id, before, r) {
       let a = account(r);
       let submit = operation('allowances', r).payload.submit == true;
       return ownedActive(r) && (before == null || before.status in ['draft', 'returned']) && r.status == (submit ? 'submitted' : before == null ? 'draft' : before.status) &&
         money(r.amountCentavos) && r.amountCentavos > 0 && r.amountCentavos <= a.policy.targetCentavos - a.reviewedBalanceCentavos && r.balanceSnapshotCentavos == a.reviewedBalanceCentavos && r.policyVersion == a.policyVersion && money(r.declaredCashCentavos) && textField(r.reason, 1000) && r.type in ['early', 'scheduled'] &&
-        !r.keys().hasAny(['approvedBy', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber']) &&
+        !r.keys().hasAny(['approvedBy', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber', 'transferProofUri', 'nextScheduledDate', 'transferInitiatedBy', 'transferInitiatedAt', 'transferFailureReason', 'transferFailedBy', 'transferFailedAt']) &&
         (!submit || requestEligible(a, r) && r.declaredCashCentavos == a.reviewedBalanceCentavos - a.unreviewedCentavos && nextAccount(r).lastOperationId == r.lastOperationId && nextAccount(r).activeRequestId == id);
     }
     function reviewedRequest(before, r, op) {
@@ -497,13 +523,25 @@ service cloud.firestore {
         (op.payload.decision == 'approve' ? r.status == 'approved' && r.approvedBy == request.auth.uid && a.unresolvedCount == 0 && a.reviewedBalanceCentavos == r.balanceSnapshotCentavos && requestEligible(a, r) :
           r.approvedBy == '' && textField(r.reviewNote, 1000) && (op.payload.decision == 'return' ? r.status == 'returned' : op.payload.decision == 'reject' && r.status == 'rejected' && changedAccount(r)));
     }
+    function initiatedTransfer(before, r, op) {
+      return (operationsRoot() || action('allowances', 'release')) && account(r).get('fundingMethod', 'bank') == 'bank' && before.status in ['approved', 'transfer_failed'] && r.status == 'transfer_pending' && r.paymentMethod == 'bank' && payment(r) && r.nextScheduledDate > today() && r.transferInitiatedBy == request.auth.uid && recent(r.transferInitiatedAt) && r.transferFailureReason == '' && changedAccount(r) &&
+        r.diff(before).affectedKeys().hasOnly(['status', 'paymentMethod', 'paymentDate', 'referenceNumber', 'transferProofUri', 'nextScheduledDate', 'transferInitiatedBy', 'transferInitiatedAt', 'transferFailureReason', 'updatedAt', 'lastOperationId']);
+    }
+    function completedTransfer(before, r, op) {
+      return account(r).get('fundingMethod', 'bank') == 'bank' && before.status == 'transfer_pending' &&
+        (op.command == 'settleTransfer' ? r.status == 'released' && r.releasedBy == request.auth.uid && recent(r.releasedAt) && changedAccount(r) && r.diff(before).affectedKeys().hasOnly(['status', 'releasedBy', 'releasedAt', 'updatedAt', 'lastOperationId']) :
+        op.command == 'failTransfer' && r.status == 'transfer_failed' && textField(r.transferFailureReason, 500) && r.transferFailedBy == request.auth.uid && recent(r.transferFailedAt) && changedAccount(r) && r.diff(before).affectedKeys().hasOnly(['status', 'transferFailureReason', 'transferFailedBy', 'transferFailedAt', 'updatedAt', 'lastOperationId']));
+    }
     match /allowanceRequisitions/{id} {
       allow create: if financial(request.resource.data, 'saveRequisition') && savedRequest(id, null, request.resource.data);
       allow update: if currentOperation('allowances', request.resource.data) && request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId &&
         (operation('allowances', request.resource.data).command == 'saveRequisition' ? savedRequest(id, resource.data, request.resource.data) :
         operation('allowances', request.resource.data).command == 'reviewRequisition' ? reviewedRequest(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
-        operation('allowances', request.resource.data).command == 'releaseRequisition' ? resource.data.status == 'approved' && request.resource.data.status == 'released' && request.resource.data.releasedBy == request.auth.uid && recent(request.resource.data.releasedAt) && payment(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data) :
-        operation('allowances', request.resource.data).command == 'cancelRequisition' && resource.data.ownerUid == request.auth.uid && resource.data.status in ['draft', 'submitted', 'returned'] && request.resource.data.status == 'cancelled' && request.resource.data.get('id', id) == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'status', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data));
+        operation('allowances', request.resource.data).command == 'releaseRequisition' ? account(request.resource.data).get('fundingMethod', 'bank') == 'cash' && resource.data.status == 'approved' && request.resource.data.status == 'released' && request.resource.data.releasedBy == request.auth.uid && recent(request.resource.data.releasedAt) && payment(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'releasedBy', 'releasedAt', 'paymentMethod', 'paymentDate', 'referenceNumber', 'transferProofUri', 'nextScheduledDate', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data) :
+        operation('allowances', request.resource.data).command == 'initiateTransfer' ? initiatedTransfer(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+        operation('allowances', request.resource.data).command in ['settleTransfer', 'failTransfer'] ? completedTransfer(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+        operation('allowances', request.resource.data).command == 'cancelRequisition' ? resource.data.ownerUid == request.auth.uid && resource.data.status in ['draft', 'submitted', 'returned'] && request.resource.data.status == 'cancelled' && request.resource.data.get('id', id) == id && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['id', 'status', 'updatedAt', 'lastOperationId']) && changedAccount(request.resource.data) :
+        operationsRoot() && operation('allowances', request.resource.data).command == 'deleteTestRecord' && operation('allowances', request.resource.data).payload.kind == 'requisition' && operation('allowances', request.resource.data).payload.id == id && request.resource.data.status == 'deleted' && request.resource.data.deletedBy == request.auth.uid && recent(request.resource.data.deletedAt) && textField(request.resource.data.deletionReason, 500) && changedAccount(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'deletedAt', 'deletedBy', 'deletionReason', 'updatedAt', 'lastOperationId']));
       allow delete: if false;
     }
     match /allowanceAttachments/{id} {
@@ -540,26 +578,35 @@ service cloud.firestore {
       let id = op.command == 'saveLiquidation' ? op.payload.meetingId : op.payload.id;
       let slip = afterRecord('allowanceLiquidations', id);
       let old = get(/databases/$(database)/documents/allowanceLiquidations/$(id)).data;
-      let oldFuel = op.command == 'correctLiquidation' || old != null && old.status == 'returned' ? old.fuelCentavos : 0;
+      let oldFuel = op.command == 'deleteTestRecord' ? (old.status == 'voided' ? old.get('correctedFuelCentavos', 0) : old.status in ['submitted', 'returned', 'approved'] ? old.fuelCentavos : 0) : op.command == 'correctLiquidation' || old != null && old.status == 'returned' ? old.fuelCentavos : 0;
       return slip.lastOperationId == d.lastOperationId && slip.date == d.date && slip.accountId == d.accountId && slip.status in ['submitted', 'voided'] &&
         d.heldMeetingIds == before.heldMeetingIds && d.fuelCentavos == before.fuelCentavos - oldFuel + (slip.status == 'voided' ? slip.correctedFuelCentavos : slip.fuelCentavos) &&
         d.allocations.diff(before.get('allocations', {})).affectedKeys().hasOnly([id]) && fuelClaims(slip, d) &&
         (slip.status != 'voided' || allocationAmount(slip, d, 0) + allocationAmount(slip, d, 1) + allocationAmount(slip, d, 2) + allocationAmount(slip, d, 3) + allocationAmount(slip, d, 4) == slip.correctedFuelCentavos);
     }
+    function deletedSlipFuel(before, d, op) {
+      let slip = record('allowanceLiquidations', op.payload.id);
+      let next = afterRecord('allowanceLiquidations', op.payload.id);
+      let fuel = slip.status == 'voided' ? slip.get('correctedFuelCentavos', 0) : slip.status in ['submitted', 'returned', 'approved'] ? slip.fuelCentavos : 0;
+      return operationsRoot() && op.command == 'deleteTestRecord' && op.payload.kind == 'liquidation' && next.status == 'deleted' && next.lastOperationId == d.lastOperationId && slip.accountId == d.accountId && slip.date == d.date &&
+        d.ownerUid == before.ownerUid && d.accountId == before.accountId && d.date == before.date && d.heldMeetingIds == before.heldMeetingIds && d.fuelCentavos == before.fuelCentavos - fuel &&
+        d.allocations.diff(before.get('allocations', {})).affectedKeys().hasOnly([op.payload.id]) && d.allocations.get(op.payload.id, {}).size() == 0;
+    }
     match /allowanceDailyFuel/{id} {
       allow create, update: if currentOperation('allowances', request.resource.data) && id == request.resource.data.accountId + '_' + request.resource.data.date &&
-        (operation('allowances', request.resource.data).command == 'correctLiquidation' || ownedActive(request.resource.data)) && request.resource.data.heldMeetingIds is list && request.resource.data.heldMeetingIds.toSet().size() == request.resource.data.heldMeetingIds.size() && money(request.resource.data.fuelCentavos) &&
+        (operation('allowances', request.resource.data).command == 'correctLiquidation' || operation('allowances', request.resource.data).command == 'deleteTestRecord' && operationsRoot() || ownedActive(request.resource.data)) && request.resource.data.heldMeetingIds is list && request.resource.data.heldMeetingIds.toSet().size() == request.resource.data.heldMeetingIds.size() && money(request.resource.data.fuelCentavos) &&
         request.resource.data.fuelCentavos <= (request.resource.data.heldMeetingIds.size() >= 2 ? account(request.resource.data).policy.dailyFuelCentavos : account(request.resource.data).policy.singleFuelCentavos) &&
         (resource == null || request.resource.data.ownerUid == resource.data.ownerUid && request.resource.data.accountId == resource.data.accountId && request.resource.data.date == resource.data.date) &&
         (operation('allowances', request.resource.data).command == 'saveMeeting' ? meetingFuel(resource == null ? {} : resource.data, request.resource.data, operation('allowances', request.resource.data)) :
-          operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation'] && resource != null && slipFuel(resource.data, request.resource.data, operation('allowances', request.resource.data)));
+          operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation'] && resource != null ? slipFuel(resource.data, request.resource.data, operation('allowances', request.resource.data)) :
+          operation('allowances', request.resource.data).command == 'deleteTestRecord' && resource != null && deletedSlipFuel(resource.data, request.resource.data, operation('allowances', request.resource.data)));
       allow delete: if false;
     }
     match /allowanceReferenceFuelClaims/{id} {
-      allow create, update: if currentOperation('allowances', request.resource.data) && operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation'] && money(request.resource.data.allocatedCentavos) &&
+      allow create, update: if currentOperation('allowances', request.resource.data) && operation('allowances', request.resource.data).command in ['saveLiquidation', 'correctLiquidation', 'deleteTestRecord'] && money(request.resource.data.allocatedCentavos) &&
         request.resource.data.ownerUid == record('allowanceAttachments', id).ownerUid && request.resource.data.accountId == record('allowanceAttachments', id).accountId && request.resource.data.date == record('allowanceAttachments', id).date && request.resource.data.allocatedCentavos <= record('allowanceAttachments', id).purchaseCentavos &&
         request.resource.data.allocatedCentavos == (resource == null ? 0 : resource.data.allocatedCentavos) - (exists(/databases/$(database)/documents/allowanceDailyFuel/$(request.resource.data.accountId + '_' + request.resource.data.date)) ? record('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).get('allocations', {}).get(request.resource.data.slipId, {}).get(id, 0) : 0) + afterRecord('allowanceDailyFuel', request.resource.data.accountId + '_' + request.resource.data.date).allocations[request.resource.data.slipId].get(id, 0) &&
-        allocationProof(request.resource.data, id);
+        (operation('allowances', request.resource.data).command == 'deleteTestRecord' ? operationsRoot() && afterRecord('allowanceLiquidations', request.resource.data.slipId).status == 'deleted' : allocationProof(request.resource.data, id));
       allow delete: if false;
     }
     function allocationProof(data, id) {
@@ -576,8 +623,10 @@ service cloud.firestore {
         (operation('allowances', request.resource.data).command == 'initialRelease' ? request.resource.data.kind == 'initial_release' && id == request.resource.data.lastOperationId :
         operation('allowances', request.resource.data).command == 'cashReturn' ? request.resource.data.kind == 'cash_return' && id == request.resource.data.lastOperationId :
         operation('allowances', request.resource.data).command == 'reviewLiquidation' ? request.resource.data.kind == 'approved_expense' && id == request.resource.data.lastOperationId :
-        operation('allowances', request.resource.data).command == 'releaseRequisition' ? request.resource.data.kind == 'replenishment' && id == request.resource.data.lastOperationId :
-        operation('allowances', request.resource.data).command == 'correctLiquidation' && id != request.resource.data.lastOperationId && request.resource.data.kind == (id == request.resource.data.lastOperationId + '_reversal' ? 'expense_reversal' : 'corrected_expense'));
+        operation('allowances', request.resource.data).command in ['releaseRequisition', 'settleTransfer'] ? request.resource.data.kind == 'replenishment' && id == request.resource.data.lastOperationId :
+        operation('allowances', request.resource.data).command == 'correctLiquidation' ? id != request.resource.data.lastOperationId && request.resource.data.kind == (id == request.resource.data.lastOperationId + '_reversal' ? 'expense_reversal' : 'corrected_expense') :
+        operation('allowances', request.resource.data).command == 'deleteTestRecord' && id == request.resource.data.lastOperationId && operationsRoot() && request.resource.data.sourceId == operation('allowances', request.resource.data).payload.id &&
+          (operation('allowances', request.resource.data).payload.kind == 'liquidation' ? request.resource.data.kind == 'test_liquidation_removed' && request.resource.data.amountCentavos > 0 : request.resource.data.kind == 'test_requisition_removed' && request.resource.data.amountCentavos < 0));
       allow update, delete: if false;
     }
     function linkedExpense(data, id, before) {
@@ -590,9 +639,11 @@ service cloud.firestore {
     match /expenses/{id} {
       allow create: if linkedExpense(request.resource.data, id, null);
       allow update: if linkedExpense(request.resource.data, id, resource.data);
+      allow delete: if operationsRoot() && resource.data.source == 'allowance_liquidation' && resource.data.liquidationId is string &&
+        afterRecord('allowanceLiquidations', resource.data.liquidationId).status == 'deleted' && operation('allowances', afterRecord('allowanceLiquidations', resource.data.liquidationId)).command == 'deleteTestRecord';
     }
     match /allowanceReleases/{id} {
-      allow create: if financial(request.resource.data, 'initialRelease') && id == request.resource.data.lastOperationId && request.resource.data.ownerUid == account(request.resource.data).ownerUid && request.resource.data.actorUid == request.auth.uid && payment(request.resource.data) && request.resource.data.amountCentavos == operation('allowances', request.resource.data).payload.amountCentavos && changedAccount(request.resource.data);
+      allow create: if financial(request.resource.data, 'initialRelease') && id == request.resource.data.lastOperationId && request.resource.data.ownerUid == account(request.resource.data).ownerUid && request.resource.data.actorUid == request.auth.uid && payment(request.resource.data) && request.resource.data.paymentMethod == account(request.resource.data).get('fundingMethod', 'bank') && (request.resource.data.paymentMethod != 'bank' || operation('allowances', request.resource.data).payload.transferConfirmed == true) && request.resource.data.amountCentavos == operation('allowances', request.resource.data).payload.amountCentavos && changedAccount(request.resource.data);
       allow update, delete: if false;
     }
     match /allowanceAuditEvents/{id} {

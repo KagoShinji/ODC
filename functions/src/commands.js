@@ -1,4 +1,4 @@
-import { ACTIONS, FILE_TYPES, check, idValue, textValue, centavos, dateValue, manilaDate, normalizedPolicy, normalizeLines, estimatedCash, eligible, topUp } from './domain.js';
+import { ACTIONS, FILE_TYPES, check, idValue, textValue, centavos, dateValue, manilaDate, normalizedPolicy, normalizeLines, estimatedCash, eligible, topUp, allowanceFundingMethod } from './domain.js';
 
 // The repository buffers writes until every read completes, satisfying Firestore transaction ordering.
 export async function executeCommand(repo, actor, command, data, commandId, now = new Date()) {
@@ -20,7 +20,7 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
   function audit(entityId, before, after, reason = '') { write('allowanceAuditEvents', `${uid}_${commandId}`, { ownerUid: auditOwner, accountId: data.accountId || '', command, entityId, before, after, reason, actorUid: uid, createdAt: timestamp }); }
   function owned(record) { check(record.ownerUid === uid, 'You can only submit your own records.', 'permission-denied'); }
   function other(record) { check(record.ownerUid !== uid, 'You cannot approve your own submission.', 'permission-denied'); }
-  function ledger(account, kind, amount, sourceId, suffix = '') { write('allowanceLedger', `${uid}_${commandId}${suffix}`, { ownerUid: account.ownerUid, accountId: account.id, staffName: account.staffName, kind, amountCentavos: amount, sourceId, actorUid: uid, date: today, createdAt: timestamp }); }
+  function ledger(account, kind, amount, sourceId, suffix = '', metadata = {}) { write('allowanceLedger', `${uid}_${commandId}${suffix}`, { ownerUid: account.ownerUid, accountId: account.id, staffName: account.staffName, kind, amountCentavos: amount, sourceId, actorUid: uid, date: today, createdAt: timestamp, ...metadata }); }
 
   if (command === 'savePolicy') {
     permit('manage');
@@ -59,10 +59,16 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     check(!current || current.ownerUid === data.ownerUid, 'Allowance ownership cannot be changed.');
     const nextScheduledDate = dateValue(data.nextScheduledDate);
     const status = current ? data.status || current.status : 'pending_setup';
+    const fundingMethod = ['bank', 'cash'].includes(data.fundingMethod) ? data.fundingMethod : allowanceFundingMethod(current);
+    const bankName = fundingMethod === 'bank' ? textValue(data.bankName, 'Bank or provider', 100) : '';
+    const bankAccountName = fundingMethod === 'bank' ? textValue(data.bankAccountName, 'Account holder name', 120) : '';
+    const bankAccountLast4 = fundingMethod === 'bank' ? String(data.bankAccountLast4 || '') : '';
+    check(fundingMethod !== 'bank' || /^\d{4}$/.test(bankAccountLast4), 'Enter only the last four account digits.', 'invalid-argument');
     check(['pending_setup', 'active', 'suspended', 'closed'].includes(status), 'Invalid account state.');
-    if (current && status === 'closed') check(current.reviewedBalanceCentavos === 0 && current.unresolvedCount === 0 && !current.activeRequestId, 'Reconcile cash and open slips before closing.');
+    if (current && fundingMethod !== allowanceFundingMethod(current)) check(!current.activeRequestId, 'Finish or cancel the active replenishment before changing the funding method.');
+    if (current && status === 'closed') check(current.reviewedBalanceCentavos === 0 && current.unresolvedCount === 0 && !current.activeRequestId, 'Reconcile the allowance balance and open slips before closing.');
     if (current) check((status !== 'pending_setup' || !current.funded) && (status !== 'active' || current.funded), 'Record initial funding before activation.');
-    const account = current ? { ...current, nextScheduledDate, status } : { id, ownerUid: data.ownerUid, staffId: id, staffName: textValue(staff.name, 'Staff name'), status, funded: false, reviewedBalanceCentavos: 0, unreviewedCentavos: 0, unresolvedCount: 0, activeRequestId: '', reconciliationHold: false, nextScheduledDate, policy: settings.policy, policyVersion: settings.policyVersion, createdAt: timestamp };
+    const account = current ? { ...current, nextScheduledDate, status, fundingMethod, bankName, bankAccountName, bankAccountLast4 } : { id, ownerUid: data.ownerUid, staffId: id, staffName: textValue(staff.name, 'Staff name'), status, fundingMethod, bankName, bankAccountName, bankAccountLast4, funded: false, reviewedBalanceCentavos: 0, unreviewedCentavos: 0, unresolvedCount: 0, activeRequestId: '', reconciliationHold: false, nextScheduledDate, policy: settings.policy, policyVersion: settings.policyVersion, createdAt: timestamp };
     write('allowanceAccounts', id, account); audit(id, current?.status || '', status);
     return { id };
   }
@@ -72,12 +78,72 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
   auditOwner = account.ownerUid;
   check(account.status !== 'closed', 'This allowance account is closed.');
   const saveAccount = () => write('allowanceAccounts', accountId, account);
+  if (command === 'deleteTestRecord') {
+    check(actor.bootstrapAdmin, 'Only the configured superadmin can remove allowance test records.', 'permission-denied');
+    const kind = data.kind;
+    check(['liquidation', 'requisition'].includes(kind), 'Choose a liquidation or requisition to remove.', 'invalid-argument');
+    const id = idValue(data.id);
+    const reason = textValue(data.reason || 'Test data cleanup', 'Deletion reason', 500);
+
+    if (kind === 'liquidation') {
+      const slip = await get('allowanceLiquidations', id);
+      check(slip.accountId === accountId && slip.status !== 'deleted', 'This liquidation is not available for removal.');
+      const wasPending = ['submitted', 'returned'].includes(slip.status);
+      const pending = wasPending ? slip.totalCentavos : 0;
+      const restored = slip.status === 'approved' ? slip.totalCentavos : slip.status === 'voided' ? slip.correctedTotalCentavos : 0;
+      check(account.unreviewedCentavos >= pending && account.unresolvedCount >= (wasPending ? 1 : 0), 'The allowance totals no longer match this test liquidation.');
+      check(account.reviewedBalanceCentavos + restored <= account.policy.targetCentavos, 'Delete newer replenishment test data first so the restored balance does not exceed the allowance float.');
+
+      if (wasPending) {
+        account.unreviewedCentavos -= pending;
+        account.unresolvedCount -= 1;
+      }
+      if (restored) {
+        account.reviewedBalanceCentavos += restored;
+        ledger(account, 'test_liquidation_removed', restored, slip.id);
+      }
+      if (wasPending && account.unresolvedCount === 0) account.reconciliationHold = false;
+
+      const postedFuel = slip.status === 'voided' ? slip.correctedFuelCentavos || 0 : ['submitted', 'returned', 'approved'].includes(slip.status) ? slip.fuelCentavos || 0 : 0;
+      if (['submitted', 'returned', 'approved', 'voided'].includes(slip.status)) {
+        const day = await get('allowanceDailyFuel', `${accountId}_${slip.date}`);
+        const allocations = { ...(day.allocations || {}) };
+        allocations[slip.id] = {};
+        check(day.fuelCentavos >= postedFuel, 'The fuel allocation no longer matches this test liquidation.');
+        write('allowanceDailyFuel', day.id, { ...day, fuelCentavos: day.fuelCentavos - postedFuel, allocations });
+      }
+
+      const meeting = await get('allowanceMeetings', slip.meetingId);
+      if (meeting.liquidationId === slip.id) write('allowanceMeetings', meeting.id, { ...meeting, liquidationId: '' });
+      if (slip.expenseId) repo.delete('expenses', slip.expenseId);
+      saveAccount();
+      write('allowanceLiquidations', slip.id, { ...slip, status: 'deleted', deletedAt: timestamp, deletedBy: uid, deletionReason: reason });
+      audit(slip.id, slip.status, 'deleted', reason);
+      return { id: slip.id, removedExpenseId: slip.expenseId || '' };
+    }
+
+    const req = await get('allowanceRequisitions', id);
+    check(req.accountId === accountId && req.status !== 'deleted', 'This requisition is not available for removal.');
+    const released = req.status === 'released' ? req.amountCentavos : 0;
+    check(account.reviewedBalanceCentavos - released >= account.unreviewedCentavos, 'Delete newer spending test data first so this replenishment can be reversed safely.');
+    if (released) {
+      account.reviewedBalanceCentavos -= released;
+      ledger(account, 'test_requisition_removed', -released, req.id);
+    }
+    if (account.activeRequestId === req.id) account.activeRequestId = '';
+    saveAccount();
+    write('allowanceRequisitions', req.id, { ...req, status: 'deleted', deletedAt: timestamp, deletedBy: uid, deletionReason: reason });
+    audit(req.id, req.status, 'deleted', reason);
+    return { id: req.id };
+  }
   if (command === 'initialRelease') {
     permit('release');
     check(!account.funded && account.status === 'pending_setup', 'Initial funding has already been recorded.');
     const amount = centavos(data.amountCentavos);
     check(amount <= account.policy.targetCentavos, 'Initial funding exceeds the target float.');
     const payment = paymentFields(data, today);
+    check(payment.paymentMethod === allowanceFundingMethod(account), 'Use the funding method configured for this allowance account.');
+    check(payment.paymentMethod !== 'bank' || data.transferConfirmed === true, 'Confirm that the initial bank transfer has settled.');
     account.funded = true; account.status = 'active'; account.reviewedBalanceCentavos = amount;
     ledger(account, 'initial_release', amount, accountId);
     write('allowanceReleases', `${uid}_${commandId}`, { ownerUid: account.ownerUid, accountId, amountCentavos: amount, ...payment, kind: 'initial_release', createdAt: timestamp, actorUid: uid });
@@ -85,18 +151,19 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
   }
   if (command === 'reconcileCash') {
     permit('manage');
-    check(account.unresolvedCount === 0, 'Resolve pending liquidation before verifying cash.');
-    const declared = centavos(data.declaredCashCentavos, 'Verified cash', true);
-    check(declared === account.reviewedBalanceCentavos, 'Verified cash must match the ledger. Record a cash return or documented correction first.');
+    check(account.unresolvedCount === 0, 'Resolve pending liquidation before verifying the allowance balance.');
+    const declared = centavos(data.declaredCashCentavos, 'Verified balance', true);
+    check(declared === account.reviewedBalanceCentavos, 'The verified balance must match the ledger. Record a return or documented correction first.');
     account.reconciliationHold = false; saveAccount(); audit(accountId, 'hold', 'reconciled', textValue(data.reason, 'Reconciliation note')); return { id: accountId };
   }
   if (command === 'cashReturn') {
     permit('release');
-    check(account.unresolvedCount === 0 && !account.activeRequestId, 'Resolve pending slips and requests before returning cash.');
+    check(account.unresolvedCount === 0 && !account.activeRequestId, 'Resolve pending slips and requests before returning funds.');
     const amount = centavos(data.amountCentavos);
-    check(amount <= account.reviewedBalanceCentavos, 'Cash return exceeds the remaining balance.');
-    const reason = textValue(data.reason, 'Cash return reason');
-    account.reviewedBalanceCentavos -= amount; saveAccount(); ledger(account, 'cash_return', -amount, accountId); audit(accountId, '', 'cash_return', reason); return { id: accountId };
+    check(amount <= account.reviewedBalanceCentavos, 'The returned amount exceeds the remaining balance.');
+    const reason = textValue(data.reason, 'Return reason');
+    const payment = allowanceFundingMethod(account) === 'bank' ? paymentFields(data, today, 'bank') : {};
+    account.reviewedBalanceCentavos -= amount; saveAccount(); ledger(account, 'cash_return', -amount, accountId, '', payment); audit(accountId, '', 'cash_return', reason); return { id: accountId };
   }
   check(account.status === 'active', 'This allowance is suspended or has not been funded.');
 
@@ -142,7 +209,7 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     check(Array.isArray(data.lines) && data.lines.length <= 30, 'Use at most 30 expense lines.', 'invalid-argument');
     const normalized = data.submit ? normalizeLines(data.lines.map(line => ({ ...line, slipId: id })), meeting.date, account.policy, attachments) : null;
     check(data.submit !== true || data.lines.length > 0 || data.noExpense === true, 'Confirm that this meeting had no expenses.');
-    const declared = centavos(data.declaredCashCentavos, 'Money left on hand', true);
+    const declared = centavos(data.declaredCashCentavos, 'Reported remaining balance', true);
     const revision = (current?.revision || 0) + (data.submit ? 1 : 0);
     const slip = { ownerUid: uid, accountId, meetingId, clientName: meeting.clientName, date: meeting.date, staffName: account.staffName, slipNumber: `LIQ-${id.slice(0, 12).toUpperCase()}`, policyVersion: account.policyVersion, lines: normalized?.lines || data.lines || [], totalCentavos: normalized?.totalCentavos || 0, fuelCentavos: normalized?.fuelCentavos || 0, attachmentIds: normalized?.attachmentIds || ids, preparedAttachmentIds: current?.preparedAttachmentIds || [], declaredCashCentavos: declared, notes: String(data.notes || '').slice(0, 1000), revision, status: data.submit ? 'submitted' : current?.status || 'draft', createdAt: current?.createdAt || timestamp, reviewNote: current?.reviewNote || '' };
     if (data.submit) {
@@ -164,7 +231,7 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
         const otherAmounts = Object.values(allocations).reduce((sum, item) => sum + (item[purchaseId] || 0), 0);
         check(amount > 0 && otherAmounts <= attachments.get(purchaseId).purchaseCentavos, 'The fuel receipt has already been fully allocated.');
       }
-      check(slip.totalCentavos - oldAmount <= estimatedCash(account), 'Reported spending exceeds the remaining cash.');
+      check(slip.totalCentavos - oldAmount <= estimatedCash(account), 'Reported spending exceeds the remaining allowance balance.');
       account.unreviewedCentavos += slip.totalCentavos - oldAmount;
       account.unresolvedCount += current?.status === 'returned' ? 0 : 1;
       if (declared !== estimatedCash(account)) account.reconciliationHold = true;
@@ -247,7 +314,7 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     const note = data.decision === 'return' ? textValue(data.reason, 'Correction reason') : String(data.reason || '').slice(0, 1000);
     const status = data.decision === 'approve' ? 'approved' : 'returned';
     if (status === 'approved') {
-      check(data.verified === true, 'Verify the receipts, totals, and cash before approval.');
+      check(data.verified === true, 'Verify the receipts, totals, and reported balance before approval.');
       const expenseId = `allowance_liquidation_${slip.id}`;
       check(!await repo.get('expenses', expenseId), 'This liquidation has already been posted.');
       account.reviewedBalanceCentavos -= slip.totalCentavos;
@@ -279,13 +346,13 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     if (data.submit) {
       check(!account.activeRequestId || account.activeRequestId === id, 'Another replenishment request is already open.');
       const why = eligible(account, type, meeting, today); check(!why, why);
-      check(declared === estimatedCash(account), 'Money left on hand does not match the calculated cash. Resolve the discrepancy first.');
+      check(declared === estimatedCash(account), 'The reported balance does not match the allowance ledger. Resolve the discrepancy first.');
       account.activeRequestId = id; saveAccount();
     }
     const req = { ownerUid: uid, accountId, staffName: account.staffName, slipNumber: `REQ-${id.slice(0, 12).toUpperCase()}`, type, reason, meetingId: meeting?.id || '', clientName: meeting?.clientName || '', declaredCashCentavos: declared, balanceSnapshotCentavos: account.reviewedBalanceCentavos, amountCentavos: amount, policyVersion: account.policyVersion, date: today, status: data.submit ? 'submitted' : current?.status || 'draft', createdAt: current?.createdAt || timestamp, submittedAt: data.submit ? timestamp : current?.submittedAt || '', reviewNote: current?.reviewNote || '' };
     write('allowanceRequisitions', id, req); audit(id, current?.status || '', req.status); return { id };
   }
-  if (command === 'reviewRequisition' || command === 'releaseRequisition') {
+  if (['reviewRequisition', 'releaseRequisition', 'initiateTransfer', 'settleTransfer', 'failTransfer'].includes(command)) {
     permit(command === 'reviewRequisition' ? 'approve' : 'release');
     const req = await get('allowanceRequisitions', idValue(data.id));
     check(req.accountId === accountId && account.activeRequestId === req.id, 'This request is no longer active.');
@@ -302,15 +369,43 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
       if (status === 'rejected') { account.activeRequestId = ''; saveAccount(); }
       write('allowanceRequisitions', req.id, { ...req, status, reviewNote: reason, approvedBy: status === 'approved' ? uid : '', reviewedAt: timestamp }); audit(req.id, req.status, status, reason); return { id: req.id };
     }
-    check(req.status === 'approved', 'Approve this requisition before releasing money.');
+    const method = allowanceFundingMethod(account);
+    if (command === 'initiateTransfer') {
+      check(method === 'bank', 'This allowance is not configured for bank transfers.');
+      check(['approved', 'transfer_failed'].includes(req.status), 'This transfer cannot be started from its current status.');
+      const why = eligible(account, req.type, meeting, today); check(!why, why);
+      check(account.unresolvedCount === 0 && account.reviewedBalanceCentavos === req.balanceSnapshotCentavos && req.amountCentavos <= topUp(account), 'The approved request is stale. Return it for revision before starting the transfer.');
+      check(data.amountCentavos === req.amountCentavos, 'Transfer the exact approved amount or return the request for revision.');
+      const payment = paymentFields(data, today, 'bank');
+      const nextScheduledDate = dateValue(data.nextScheduledDate); check(nextScheduledDate > today, 'Choose the next scheduled replenishment date.');
+      saveAccount();
+      write('allowanceRequisitions', req.id, { ...req, status: 'transfer_pending', ...payment, nextScheduledDate, transferInitiatedBy: uid, transferInitiatedAt: timestamp, transferFailureReason: '' });
+      audit(req.id, req.status, 'transfer_pending', payment.referenceNumber); return { id: req.id };
+    }
+    if (command === 'failTransfer') {
+      check(method === 'bank' && req.status === 'transfer_pending', 'Only a pending bank transfer can be marked failed.');
+      const reason = textValue(data.reason, 'Transfer failure reason', 500);
+      saveAccount();
+      write('allowanceRequisitions', req.id, { ...req, status: 'transfer_failed', transferFailureReason: reason, transferFailedBy: uid, transferFailedAt: timestamp });
+      audit(req.id, 'transfer_pending', 'transfer_failed', reason); return { id: req.id };
+    }
+    if (command === 'settleTransfer') {
+      check(method === 'bank' && req.status === 'transfer_pending', 'Only a pending bank transfer can be settled.');
+      check(account.unresolvedCount === 0 && req.amountCentavos <= topUp(account), 'The allowance changed while the transfer was pending. Resolve its balance before settlement.');
+      account.reviewedBalanceCentavos += req.amountCentavos; account.activeRequestId = ''; account.nextScheduledDate = dateValue(req.nextScheduledDate); saveAccount();
+      ledger(account, 'replenishment', req.amountCentavos, req.id, '', { paymentMethod: 'bank', paymentDate: req.paymentDate, referenceNumber: req.referenceNumber, transferProofUri: req.transferProofUri || '' });
+      write('allowanceRequisitions', req.id, { ...req, status: 'released', releasedBy: uid, releasedAt: timestamp });
+      audit(req.id, 'transfer_pending', 'released', req.referenceNumber); return { id: req.id };
+    }
+    check(method === 'cash' && req.status === 'approved', 'Use the bank transfer workflow for this allowance account.');
     const why = eligible(account, req.type, meeting, today); check(!why, why);
     check(account.unresolvedCount === 0 && account.reviewedBalanceCentavos === req.balanceSnapshotCentavos && req.amountCentavos <= topUp(account), 'The approved request is stale. Return it for revision before release.');
     check(data.amountCentavos === req.amountCentavos, 'Release the exact approved amount or return the request for revision.');
-    const payment = paymentFields(data, today);
+    const payment = paymentFields(data, today, 'cash');
     const nextScheduledDate = dateValue(data.nextScheduledDate); check(nextScheduledDate > today, 'Choose the next scheduled replenishment date.');
     account.reviewedBalanceCentavos += req.amountCentavos; account.activeRequestId = ''; account.nextScheduledDate = nextScheduledDate; saveAccount();
-    ledger(account, 'replenishment', req.amountCentavos, req.id);
-    write('allowanceRequisitions', req.id, { ...req, status: 'released', releasedBy: uid, releasedAt: timestamp, ...payment }); audit(req.id, 'approved', 'released'); return { id: req.id };
+    ledger(account, 'replenishment', req.amountCentavos, req.id, '', payment);
+    write('allowanceRequisitions', req.id, { ...req, status: 'released', releasedBy: uid, releasedAt: timestamp, ...payment, nextScheduledDate }); audit(req.id, 'approved', 'released'); return { id: req.id };
   }
   if (command === 'cancelRequisition') {
     permit('request');
@@ -326,14 +421,14 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
     const correctedTotal = centavos(data.amountCentavos, 'Corrected total', true);
     check(correctedTotal <= slip.totalCentavos && correctedTotal !== slip.totalCentavos, 'A correction must reduce the expense. New spending requires its own evidence and review.');
     const reason = textValue(data.reason, 'Correction reason');
-    check(data.cashRecovered === true, 'Confirm the difference has physically been recovered before restoring cash.');
+    check(data.cashRecovered === true, 'Confirm the difference has been recovered to the allowance account.');
     const expense = await get('expenses', slip.expenseId);
     const difference = slip.totalCentavos - correctedTotal;
     const day = await get('allowanceDailyFuel', `${accountId}_${slip.date}`);
     const correctedFuel = centavos(data.fuelCentavos, 'Corrected fuel', true);
     check(correctedFuel <= slip.fuelCentavos && correctedFuel <= correctedTotal && slip.fuelCentavos - correctedFuel <= difference, 'Invalid corrected fuel allocation.');
     account.reviewedBalanceCentavos += difference;
-    check(account.reviewedBalanceCentavos <= account.policy.targetCentavos, 'Recover excess cash with a cash return before correcting.');
+    check(account.reviewedBalanceCentavos <= account.policy.targetCentavos, 'Return excess allowance funds before correcting.');
     ledger(account, 'expense_reversal', slip.totalCentavos, slip.id, '_reversal');
     ledger(account, 'corrected_expense', -correctedTotal, slip.id, '_replacement');
     write('expenses', slip.expenseId, { ...expense, amount: correctedTotal / 100, correctionReason: reason, correctedAt: timestamp, correctedBy: uid });
@@ -350,8 +445,11 @@ export async function executeCommand(repo, actor, command, data, commandId, now 
   throw new Error('Unknown allowance command.');
 }
 
-function paymentFields(data, today) {
+function paymentFields(data, today, expectedMethod) {
   check(['cash', 'bank'].includes(data.paymentMethod), 'Select cash or bank payment.');
+  check(!expectedMethod || data.paymentMethod === expectedMethod, `Use ${expectedMethod === 'bank' ? 'bank transfer' : 'cash'} for this allowance account.`);
   const paymentDate = dateValue(data.paymentDate); check(paymentDate <= today, 'Actual payment cannot be dated in the future.');
-  return { paymentMethod: data.paymentMethod, paymentDate, referenceNumber: textValue(data.referenceNumber, data.paymentMethod === 'cash' ? 'Cash acknowledgment' : 'Bank reference', 200) };
+  const transferProofUri = String(data.transferProofUri || '').trim();
+  check(!transferProofUri || transferProofUri.length <= 1000 && /^https:\/\//.test(transferProofUri), 'Use an HTTPS transfer proof link.');
+  return { paymentMethod: data.paymentMethod, paymentDate, referenceNumber: textValue(data.referenceNumber, data.paymentMethod === 'cash' ? 'Cash acknowledgment' : 'Bank reference', 200), transferProofUri: data.paymentMethod === 'bank' ? transferProofUri : '' };
 }

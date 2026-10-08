@@ -47,9 +47,9 @@ export const ALL_ADMIN_NAVIGATIONS = [
       { id: 'allowances:review', label: 'Review Liquidations', desc: 'Check receipts for other staff', accessRole: 'Operations' },
       { id: 'allowances:request', label: 'Request Replenishment', desc: 'Submit your replenishment requisitions', accessRole: 'Staff' },
       { id: 'allowances:approve', label: 'Approve Requisitions', desc: 'Approve requests from other staff', accessRole: 'Finance' },
-      { id: 'allowances:release', label: 'Record Releases', desc: 'Record actual funding and cash returns', accessRole: 'Finance' },
+      { id: 'allowances:release', label: 'Record Funding', desc: 'Initiate and settle transfers or record cash releases and returns', accessRole: 'Finance' },
       { id: 'allowances:reports', label: 'Allowance Reports', desc: 'View staff ledgers and export history', accessRole: 'Finance' },
-      { id: 'allowances:reverse', label: 'Correct Expenses', desc: 'Record audited reductions and recovered cash', accessRole: 'Finance' },
+      { id: 'allowances:reverse', label: 'Correct Expenses', desc: 'Record audited reductions and recovered allowance funds', accessRole: 'Finance' },
     ],
   },
   {
@@ -234,4 +234,3 @@ export const getActionsForTabs = (tabIds = []) => {
     .filter((nav) => tabIds.includes(nav.id))
     .flatMap((nav) => (nav.actions || []).map((a) => a.id));
 };
-

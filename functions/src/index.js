@@ -15,7 +15,7 @@ export { staffModulePermissions } from './staffPermissions.js';
 initializeApp();
 const db = getFirestore();
 const toWire = value => value instanceof Timestamp ? value.toDate().toISOString() : Array.isArray(value) ? value.map(toWire) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([k, v]) => [k, toWire(v)])) : value;
-const timestampKeys = new Set(['createdAt', 'updatedAt', 'submittedAt', 'reviewedAt', 'releasedAt', 'correctedAt', 'frozenAt']);
+const timestampKeys = new Set(['createdAt', 'updatedAt', 'submittedAt', 'reviewedAt', 'releasedAt', 'correctedAt', 'deletedAt', 'transferInitiatedAt', 'transferFailedAt', 'frozenAt']);
 function toFirestore(value) {
   if (Array.isArray(value)) return value.map(toFirestore);
   if (!value || typeof value !== 'object') return value;
@@ -87,12 +87,15 @@ export const allowanceCommand = onCall(options, async request => {
       const previous = (await transaction.get(resultRef)).data();
       if (previous) { check(previous.digest === digest, 'A submission key cannot be reused for a different operation.', 'invalid-argument'); return previous.result; }
       const writes = new Map();
+      const deletes = new Set();
       const repo = {
         async get(collection, id) { check(typeof id === 'string' && /^[a-zA-Z0-9_-]+$/.test(id), 'Invalid record identifier.', 'invalid-argument'); return toWire((await transaction.get(db.collection(collection).doc(id))).data()); },
-        set(collection, id, value) { writes.set(`${collection}/${id}`, value); },
+        set(collection, id, value) { const path = `${collection}/${id}`; deletes.delete(path); writes.set(path, value); },
+        delete(collection, id) { const path = `${collection}/${id}`; writes.delete(path); deletes.add(path); },
       };
       const output = await executeCommand(repo, actor, command, payload, commandId);
       for (const [path, value] of writes) transaction.set(db.doc(path), toFirestore(value));
+      for (const path of deletes) transaction.delete(db.doc(path));
       transaction.set(resultRef, { digest, result: output, ownerUid: uid, createdAt: Timestamp.now() });
       return output;
     });
