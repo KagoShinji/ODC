@@ -1,5 +1,5 @@
 import { ServicesSection } from '../components/sections/Services';
-import { FAQSection } from '../components/sections/FAQ';
+import { FAQSection } from '../components/sections/Faq';
 import { usePageSEO } from '../hooks/usePageSEO';
 
 export function Services() {
