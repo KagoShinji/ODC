@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
+import { usePageSEO } from '../hooks/usePageSEO';
 import {
     ArrowRight,
     ArrowSquareOut,
@@ -641,6 +642,12 @@ function FinalCta() {
 }
 
 export function Home() {
+    usePageSEO({
+        title: 'OdysseyPH IT Solutions | Custom Web & Software Systems Philippines',
+        description: 'We engineer high-performance web applications, healthcare clinic management systems, sports court booking networks (ODC-Courts), and automated business systems across the Philippines.',
+        canonicalPath: '/',
+    });
+
     return (
         <div className="reference-landing premium-landing">
             <HeroSection />
