@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { ShieldCheck, Printer, CheckCircle2, FileText, Globe, Award, Sparkles, RefreshCw, CreditCard, DollarSign, Clock } from 'lucide-react';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',

@@ -6,15 +6,15 @@ import { secondaryAuth } from '../lib/firebase';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { useSystemModal } from '../components/ui/SystemModalContext';
 import LoadingButton from '../components/ui/LoadingButton';
-import { 
-  Plus, X, Trash2, RefreshCw, Users, Mail, Building2, 
-  CreditCard, Edit2, Calendar, Check, Minus, Search, 
+import {
+  Plus, X, Trash2, RefreshCw, Users, Mail, Building2,
+  CreditCard, Edit2, Calendar, Check, Minus, Search,
   FileText, Clock, AlertCircle, CheckCircle2, ChevronRight, Settings,
   MessageSquare, Star, Copy, Link, LayoutList, DollarSign, Target, Layers, Tag, ChevronDown, Rocket, Banknote
 } from 'lucide-react';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',
@@ -56,10 +56,10 @@ const getDueDateStatus = (dueDateStr) => {
   today.setHours(0, 0, 0, 0);
   const due = new Date(dueDateStr + 'T00:00:00');
   due.setHours(0, 0, 0, 0);
-  
+
   const diffTime = due.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return 'overdue';
   if (diffDays === 0) return 'due_today';
   if (diffDays <= 7) return 'due_soon';
@@ -126,7 +126,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   const [refreshing, setRefreshing] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [maintenancePlans, setMaintenancePlans] = useState([]);
-  
+
   // Sub-tabs navigation
   const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'masterlist' | 'directory' | 'billing' | 'feedback'
   const [feedbacks, setFeedbacks] = useState([]);
@@ -148,7 +148,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   // Registration form
   const [form, setForm] = useState({ name: '', business: '', email: '', password: '' });
   const [createPortalAccount, setCreatePortalAccount] = useState(false);
-  
+
   const [billingSetup, setBillingSetup] = useState(false);
   const [billingForm, setBillingForm] = useState({
     billingType: 'flat_rate',
@@ -211,10 +211,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   const [mastTypeFilter, setMastTypeFilter] = useState('all');
   const [mastPayFilter, setMastPayFilter] = useState('all');
   const [mastSort, setMastSort] = useState('newest');
-  
+
   const [showMastDetail, setShowMastDetail] = useState(false);
   const [detailClient, setDetailClient] = useState(null);
-  
+
   const [showMastEdit, setShowMastEdit] = useState(false);
   const [mastCustomTypeOpen, setMastCustomTypeOpen] = useState(false);
   const [mastEditForm, setMastEditForm] = useState({
@@ -303,9 +303,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       const selected = maintenancePlans.find(p => p.name === val);
       if (selected) {
         const parsedRate = parsePriceToNumber(selected.price);
-        setFormFn(f => ({ 
-          ...f, 
-          maintenancePlan: val, 
+        setFormFn(f => ({
+          ...f,
+          maintenancePlan: val,
           maintenanceRate: String(parsedRate)
         }));
       }
@@ -316,7 +316,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
     e.preventDefault();
     setSaving(true);
     setErrorMsg('');
-    
+
     try {
       let newUserId = null;
 
@@ -327,7 +327,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
         }
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, form.email, form.password);
         newUserId = userCredential.user.uid;
-        
+
         // Update profile name
         await updateProfile(userCredential.user, { displayName: form.name });
       }
@@ -349,7 +349,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
         maintenanceRate: billingSetup ? Number(billingForm.maintenanceRate || 0) : null,
         billingCycle: billingSetup ? (billingForm.billingType === 'flat_rate' ? billingForm.billingCycle : null) : null,
         billingDay: billingSetup && billingForm.dueType === 'day_of_month' ? Number(billingForm.billingDay) : null,
-        nextDueDate: billingSetup 
+        nextDueDate: billingSetup
           ? (billingForm.dueType === 'day_of_month' ? calculateDueDateFromDay(billingForm.billingDay) : billingForm.nextDueDate)
           : null,
         currentBookingsCount: billingSetup && billingForm.billingType === 'per_booking' ? Number(billingForm.currentBookingsCount || 0) : 0,
@@ -357,7 +357,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       };
 
       await addDoc(collection(db, 'clients'), payload);
-      
+
       setShowSidebar(false);
       setForm({ name: '', business: '', email: '', password: '' });
       setCreatePortalAccount(false);
@@ -376,7 +376,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
         maintenanceRate: ''
       });
       load();
-    } catch (err) { 
+    } catch (err) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
         setErrorMsg('That email is already registered.');
@@ -392,7 +392,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   const handleUpdateBillingSubmit = async (e) => {
     e.preventDefault();
     setSavingBilling(true);
-    
+
     const payload = {
       billingType: editBillingForm.billingType,
       billingRate: Number(editBillingForm.billingRate || 0),
@@ -402,13 +402,13 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       maintenanceRate: Number(editBillingForm.maintenanceRate || 0),
       billingCycle: editBillingForm.billingType === 'flat_rate' ? editBillingForm.billingCycle : null,
       billingDay: editBillingForm.dueType === 'day_of_month' ? Number(editBillingForm.billingDay) : null,
-      nextDueDate: editBillingForm.dueType === 'day_of_month' 
-        ? calculateDueDateFromDay(editBillingForm.billingDay) 
+      nextDueDate: editBillingForm.dueType === 'day_of_month'
+        ? calculateDueDateFromDay(editBillingForm.billingDay)
         : (editBillingForm.nextDueDate || null),
       currentBookingsCount: editBillingForm.billingType === 'per_booking' ? Number(editBillingForm.currentBookingsCount || 0) : 0,
       lastBilledDate: editBillingForm.lastBilledDate || null,
     };
-    
+
     try {
       await updateDoc(doc(db, 'clients', editingClient.id), payload);
       setShowBillingSidebar(false);
@@ -422,10 +422,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
 
   const handleAdjustBookings = async (client, delta) => {
     const newCount = Math.max(0, (client.currentBookingsCount || 0) + delta);
-    
+
     // Optimistic UI update
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, currentBookingsCount: newCount } : c));
-    
+
     try {
       await updateDoc(doc(db, 'clients', client.id), { currentBookingsCount: newCount });
     } catch (e) {
@@ -460,7 +460,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   const handleSaveMastEdit = async (e) => {
     e.preventDefault();
     setSavingMast(true);
-    
+
     const payload = {
       projectStatus: mastEditForm.projectStatus,
       projectType: mastEditForm.projectType,
@@ -480,11 +480,11 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
     try {
       await updateDoc(doc(db, 'clients', detailClient.id), payload);
       setShowMastEdit(false);
-      
+
       // Update local state for immediate feedback
       setClients(prev => prev.map(c => c.id === detailClient.id ? { ...c, ...payload } : c));
       setDetailClient(prev => ({ ...prev, ...payload }));
-      
+
     } catch (err) {
       console.error(err);
       modal.error({ title: 'Client details not saved', message: err.message || 'Please check the details and try again.' });
@@ -509,7 +509,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       }
       return i;
     });
-    
+
     try {
       await updateDoc(doc(db, 'clients', client.id), { installments: updatedInst });
       setClients(prev => prev.map(c => c.id === client.id ? { ...c, installments: updatedInst } : c));
@@ -518,7 +518,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       console.error(e);
     }
   };
-  
+
   const today = () => new Date().toISOString().split('T')[0];
 
   // Triggers the invoice creation modal pre-populated with default client billing data
@@ -541,7 +541,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       baseAmount = rateInPHP;
       const cycleLabel = client.billingCycle === 'monthly' ? 'Monthly' : client.billingCycle === 'quarterly' ? 'Quarterly' : 'Yearly';
       const monthStr = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      baseDesc = isUSD 
+      baseDesc = isUSD
         ? `${cycleLabel} Flat Rate — ${monthStr} ($${rateInUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })} @ ₱${exRate.toFixed(2)}/USD)`
         : `${cycleLabel} Flat Rate — ${monthStr}`;
     } else if (client.billingType === 'per_booking') {
@@ -593,12 +593,12 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       // 1. Fetch current invoices to calculate sequential number
       const invoicesSnap = await getDocs(collection(db, 'invoices'));
       const invoiceCount = invoicesSnap.size;
-      
+
       const now = new Date();
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       const invoiceNumber = `SOA-${year}-${month}-${String(invoiceCount + 1).padStart(3, '0')}`;
-      
+
       // 2. Add Invoice document to Firestore
       const invoicePayload = {
         invoiceNumber,
@@ -624,7 +624,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       };
 
       if (invoicingClient.billingType === 'flat_rate') {
-        const newDueDate = invoicingClient.billingDay 
+        const newDueDate = invoicingClient.billingDay
           ? getNextMonthDueDate(invoicingClient.nextDueDate || invoiceForm.date, invoicingClient.billingDay)
           : shiftDueDate(invoicingClient.nextDueDate || invoiceForm.date, invoicingClient.billingCycle);
         clientUpdate.nextDueDate = newDueDate;
@@ -694,10 +694,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   const activeBillingClients = clients.filter(c => c.billingType);
   const totalFeedbacks = feedbacks.length;
   const overdueClients = clients.filter(c => c.billingType && c.nextDueDate && getDueDateStatus(c.nextDueDate) === 'overdue');
-  
+
   const currentYearMonth = new Date().toISOString().substring(0, 7); // "YYYY-MM"
   const dueThisMonth = clients.filter(c => c.billingType && c.nextDueDate && c.nextDueDate.substring(0, 7) === currentYearMonth);
-  
+
   const projectedRevenue = clients.reduce((acc, c) => {
     if (!c.billingType) return acc;
     const isUSD = c.billingCurrency === 'USD';
@@ -711,7 +711,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
     } else if (c.billingType === 'per_booking') {
       clientTotal = rateInPHP * Number(c.currentBookingsCount || 0);
     }
-    
+
     // Add the maintenance rate (always in PHP) if configured
     if (c.maintenancePlan && c.maintenancePlan !== 'none') {
       clientTotal += Number(c.maintenanceRate || 0);
@@ -737,7 +737,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
     if (status === 'ongoing') acc.ongoing++;
     if (status === 'completed') acc.completed++;
     if (status === 'pending_launch') acc.pendingLaunch++;
-    
+
     const contract = Number(c.contractTotal || 0);
     const collected = getClientCollected(c);
     acc.totalContract += contract;
@@ -754,7 +754,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
       if (c.maintenancePlan && c.maintenancePlan !== 'none') clientBillTotal += Number(c.maintenanceRate || 0);
       acc.projectedRevenue += clientBillTotal;
     }
-    
+
     if (c.billingType && c.nextDueDate) {
       const billStatus = getDueDateStatus(c.nextDueDate);
       if (billStatus === 'overdue') acc.billingOverdue++;
@@ -767,16 +767,16 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
 
   const filteredMasterlist = clients.filter(c => {
     const s = (c.projectStatus || 'ongoing');
-    
-    const matchSearch = 
+
+    const matchSearch =
       c.name?.toLowerCase().includes(mastSearch.toLowerCase()) ||
       c.business?.toLowerCase().includes(mastSearch.toLowerCase()) ||
       c.projectType?.toLowerCase().includes(mastSearch.toLowerCase()) ||
       (c.projectTags || []).some(t => t.toLowerCase().includes(mastSearch.toLowerCase()));
-      
+
     const matchStatus = mastStatusFilter === 'all' || s === mastStatusFilter;
     const matchType = mastTypeFilter === 'all' || (c.projectType || '') === mastTypeFilter;
-    
+
     let matchPay = true;
     if (mastPayFilter === 'fully_paid') {
       matchPay = getClientCollected(c) >= Number(c.contractTotal || 0);
@@ -800,19 +800,19 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
   });
 
   // Filter client directory list
-  const filteredDirectory = clients; 
+  const filteredDirectory = clients;
 
   // Filter clients for billing tracker
   const filteredBilling = clients.filter(c => {
-    const matchesSearch = 
+    const matchesSearch =
       c.name?.toLowerCase().includes(billingSearch.toLowerCase()) ||
       c.business?.toLowerCase().includes(billingSearch.toLowerCase()) ||
       c.email?.toLowerCase().includes(billingSearch.toLowerCase());
-      
-    const matchesType = 
-      billingTypeFilter === 'all' || 
+
+    const matchesType =
+      billingTypeFilter === 'all' ||
       c.billingType === billingTypeFilter;
-      
+
     const status = getDueDateStatus(c.nextDueDate);
     let matchesStatus = true;
     if (billingStatusFilter === 'overdue') {
@@ -824,71 +824,71 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
     } else if (billingStatusFilter === 'not_configured') {
       matchesStatus = !c.billingType;
     }
-    
+
     return matchesSearch && matchesType && matchesStatus;
   });
 
   const renderDueDateBadge = (dueDate) => {
     if (!dueDate) {
       return (
-        <span style={{ 
-          display: 'inline-flex', alignItems: 'center', gap: 4, 
-          padding: '2px 8px', fontSize: 11, fontWeight: 600, 
-          background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', 
-          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6 
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', fontSize: 11, fontWeight: 600,
+          background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)',
+          border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6
         }}>
           Not Configured
         </span>
       );
     }
-    
+
     const status = getDueDateStatus(dueDate);
-    
+
     if (status === 'overdue') {
       return (
-        <span style={{ 
-          display: 'inline-flex', alignItems: 'center', gap: 4, 
-          padding: '2px 8px', fontSize: 11, fontWeight: 600, 
-          background: 'rgba(239,68,68,0.1)', color: '#f87171', 
-          border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6 
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', fontSize: 11, fontWeight: 600,
+          background: 'rgba(239,68,68,0.1)', color: '#f87171',
+          border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6
         }}>
           <AlertCircle size={10} /> Overdue
         </span>
       );
     }
-    
+
     if (status === 'due_today') {
       return (
-        <span style={{ 
-          display: 'inline-flex', alignItems: 'center', gap: 4, 
-          padding: '2px 8px', fontSize: 11, fontWeight: 600, 
-          background: 'rgba(249,115,22,0.1)', color: '#fb923c', 
-          border: '1px solid rgba(249,115,22,0.2)', borderRadius: 6 
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', fontSize: 11, fontWeight: 600,
+          background: 'rgba(249,115,22,0.1)', color: '#fb923c',
+          border: '1px solid rgba(249,115,22,0.2)', borderRadius: 6
         }}>
           <Clock size={10} /> Due Today
         </span>
       );
     }
-    
+
     if (status === 'due_soon') {
       return (
-        <span style={{ 
-          display: 'inline-flex', alignItems: 'center', gap: 4, 
-          padding: '2px 8px', fontSize: 11, fontWeight: 600, 
-          background: 'rgba(234,179,8,0.1)', color: '#facc15', 
-          border: '1px solid rgba(234,179,8,0.2)', borderRadius: 6 
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '2px 8px', fontSize: 11, fontWeight: 600,
+          background: 'rgba(234,179,8,0.1)', color: '#facc15',
+          border: '1px solid rgba(234,179,8,0.2)', borderRadius: 6
         }}>
           <Clock size={10} /> Due Soon
         </span>
       );
     }
-    
+
     return (
-      <span style={{ 
-        display: 'inline-flex', alignItems: 'center', gap: 4, 
-        padding: '2px 8px', fontSize: 11, fontWeight: 600, 
-        background: 'rgba(34,197,94,0.1)', color: '#4ade80', 
-        border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6 
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 8px', fontSize: 11, fontWeight: 600,
+        background: 'rgba(34,197,94,0.1)', color: '#4ade80',
+        border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6
       }}>
         <CheckCircle2 size={10} /> Up to Date
       </span>
@@ -1057,9 +1057,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
               <option value="ongoing" style={{ background: '#0f1218' }}>🟢 Ongoing ({mastStats.ongoing})</option>
               <option value="completed" style={{ background: '#0f1218' }}>🔵 Completed ({mastStats.completed})</option>
               <option value="pending_launch" style={{ background: '#0f1218' }}>🟣 Pending Launch ({mastStats.pendingLaunch})</option>
-              <option value="pending_contract" style={{ background: '#0f1218' }}>🟡 Pending Contract ({clients.filter(c => (c.projectStatus||'ongoing') === 'pending_contract').length})</option>
-              <option value="on_hold" style={{ background: '#0f1218' }}>🟠 On Hold ({clients.filter(c => (c.projectStatus||'ongoing') === 'on_hold').length})</option>
-              <option value="cancelled" style={{ background: '#0f1218' }}>🔴 Cancelled ({clients.filter(c => (c.projectStatus||'ongoing') === 'cancelled').length})</option>
+              <option value="pending_contract" style={{ background: '#0f1218' }}>🟡 Pending Contract ({clients.filter(c => (c.projectStatus || 'ongoing') === 'pending_contract').length})</option>
+              <option value="on_hold" style={{ background: '#0f1218' }}>🟠 On Hold ({clients.filter(c => (c.projectStatus || 'ongoing') === 'on_hold').length})</option>
+              <option value="cancelled" style={{ background: '#0f1218' }}>🔴 Cancelled ({clients.filter(c => (c.projectStatus || 'ongoing') === 'cancelled').length})</option>
             </select>
             <select style={{ ...S.inp, width: 'auto', minWidth: 150, cursor: 'pointer', fontSize: 13 }} value={mastTypeFilter} onChange={e => { setMastTypeFilter(e.target.value); setMastPage(1); }}>
               <option value="all" style={{ background: '#0f1218' }}>All Types</option>
@@ -1110,7 +1110,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                   const hasFinancials = contract > 0;
                   const overdueCount = (c.installments || []).filter(i => i.status === 'overdue').length;
                   const billStatus = c.billingType && c.nextDueDate ? getDueDateStatus(c.nextDueDate) : null;
-                  
+
                   let cardBorder = 'rgba(255,255,255,0.08)';
                   let cardBg = 'rgba(255,255,255,0.04)';
                   if (overdueCount > 0 || billStatus === 'overdue') {
@@ -1120,7 +1120,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                     cardBorder = 'rgba(251,191,36,0.4)';
                     cardBg = 'rgba(251,191,36,0.08)';
                   }
-                  
+
                   return (
                     <div key={c.id} style={{ background: cardBg, border: `1px solid ${cardBorder}`, borderRadius: 14, display: 'flex', flexDirection: 'column', transition: 'border-color 0.2s, background-color 0.2s' }}>
                       {/* Card Header */}
@@ -1227,19 +1227,19 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                                   const isUSD = c.billingCurrency === 'USD';
                                   const rate = Number(c.billingRate || 0);
                                   const exRate = Number(c.exchangeRate || 58.0);
-                                  
+
                                   const rateInPHP = isUSD ? rate * exRate : rate;
                                   let clientBillTotal = c.billingType === 'flat_rate' ? rateInPHP : rateInPHP * Number(c.currentBookingsCount || 0);
                                   if (c.maintenancePlan && c.maintenancePlan !== 'none') clientBillTotal += Number(c.maintenanceRate || 0);
-                                  
+
                                   const phpDisplay = `₱${clientBillTotal.toLocaleString('en-PH')}`;
-                                  
+
                                   if (isUSD) {
                                     let usdTotal = c.billingType === 'flat_rate' ? rate : rate * Number(c.currentBookingsCount || 0);
                                     // Note: Maintenance rate is always assumed to be in PHP, so we don't add it to the base USD display.
                                     return <>{phpDisplay} <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 400 }}>(${usdTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD' })})</span></>;
                                   }
-                                  
+
                                   return phpDisplay;
                                 })()}
                               </div>
@@ -1302,7 +1302,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                       const pct = contract > 0 ? Math.min(100, Math.round((collected / contract) * 100)) : 0;
                       const overdueCount = (c.installments || []).filter(i => i.status === 'overdue').length;
                       const billStatus = c.billingType && c.nextDueDate ? getDueDateStatus(c.nextDueDate) : null;
-                      
+
                       let rowBg = 'transparent';
                       if (overdueCount > 0 || billStatus === 'overdue') {
                         rowBg = 'rgba(248,113,113,0.08)';
@@ -1586,9 +1586,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                     const baseAmountPHP = client.billingType === 'flat_rate'
                       ? rateInPHP
                       : (client.billingType === 'per_booking' ? rateInPHP * (client.currentBookingsCount || 0) : 0);
-                    
+
                     const maintenanceAmt = (client.maintenancePlan && client.maintenancePlan !== 'none') ? Number(client.maintenanceRate || 0) : 0;
-                    
+
                     const amountDue = baseAmountPHP + maintenanceAmt;
 
                     const matchingPlan = maintenancePlans.find(p => p.name === client.maintenancePlan);
@@ -1629,7 +1629,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                                   (₱{rateInPHP.toLocaleString('en-PH', { minimumFractionDigits: 2 })} @ ₱{exRate.toFixed(2)}/USD)
                                 </div>
                               )}
-                              
+
                               {/* Additional Maintenance plan details */}
                               {client.maintenancePlan && client.maintenancePlan !== 'none' && (
                                 <div style={{ marginTop: 6, paddingTop: 4, borderTop: '1px dashed rgba(255,255,255,0.06)' }}>
@@ -1698,13 +1698,13 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                               </button>
                             )}
                             {client.billingType && canInvoiceClient && (
-                              <button 
-                                onClick={() => handleOpenGenerateInvoice(client)} 
-                                style={{ 
-                                  ...S.btn, 
-                                  background: 'linear-gradient(135deg,rgba(255,106,26,0.1),rgba(255,154,74,0.15))', 
-                                  color: '#ff9a4a', 
-                                  border: '1px solid rgba(255,106,26,0.3)' 
+                              <button
+                                onClick={() => handleOpenGenerateInvoice(client)}
+                                style={{
+                                  ...S.btn,
+                                  background: 'linear-gradient(135deg,rgba(255,106,26,0.1),rgba(255,154,74,0.15))',
+                                  color: '#ff9a4a',
+                                  border: '1px solid rgba(255,106,26,0.3)'
                                 }}
                               >
                                 <FileText size={13} /> Gen Invoice
@@ -1904,7 +1904,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 <label style={S.lbl}>Client Name</label>
                 <input style={S.inp} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Kharyl Simolde" required />
               </div>
-              
+
               <div>
                 <label style={S.lbl}>Business / Company</label>
                 <input style={S.inp} value={form.business} onChange={e => setForm(f => ({ ...f, business: e.target.value }))} placeholder="Optional" />
@@ -1918,10 +1918,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
               {/* Toggle to create portal account */}
               <div style={{ margin: '4px 0' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 13, cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={createPortalAccount} 
-                    onChange={e => setCreatePortalAccount(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={createPortalAccount}
+                    onChange={e => setCreatePortalAccount(e.target.checked)}
                     style={{ accentColor: '#ff6a1a', width: 15, height: 15 }}
                   />
                   Enable Client Portal Access (Creates Logins)
@@ -1938,10 +1938,10 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
               {/* Billing setup toggle */}
               <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 16, marginTop: 8 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
-                  <input 
-                    type="checkbox" 
-                    checked={billingSetup} 
-                    onChange={e => setBillingSetup(e.target.checked)} 
+                  <input
+                    type="checkbox"
+                    checked={billingSetup}
+                    onChange={e => setBillingSetup(e.target.checked)}
                     style={{ accentColor: '#ff6a1a', width: 16, height: 16 }}
                   />
                   Configure Billing Setup Now
@@ -2010,8 +2010,8 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
 
                     <div>
                       <label style={S.lbl}>
-                        {billingForm.billingType === 'flat_rate' 
-                          ? `Rate Fee (${billingForm.billingCurrency || 'PHP'})` 
+                        {billingForm.billingType === 'flat_rate'
+                          ? `Rate Fee (${billingForm.billingCurrency || 'PHP'})`
                           : `Fee per Booking (${billingForm.billingCurrency || 'PHP'})`}
                       </label>
                       <input
@@ -2197,8 +2197,8 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
 
                 <div>
                   <label style={S.lbl}>
-                    {editBillingForm.billingType === 'flat_rate' 
-                      ? `Rate Fee (${editBillingForm.billingCurrency || 'PHP'})` 
+                    {editBillingForm.billingType === 'flat_rate'
+                      ? `Rate Fee (${editBillingForm.billingCurrency || 'PHP'})`
                       : `Fee per Booking (${editBillingForm.billingCurrency || 'PHP'})`}
                   </label>
                   <input
@@ -2309,20 +2309,20 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
               </div>
 
               <LoadingButton
-                type="submit" 
+                type="submit"
                 loading={savingBilling}
                 loadingLabel="Saving billing info…"
-                style={{ 
-                  ...S.btn, 
-                  background: savingBilling ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)', 
-                  color: '#fff', 
-                  padding: '13px 0', 
-                  justifyContent: 'center', 
-                  fontSize: 15, 
-                  fontWeight: 600, 
-                  boxShadow: savingBilling ? 'none' : '0 4px 16px rgba(255,106,26,0.3)', 
-                  width: '100%', 
-                  marginTop: 16 
+                style={{
+                  ...S.btn,
+                  background: savingBilling ? 'rgba(255,106,26,0.4)' : 'linear-gradient(135deg,#ff6a1a,#ff9a4a)',
+                  color: '#fff',
+                  padding: '13px 0',
+                  justifyContent: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                  boxShadow: savingBilling ? 'none' : '0 4px 16px rgba(255,106,26,0.3)',
+                  width: '100%',
+                  marginTop: 16
                 }}
               >
                 Save Configuration
@@ -2477,7 +2477,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                       <div style={S.lbl}>Contract Value</div>
                       <div style={{ color: '#fff', fontSize: 16, fontWeight: 700 }}>₱{contract.toLocaleString('en-PH')}</div>
                     </div>
-                    
+
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Collected (₱{collected.toLocaleString('en-PH')})</span>
@@ -2498,7 +2498,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                   {detailClient.paymentScheme !== 'full' && (
                     <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 16 }}>
                       <div style={{ ...S.lbl, marginBottom: 16 }}>Payment Timeline</div>
-                      
+
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {/* Downpayment Row */}
                         {detailClient.downpaymentAmount > 0 && (
@@ -2582,11 +2582,11 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
             </div>
 
             <form onSubmit={handleSaveMastEdit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              
+
               {/* Section 1: Project Info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <h4 style={{ color: '#fff', fontSize: 15, margin: 0, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>1. Project Information</h4>
-                
+
                 <div>
                   <label style={S.lbl}>Project Status</label>
                   <select style={{ ...S.inp, cursor: 'pointer' }} value={mastEditForm.projectStatus} onChange={e => setMastEditForm(f => ({ ...f, projectStatus: e.target.value }))}>
@@ -2602,9 +2602,9 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={S.lbl}>Project Type</label>
-                    <select 
-                      style={{ ...S.inp, cursor: 'pointer', marginBottom: mastCustomTypeOpen ? 8 : 0 }} 
-                      value={mastCustomTypeOpen ? '__custom__' : (mastEditForm.projectType || '')} 
+                    <select
+                      style={{ ...S.inp, cursor: 'pointer', marginBottom: mastCustomTypeOpen ? 8 : 0 }}
+                      value={mastCustomTypeOpen ? '__custom__' : (mastEditForm.projectType || '')}
                       onChange={e => {
                         if (e.target.value === '__custom__') {
                           setMastCustomTypeOpen(true);
@@ -2620,11 +2620,11 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
                       <option value="__custom__" style={{ background: '#0f1218' }}>+ Other (Custom Type)...</option>
                     </select>
                     {mastCustomTypeOpen && (
-                      <input 
-                        style={S.inp} 
-                        placeholder="Type custom project type..." 
-                        value={mastEditForm.projectType} 
-                        onChange={e => setMastEditForm(f => ({ ...f, projectType: e.target.value }))} 
+                      <input
+                        style={S.inp}
+                        placeholder="Type custom project type..."
+                        value={mastEditForm.projectType}
+                        onChange={e => setMastEditForm(f => ({ ...f, projectType: e.target.value }))}
                         autoFocus
                       />
                     )}
@@ -2662,7 +2662,7 @@ export default function AdminClients({ firebaseUser, isSuperAdmin, can, initialS
               {/* Section 2: Financials */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <h4 style={{ color: '#fff', fontSize: 15, margin: 0, borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 8 }}>2. Financials & Payment Scheme</h4>
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
                     <label style={S.lbl}>Contract Total (₱)</label>

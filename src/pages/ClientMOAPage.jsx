@@ -9,7 +9,7 @@ import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',

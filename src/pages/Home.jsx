@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { usePageSEO } from '../hooks/usePageSEO';
-import { FAQSection } from '../components/sections/FAQ';
+import { ClientProofBento } from '../components/sections/ClientProofBento';
 import {
     ArrowRight,
     ArrowSquareOut,
@@ -31,28 +31,6 @@ const sectionMotion = {
     variants: fadeUp,
 };
 
-const businessMarqueeLogos = [
-    { name: 'Dr. Humba', src: '/logos/drhumbalogonew.png' },
-    { name: 'Chibs N Dink', src: '/logos/chibsndinknew.png' },
-    { name: 'Sosyal Dinkers', src: '/logos/sosyaldinkers.png' },
-    { name: 'Man and Paddle', src: '/logos/manandpaddle.png' },
-    { name: 'KennyDink', src: '/logos/kennydinklogo.png' },
-    { name: 'Talisay Chamber', src: '/logos/talisaychamber.png' },
-    { name: 'Jump Serve Mandaue', src: '/logos/jumpservemandaue.png' },
-    { name: 'CPRMED', src: '/logos/cprmedlogo.png' },
-
-    { name: 'Jump Serve Mactan', src: '/logos/jumpservemactan.png' },
-    { name: 'Pickleball Avenue', src: '/logos/nickleballavenue.png' },
-    { name: 'The Pickle Point Cebu', src: '/logos/thepicklepoint.png' },
-    { name: 'Firsel Tattoo', src: '/logos/firseltattoonew.png' },
-    { name: 'Pater ni CJ', src: '/logos/paternicj.png' },
-    { name: 'IMS-US', src: '/logos/ims-us.png' },
-    { name: 'PDRRMO', src: '/logos/pdrrmo.jpg' },
-    { name: 'Surigao del Norte', src: '/logos/surigaodelnorte.jpg' },
-    { name: 'Slide Two', src: '/logos/slidetwo.png' },
-    { name: 'The Halo Hub', src: '/logos/thehalohub.jpg' },
-    { name: 'KBDF Luxury', src: '/logos/kbdflogotext.jpg' },
-];
 
 const businessSystemShowcases = [
     {
@@ -533,7 +511,7 @@ function BrowserStack({ title, projects }) {
 
 function UnifiedPortfolioSection() {
     return (
-        <section id="portfolio" className="landing-section unified-portfolio-section">
+        <section id="portfolio" className="landing-section unified-portfolio-section" style={{ paddingBottom: '2.5rem' }}>
             <div className="landing-shell">
                 <SectionHeader
                     eyebrow="Selected Systems"
@@ -574,33 +552,6 @@ function PartnershipValueSection() {
                         );
                     })}
                 </div>
-            </div>
-        </section>
-    );
-}
-
-function TrustedClientsSection() {
-    return (
-        <section id="clients" className="landing-section trusted-clients-section" style={{ paddingBottom: '6rem', paddingTop: '4rem' }}>
-            <div className="landing-shell">
-                <p className="trusted-label" style={{ textAlign: 'center', marginBottom: '3rem', fontSize: '0.9rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.2em', fontWeight: '700' }}>
-                    Trusted by Our Clients
-                </p>
-            </div>
-            <div className="flex flex-wrap justify-center items-center w-full max-w-[1800px] mx-auto px-4 md:px-[4vw] gap-x-8 gap-y-10 md:gap-x-24 md:gap-y-16">
-                {businessMarqueeLogos.map((item, index) => (
-                    <div
-                        key={`${item.name}-${index}`}
-                        className="flex justify-center items-center w-24 h-12 sm:w-32 sm:h-16 md:w-48 md:h-24 lg:w-[240px] lg:h-[120px] transition-all duration-300 opacity-50 grayscale hover:opacity-100 hover:grayscale-0"
-                    >
-                        <img
-                            src={item.src}
-                            alt={`${item.name} logo`}
-                            loading="lazy"
-                            className="max-w-full max-h-full object-contain"
-                        />
-                    </div>
-                ))}
             </div>
         </section>
     );
@@ -652,9 +603,8 @@ export function Home() {
         <div className="reference-landing premium-landing">
             <HeroSection />
             <UnifiedPortfolioSection />
-            <TrustedClientsSection />
+            <ClientProofBento />
             <PartnershipValueSection />
-            <FAQSection />
             <FinalCta />
         </div>
     );

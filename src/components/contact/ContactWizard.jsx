@@ -188,11 +188,9 @@ export function ContactWizard({ onSwitchToSimple }) {
             .map((fid) => capabilities.find((c) => c.id === fid)?.label)
             .filter(Boolean);
 
-        const goalSummary = `[${activeBlueprint.title}] Category: ${selectedCategory?.title || 'Custom'} | Features: ${
-            featureLabels.length > 0 ? featureLabels.join(', ') : 'Standard Suite'
-        } | Timeline: ${activeTimeline.timeframe}${
-            lead.notes ? ` | Notes: ${lead.notes.trim()}` : ''
-        }`;
+        const goalSummary = `[${activeBlueprint.title}] Category: ${selectedCategory?.title || 'Custom'} | Features: ${featureLabels.length > 0 ? featureLabels.join(', ') : 'Standard Suite'
+            } | Timeline: ${activeTimeline.timeframe}${lead.notes ? ` | Notes: ${lead.notes.trim()}` : ''
+            }`;
 
         try {
             await addDoc(collection(db, 'contactSubmissions'), {
@@ -318,13 +316,12 @@ export function ContactWizard({ onSwitchToSimple }) {
                     {[1, 2, 3, 4].map((i) => (
                         <div
                             key={i}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${
-                                i === step
+                            className={`h-1.5 rounded-full transition-all duration-300 ${i === step
                                     ? 'w-6 bg-primary'
                                     : i < step
-                                    ? 'w-3 bg-white/40'
-                                    : 'w-2 bg-white/10'
-                            }`}
+                                        ? 'w-3 bg-white/40'
+                                        : 'w-2 bg-white/10'
+                                }`}
                         />
                     ))}
                 </div>
@@ -359,27 +356,24 @@ export function ContactWizard({ onSwitchToSimple }) {
                                         key={cat.id}
                                         type="button"
                                         onClick={() => handleCategorySelect(cat)}
-                                        className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between group ${
-                                            isSelected
+                                        className={`p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between group ${isSelected
                                                 ? 'bg-primary/15 border-primary shadow-[0_0_20px_rgba(20,184,166,0.2)]'
                                                 : 'bg-white/4 border-white/8 hover:border-white/20 hover:bg-white/7'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center justify-between mb-3">
                                             <div
-                                                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
-                                                    isSelected
+                                                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${isSelected
                                                         ? 'bg-primary text-black'
                                                         : 'bg-white/8 text-white/80 group-hover:text-white group-hover:bg-white/12'
-                                                }`}
+                                                    }`}
                                             >
                                                 <CatIcon size={20} weight="duotone" />
                                             </div>
                                             <ArrowRight
                                                 size={14}
-                                                className={`transition-transform duration-200 ${
-                                                    isSelected ? 'text-primary translate-x-0.5' : 'text-white/30 group-hover:text-white/60 group-hover:translate-x-0.5'
-                                                }`}
+                                                className={`transition-transform duration-200 ${isSelected ? 'text-primary translate-x-0.5' : 'text-white/30 group-hover:text-white/60 group-hover:translate-x-0.5'
+                                                    }`}
                                             />
                                         </div>
                                         <div>
@@ -425,16 +419,14 @@ export function ContactWizard({ onSwitchToSimple }) {
                                         key={cap.id}
                                         type="button"
                                         onClick={() => toggleFeature(cap.id)}
-                                        className={`p-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${
-                                            isSelected
+                                        className={`p-3.5 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center gap-3 ${isSelected
                                                 ? 'bg-primary/15 border-primary/80 shadow-[0_0_15px_rgba(20,184,166,0.15)] text-white'
                                                 : 'bg-white/4 border-white/8 hover:border-white/20 hover:bg-white/7 text-white/70 hover:text-white'
-                                        }`}
+                                            }`}
                                     >
                                         <div
-                                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                                                isSelected ? 'bg-primary text-black' : 'bg-white/8 text-white/60'
-                                            }`}
+                                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'bg-primary text-black' : 'bg-white/8 text-white/60'
+                                                }`}
                                         >
                                             <CapIcon size={16} weight="duotone" />
                                         </div>
@@ -485,17 +477,15 @@ export function ContactWizard({ onSwitchToSimple }) {
                                         key={timeline.id}
                                         type="button"
                                         onClick={() => handleTimelineSelect(timeline)}
-                                        className={`w-full p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center justify-between group ${
-                                            isSelected
+                                        className={`w-full p-4 rounded-xl border text-left transition-all duration-200 cursor-pointer flex items-center justify-between group ${isSelected
                                                 ? 'bg-primary/15 border-primary shadow-[0_0_20px_rgba(20,184,166,0.2)]'
                                                 : 'bg-white/4 border-white/8 hover:border-white/20 hover:bg-white/7'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-center gap-4">
                                             <div
-                                                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                                                    isSelected ? 'bg-primary text-black' : 'bg-white/8 text-white/70'
-                                                }`}
+                                                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary text-black' : 'bg-white/8 text-white/70'
+                                                    }`}
                                             >
                                                 <Clock size={20} weight="duotone" />
                                             </div>
@@ -538,10 +528,7 @@ export function ContactWizard({ onSwitchToSimple }) {
                         {/* Dynamic Blueprint Card */}
                         <div className="p-5 rounded-2xl bg-white/5 border border-primary/30 shadow-[0_0_30px_rgba(20,184,166,0.12)] relative overflow-hidden">
                             <div className="flex items-center justify-between gap-2 mb-3">
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/20 border border-primary/40 text-[10px] font-bold text-primary uppercase tracking-wider">
-                                    <Sparkle size={12} weight="fill" />
-                                    Custom Blueprint Recommended
-                                </div>
+
                                 <span className="text-xs font-semibold text-white/60">
                                     {activeTimeline.timeframe}
                                 </span>

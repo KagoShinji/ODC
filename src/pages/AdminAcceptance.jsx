@@ -7,7 +7,7 @@ import { useSystemModal } from '../components/ui/SystemModalContext';
 import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',
@@ -483,7 +483,7 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              
+
               {/* Project Title & Cost */}
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <h4 style={{ color: '#ff9a4a', margin: '0 0 14px 0', fontSize: 13, fontWeight: 600 }}>Project Information</h4>

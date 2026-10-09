@@ -7,7 +7,7 @@ import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 08099855322',
   preparedBy: 'Johnjosefir Roca',
@@ -184,10 +184,10 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
 function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue = '', preparedBy = CO.preparedBy) {
   let paidInvs = invoices.filter(i => i.status === 'paid');
   let paidExps = expenses.filter(e => e.status === 'paid');
-  
+
   let reportTitle = 'SHAREHOLDER FINANCIAL REPORT';
   let scopeSubtitle = 'All-Time Performance';
-  
+
   if (scope === 'yearly') {
     paidInvs = paidInvs.filter(i => (i.date || '').startsWith(scopeValue));
     paidExps = paidExps.filter(e => (e.date || '').startsWith(scopeValue));
@@ -202,20 +202,20 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
     reportTitle = `MONTHLY SHAREHOLDER FINANCIAL REPORT - ${monthName.toUpperCase()}`;
     scopeSubtitle = `Monthly Performance for ${monthName}`;
   }
-  
+
   const totalRevenue = paidInvs.reduce((s, i) => s + (i.total || 0), 0);
   const totalExpenses = paidExps.reduce((s, e) => s + (e.amount || 0), 0);
   const netProfit = totalRevenue - totalExpenses;
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-  
+
   // Group expenses by category
   const catTotals = EXPENSE_CATEGORIES.reduce((acc, cat) => {
     acc[cat] = paidExps.filter(e => e.category === cat).reduce((sum, e) => sum + (e.amount || 0), 0);
     return acc;
   }, {});
-  
+
   const logoUrl = window.location.origin + '/images/odcclearlogo.png';
-  
+
   // Group by month
   const monthlyMap = {};
   paidInvs.forEach(inv => {
@@ -248,7 +248,7 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
         <td class="td ar ${net >= 0 ? 'pos' : 'neg'}">&#8369; ${fmt(net)}</td>
       </tr>`;
     }).join('');
-    
+
   // Category breakdown rows
   const catRows = EXPENSE_CATEGORIES.map(cat => {
     const amt = catTotals[cat] || 0;
@@ -259,9 +259,9 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
       <td class="td ar">${pct.toFixed(1)}%</td>
     </tr>`;
   }).join('');
-  
+
   let middleSection = '';
-  
+
   if (scope === 'monthly') {
     // Combine paid invoices and paid expenses into a single ledger list
     const ledger = [];
@@ -285,10 +285,10 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
         expense: exp.amount || 0
       });
     });
-    
+
     // Sort by date ascending
     ledger.sort((a, b) => a.date.localeCompare(b.date));
-    
+
     const ledgerRows = ledger.map(item => `
       <tr>
         <td class="td">${fmtDate(item.date)}</td>
@@ -299,7 +299,7 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
         <td class="td ar" style="color: #d93025">${item.expense > 0 ? '&#8369; ' + fmt(item.expense) : '—'}</td>
       </tr>
     `).join('');
-    
+
     middleSection = `
       <div class="section-title">Transactional Details</div>
       <table>
@@ -352,7 +352,7 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
       </table>
     `;
   }
-  
+
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${reportTitle}</title><style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
@@ -611,7 +611,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const getAvailablePeriods = () => {
     const years = new Set();
     const months = new Set();
-    
+
     invoices.forEach(inv => {
       if (inv.date) {
         years.add(inv.date.substring(0, 4));
@@ -624,7 +624,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
         months.add(exp.date.substring(0, 7));
       }
     });
-    
+
     return {
       years: Array.from(years).sort((a, b) => b.localeCompare(a)),
       months: Array.from(months).sort((a, b) => b.localeCompare(a))
@@ -651,7 +651,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   useEffect(() => {
     setLoading(true);
     setExpensesLoading(true);
-    
+
     // Listen to invoices
     const qInvoices = query(collection(db, 'invoices'), orderBy('createdAt', 'desc'));
     const unsubscribeInvoices = onSnapshot(qInvoices, (snap) => {
@@ -770,7 +770,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
       amount: Number(expenseForm.amount || 0),
       updatedAt: serverTimestamp(),
     };
-    
+
     const saveExpense = async () => {
       try {
         if (expenseEditingId) {
@@ -789,15 +789,15 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
     };
 
     if (!expenseEditingId) {
-      const isDuplicate = expenses.some(ex => 
-        ex.title?.toLowerCase() === expenseForm.title.toLowerCase() && 
-        ex.amount === Number(expenseForm.amount) && 
+      const isDuplicate = expenses.some(ex =>
+        ex.title?.toLowerCase() === expenseForm.title.toLowerCase() &&
+        ex.amount === Number(expenseForm.amount) &&
         ex.payee?.toLowerCase() === expenseForm.payee.toLowerCase() &&
         (new Date(ex.createdAt?.toDate ? ex.createdAt.toDate() : new Date()).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000)
       );
       if (isDuplicate) {
         setModal({
-          isOpen: true, title: 'Duplicate Detected', 
+          isOpen: true, title: 'Duplicate Detected',
           message: 'An expense with the same title, amount, and payee was recorded in the last 30 days. Save anyway?',
           type: 'confirm', icon: 'warning',
           onConfirm: async () => { await saveExpense(); }
@@ -806,7 +806,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
         return;
       }
     }
-    
+
     await saveExpense();
   };
 
@@ -859,7 +859,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const toggleInvoiceSelect = (id) => {
     setSelectedInvoices(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
-  
+
   const toggleSelectAllInvoices = () => {
     if (selectedInvoices.length === filteredInvoices.length && filteredInvoices.length > 0) {
       setSelectedInvoices([]);
@@ -915,7 +915,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const handleDuplicateInvoice = (inv) => {
     setForm({
       ...inv,
-      id: undefined, 
+      id: undefined,
       invoiceNumber: '', // let it generate a new one
       status: 'pending',
       preparedSigned: false,
@@ -961,21 +961,21 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const getMonthlyData = () => {
     const monthly = {};
     const getYearMonth = (dateStr) => (dateStr || '').substring(0, 7);
-    
+
     paid.forEach(inv => {
       const ym = getYearMonth(inv.date);
       if (!ym) return;
       if (!monthly[ym]) monthly[ym] = { revenue: 0, expenses: 0 };
       monthly[ym].revenue += (inv.total || 0);
     });
-    
+
     paidExpensesList.forEach(exp => {
       const ym = getYearMonth(exp.date);
       if (!ym) return;
       if (!monthly[ym]) monthly[ym] = { revenue: 0, expenses: 0 };
       monthly[ym].expenses += (exp.amount || 0);
     });
-    
+
     return Object.keys(monthly)
       .sort((a, b) => b.localeCompare(a))
       .map(ym => {
@@ -1003,11 +1003,11 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   // Invoice Filtering and Sorting
   const filteredInvoices = invoices
     .filter(inv => {
-      const matchSearch = (inv.billTo || '').toLowerCase().includes(invoiceSearch.toLowerCase()) || 
-                          (inv.project || '').toLowerCase().includes(invoiceSearch.toLowerCase()) || 
-                          (inv.invoiceNumber || '').toLowerCase().includes(invoiceSearch.toLowerCase());
+      const matchSearch = (inv.billTo || '').toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+        (inv.project || '').toLowerCase().includes(invoiceSearch.toLowerCase()) ||
+        (inv.invoiceNumber || '').toLowerCase().includes(invoiceSearch.toLowerCase());
       const matchStat = invoiceStatusFilter === 'All' || inv.status === invoiceStatusFilter;
-      
+
       let matchDate = true;
       if (globalMonthFilter !== 'All') {
         matchDate = (inv.date || '').substring(0, 7) === globalMonthFilter;
@@ -1100,14 +1100,14 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
           Page {currentPage} of {totalPages}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button 
+          <button
             disabled={currentPage === 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
             style={{ ...S.btn, background: currentPage === 1 ? 'transparent' : 'rgba(255,255,255,0.06)', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', padding: '6px 12px' }}
           >
             Previous
           </button>
-          <button 
+          <button
             disabled={currentPage === totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
             style={{ ...S.btn, background: currentPage === totalPages ? 'transparent' : 'rgba(255,255,255,0.06)', color: currentPage === totalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', padding: '6px 12px' }}
@@ -1144,7 +1144,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
 
   // MoM KPI Calculations
   let currentMonthStr, lastMonthStr;
-  
+
   if (globalMonthFilter !== 'All') {
     currentMonthStr = globalMonthFilter;
     const [y, m] = globalMonthFilter.split('-');
@@ -1202,8 +1202,8 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const totalInvTrend = calcTrend(cmTotalCount, lmTotalCount);
   const paidInvTrend = calcTrend(cmPaidCount, lmPaidCount);
   const unpaidInvTrend = calcTrend(cmUnpaidCount, lmUnpaidCount);
-  
-  const currentMonthName = globalMonthFilter !== 'All' 
+
+  const currentMonthName = globalMonthFilter !== 'All'
     ? new Date(Number(globalMonthFilter.split('-')[0]), Number(globalMonthFilter.split('-')[1]) - 1).toLocaleString('en-US', { month: 'long', year: 'numeric' })
     : new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
@@ -1215,9 +1215,9 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
       <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <h2 style={{ color: '#fff', fontSize: 20, fontWeight: 700, margin: 0 }}>Invoices & Finance</h2>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <select 
-            style={{ ...S.inp, width: 'auto', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }} 
-            value={globalMonthFilter} 
+          <select
+            style={{ ...S.inp, width: 'auto', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            value={globalMonthFilter}
             onChange={e => setGlobalMonthFilter(e.target.value)}
           >
             <option value="All" style={{ background: '#0f1218', color: '#fff' }}>All Time (KPIs show Current Month)</option>
@@ -1494,26 +1494,26 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                   {copiedId === inv.id ? <Check size={12} /> : <Copy size={12} />}
                                   <span className="hide-on-mobile">{copiedId === inv.id ? 'Copied Link!' : 'Copy Link'}</span>
                                 </button>
-                                
+
                                 {canCreateInvoice && (
                                   <button onClick={() => handleDuplicateInvoice(inv)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)', padding: 8 }} title="Duplicate"><Copy size={14} /></button>
                                 )}
 
                                 <button onClick={() => printInvoice(inv)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print Invoice"><Printer size={14} /> <span className="hide-on-mobile">Print</span></button>
-                                
+
                                 {canEditInvoice && (
                                   <button onClick={() => openEdit(inv)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit"><Edit2 size={14} /></button>
                                 )}
                               </div>
                             </td>
                           </tr>
-                          
+
                           {/* Expanded Details Row */}
                           {isExpanded && (
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.3)' }}>
                               <td colSpan={8} style={{ padding: '20px 32px' }}>
                                 <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-                                  
+
                                   {/* Line Items */}
                                   <div style={{ flex: '2 1 300px' }}>
                                     <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Line Items</div>
@@ -1542,22 +1542,22 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                     <div>
                                       <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Signatures</div>
                                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                        
+
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
                                           <span style={{ color: 'rgba(255,255,255,0.7)' }}>Prepared:</span>
                                           {inv.preparedSigned ? (
-                                            <span style={{ color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><PenTool size={12}/> Signed</span>
+                                            <span style={{ color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><PenTool size={12} /> Signed</span>
                                           ) : (
-                                            <span style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12}/> Unsigned</span>
+                                            <span style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> Unsigned</span>
                                           )}
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12 }}>
                                           <span style={{ color: 'rgba(255,255,255,0.7)' }}>Approved:</span>
                                           {inv.approvedSigned ? (
-                                            <span style={{ color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Award size={12}/> Signed</span>
+                                            <span style={{ color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}><Award size={12} /> Signed</span>
                                           ) : (
-                                            <span style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12}/> Unsigned</span>
+                                            <span style={{ color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}><Clock size={12} /> Unsigned</span>
                                           )}
                                         </div>
 
@@ -1568,7 +1568,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                   {/* Quick Actions */}
                                   <div style={{ flex: '1 1 150px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Quick Actions</div>
-                                    
+
                                     {canSignPrepared && !inv.preparedSigned && (
                                       <button onClick={() => handlePrepareSign(inv)} style={{ ...S.btn, width: '100%', justifyContent: 'center', background: 'rgba(96,165,250,0.15)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }} title="Sign as Prepared By">
                                         <PenTool size={12} /> Sign Prepared
@@ -1620,7 +1620,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
         <>
           {/* Expenses Summary Cards */}
           <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 28 }}>
-            
+
             {/* Total Outflow (Paid) */}
             <div style={{ ...S.card, border: '1px solid rgba(255,154,74,0.15)', background: 'linear-gradient(135deg, rgba(255,154,74,0.02), rgba(255,255,255,0.03))', display: 'flex', flexDirection: 'column' }}>
               <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -1952,7 +1952,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                 <button onClick={() => setReportModal(false)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
               </div>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>Select the scope of the financial report you want to view and generate.</div>
-              
+
               <div style={{ marginBottom: 18 }}>
                 <label style={S.lbl}>Report Scope</label>
                 <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginTop: 8 }}>

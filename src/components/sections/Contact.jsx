@@ -105,9 +105,9 @@ export function ContactSection() {
                                     {[
                                         { Icon: Envelope, label: 'Email', value: 'odysseyphitsolutions@gmail.com', href: 'mailto:odysseyphitsolutions@gmail.com' },
                                         { Icon: Phone, label: 'Phone', value: '0993-005-0994', href: 'tel:0993-005-0994' },
-                                        { Icon: MapPin, label: 'Address', value: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City', href: '#' },
-                                    // eslint-disable-next-line no-unused-vars
-              ].map(({ Icon, label, value, href }) => (
+                                        { Icon: MapPin, label: 'Address', value: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu', href: '#' },
+                                        // eslint-disable-next-line no-unused-vars
+                                    ].map(({ Icon, label, value, href }) => (
                                         <a
                                             key={label}
                                             href={href}

@@ -7,7 +7,7 @@ import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
 
 const CO = {
-  address: '3409 Pearl Corner Jade St. Casals Village, Mabolo, Cebu City',
+  address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
   email: 'odysseyphitsolutions@gmail.com',
   phone: '09930050994 / 09099855322',
   serviceProviderName: 'Johnjosfir B. Roca',
@@ -473,24 +473,24 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
         const parsed = JSON.parse(jsonStr);
         if (parsed.clientName || parsed.scope) data = parsed;
       }
-    // eslint-disable-next-line no-unused-vars
+      // eslint-disable-next-line no-unused-vars
     } catch (e) { /* ignore */ }
 
     if (!data.clientName && !data.scope) {
       const extract = (regex) => (aiText.match(regex)?.[1] || '').trim().replace(/\*|_/g, '');
       data.clientName = extract(/Client Name:?\s*([^\n]+)/i) || extract(/Name:?\s*([^\n]+)/i);
       data.clientBusiness = extract(/Business Name:?\s*([^\n]+)/i) || extract(/Company:?\s*([^\n]+)/i);
-      
+
       if (!data.clientBusiness) {
         const clientMatch = aiText.match(/([^\n]+)\s*\n+\(Hereinafter referred to as the [“"']Client[”"']\)/i);
         if (clientMatch) data.clientBusiness = clientMatch[1].trim();
       }
 
       data.clientAddress = extract(/Address:?\s*([^\n]+)/i);
-      
+
       const costRaw = extract(/Project Cost:?\s*(?:₱|PHP)?\s*([\d,.]+)/i) || extract(/pay (?:₱|PHP)?\s*([\d,.]+)/i);
       data.projectCost = costRaw ? costRaw.replace(/,/g, '') : '';
-      
+
       data.timeline = extract(/Timeline:?\s*([^\n]+)/i) || extract(/Development Timeline:?\s*([^\n]+)/i);
       data.maintenancePeriod = extract(/Maintenance(?: Period)?:?\s*([^\n]+)/i);
 
@@ -505,8 +505,8 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
           if (line.endsWith(':') || (line === line.toUpperCase() && line.length > 5 && !line.match(/^[-*]/))) {
             const cleanTitle = line.replace(/^[#\s]+/, '').replace(/[:*_*]/g, '').trim();
             if (cleanTitle) {
-               currentGroup = { id: Date.now() + Math.random(), title: cleanTitle, items: [] };
-               data.scope.push(currentGroup);
+              currentGroup = { id: Date.now() + Math.random(), title: cleanTitle, items: [] };
+              data.scope.push(currentGroup);
             }
           } else {
             // Treat as item
@@ -550,12 +550,12 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
     const extract = (regex) => (freeformText.match(regex)?.[1] || '').trim().replace(/\*|_/g, '');
     let cName = extract(/Client Name:?\s*([^\n]+)/i) || extract(/Name:?\s*([^\n]+)/i);
     let cBusiness = extract(/Business Name:?\s*([^\n]+)/i) || extract(/Company:?\s*([^\n]+)/i);
-    
+
     if (!cBusiness) {
       const clientMatch = freeformText.match(/([^\n]+)\s*\n+\(Hereinafter referred to as the [“"']Client[”"']\)/i);
       if (clientMatch) cBusiness = clientMatch[1].trim();
     }
-    
+
     if (!cName && cBusiness) cName = cBusiness;
 
     setFfFooter(prev => ({
@@ -568,7 +568,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
   const handleFreeformSubmit = async () => {
     if (!freeformText.trim()) return;
     setSaving(true);
-    
+
     const payload = {
       isFreeform: true,
       freeformContent: freeformText,
@@ -602,13 +602,13 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
         const now = new Date();
         const num = `MOA-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(moas.length + 1).padStart(3, '0')}`;
         payload.moaNumber = num;
-        
+
         const docRef = await addDoc(collection(db, 'moas'), payload);
-        
+
         setShowFreeformModal(false);
         setFreeformText('');
         load();
-        
+
         // Auto print
         printMOA({ ...payload, id: docRef.id });
       }
@@ -956,11 +956,11 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
               <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>⚡ Quick Paste (Freeform MOA)</h3>
               <button onClick={() => setShowFreeformModal(false)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
-            
+
             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
               Paste or edit the entire raw text of your MOA here. The system will automatically generate a print-ready MOA exactly as you pasted it, enclosed within the official ODC letterhead and signature blocks.
             </p>
-            
+
             <textarea
               style={{ ...S.inp, resize: 'vertical', minHeight: 300, marginBottom: 20, fontFamily: 'monospace', fontSize: 12, padding: 16, lineHeight: 1.6 }}
               placeholder="Paste raw MOA text here..."
@@ -974,7 +974,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
                 <h4 style={{ color: '#ff9a4a', margin: 0, fontSize: 14, fontWeight: 600 }}>Footer / Signature Details</h4>
                 <button type="button" onClick={autoExtractFfFooter} style={{ ...S.btn, background: 'rgba(96,165,250,0.15)', color: '#60a5fa', fontSize: 11, padding: '4px 10px' }}>⚡ Auto-fill from text</button>
               </div>
-              
+
               <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                 <div>
                   <label style={S.lbl}>Client Representative (Party A)</label>
@@ -985,7 +985,7 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
                   <input type="date" style={{ ...S.inp, fontSize: 13 }} value={ffFooter.date} onChange={e => setFfFooter(prev => ({ ...prev, date: e.target.value }))} />
                 </div>
               </div>
-              
+
               <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.lbl}>Provider Representative (Party B)</label>
@@ -996,13 +996,13 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
                   <input style={{ ...S.inp, fontSize: 13 }} value={ffFooter.providerBusiness} onChange={e => setFfFooter(prev => ({ ...prev, providerBusiness: e.target.value }))} />
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16 }}>
                 <input type="checkbox" id="ffHideFooter" checked={ffFooter.hideFooter} onChange={e => setFfFooter(prev => ({ ...prev, hideFooter: e.target.checked }))} style={{ width: 16, height: 16, cursor: 'pointer' }} />
                 <label htmlFor="ffHideFooter" style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, cursor: 'pointer' }}>Hide Signature Footer</label>
               </div>
             </div>
-            
+
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setShowFreeformModal(false)} disabled={saving} style={{ ...S.btn, flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
               <LoadingButton onClick={handleFreeformSubmit} loading={saving} loadingLabel="Saving…" disabled={!freeformText.trim()} style={{ ...S.btn, flex: 2, justifyContent: 'center', background: (!freeformText.trim() || saving) ? 'rgba(96,165,250,0.2)' : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontWeight: 600, boxShadow: (!freeformText.trim() || saving) ? 'none' : '0 4px 14px rgba(59,130,246,0.3)' }}>
