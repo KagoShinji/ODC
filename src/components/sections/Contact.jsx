@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
-import { Envelope, Phone, MapPin, PaperPlaneRight, CheckCircle, Warning, FacebookLogo } from '@phosphor-icons/react';
+import { Envelope, Phone, MapPin, PaperPlaneRight, CheckCircle, Warning, FacebookLogo, ArrowRight, Sparkle } from '@phosphor-icons/react';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import LoadingButton from '../ui/LoadingButton';
+import { ContactWizard } from '../contact/ContactWizard';
 
 const easeOut = [0.22, 1, 0.36, 1];
 
@@ -28,6 +29,7 @@ const labelClass = 'block text-xs font-semibold uppercase tracking-widest text-w
 const initialForm = { name: '', email: '', company: '', goal: '' };
 
 export function ContactSection() {
+    const [mode, setMode] = useState('wizard'); // 'wizard' | 'simple'
     const [form, setForm] = useState(initialForm);
     const [status, setStatus] = useState('idle'); // idle | loading | success | error
     const [errorMsg, setErrorMsg] = useState('');
@@ -163,126 +165,151 @@ export function ContactSection() {
                         </div>
                     </Motion.div>
 
-                    {/* Right Column - Form */}
+                    {/* Right Column - Interactive Wizard or Standard Form */}
                     <Motion.div
                         initial="hidden"
                         whileInView="show"
                         viewport={{ once: true, margin: '-90px' }}
                         transition={{ duration: 0.85, delay: 0.2, ease: easeOut }}
                         variants={fadeUp}
-                        className="min-w-0 md:pt-14 lg:pt-16"
+                        className="min-w-0"
                     >
-                        <div className="p-8 md:p-10 rounded-2xl border border-white/10 bg-white/3 backdrop-blur-xl">
-                            {status === 'success' ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <Motion.div
-                                        initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ duration: 0.5, ease: easeOut }}
-                                        className="mb-6 w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center"
-                                    >
-                                        <CheckCircle size={32} weight="duotone" className="text-white" />
-                                    </Motion.div>
-                                    <h3 className="text-xl font-black text-white mb-2">Message received</h3>
-                                    <p className="text-white/60 text-sm max-w-xs mb-6">
-                                        Thanks for reaching out. Our team will review and respond within 24 hours.
-                                    </p>
-                                    <button
-                                        onClick={() => setStatus('idle')}
-                                        className="text-sm font-semibold text-white/70 hover:text-white transition-colors"
-                                    >
-                                        Send another message
-                                    </button>
-                                </div>
-                            ) : (
-                                <form className="space-y-6" noValidate onSubmit={handleSubmit}>
-                                    <div>
-                                        <label htmlFor="contact-name" className={labelClass}>Full Name</label>
-                                        <input
-                                            id="contact-name"
-                                            name="name"
-                                            type="text"
-                                            autoComplete="name"
-                                            className={inputClass}
-                                            placeholder="John Doe"
-                                            value={form.name}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="contact-email" className={labelClass}>Email Address</label>
-                                        <input
-                                            id="contact-email"
-                                            name="email"
-                                            type="email"
-                                            autoComplete="email"
-                                            className={inputClass}
-                                            placeholder="john@example.com"
-                                            value={form.email}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="contact-company" className={labelClass}>
-                                            Company <span className="normal-case font-normal text-white/40">(Optional)</span>
-                                        </label>
-                                        <input
-                                            id="contact-company"
-                                            name="company"
-                                            type="text"
-                                            autoComplete="organization"
-                                            className={inputClass}
-                                            placeholder="Acme Inc."
-                                            value={form.company}
-                                            onChange={handleChange}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label htmlFor="contact-goal" className={labelClass}>What's your goal?</label>
-                                        <textarea
-                                            id="contact-goal"
-                                            name="goal"
-                                            rows={4}
-                                            className={`${inputClass} resize-none`}
-                                            placeholder="Example: Build a booking system to reduce no-shows by 40%"
-                                            value={form.goal}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-
-                                    {status === 'error' && (
+                        {mode === 'wizard' ? (
+                            <ContactWizard onSwitchToSimple={() => setMode('simple')} />
+                        ) : (
+                            <div className="p-8 md:p-10 rounded-2xl border border-white/10 bg-white/3 backdrop-blur-xl">
+                                {status === 'success' ? (
+                                    <div className="flex flex-col items-center justify-center py-16 text-center">
                                         <Motion.div
-                                            initial={{ opacity: 0, y: -10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            transition={{ duration: 0.5, ease: easeOut }}
+                                            className="mb-6 w-16 h-16 rounded-full bg-white/10 border border-white/20 flex items-center justify-center"
                                         >
-                                            <Warning size={18} weight="fill" className="text-red-400 shrink-0 mt-0.5" />
-                                            <p className="text-sm text-red-300">{errorMsg}</p>
+                                            <CheckCircle size={32} weight="duotone" className="text-white" />
                                         </Motion.div>
-                                    )}
+                                        <h3 className="text-xl font-black text-white mb-2">Message received</h3>
+                                        <p className="text-white/60 text-sm max-w-xs mb-6">
+                                            Thanks for reaching out. Our team will review and respond within 24 hours.
+                                        </p>
+                                        <button
+                                            onClick={() => setStatus('idle')}
+                                            className="text-sm font-semibold text-white/70 hover:text-white transition-colors cursor-pointer"
+                                        >
+                                            Send another message
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <form className="space-y-6" noValidate onSubmit={handleSubmit}>
+                                        <div className="flex items-center justify-between pb-3 border-b border-white/8">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-white/80">Standard Inquiry Form</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setMode('wizard')}
+                                                className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Sparkle size={12} weight="fill" />
+                                                Switch to Guided Scoper
+                                            </button>
+                                        </div>
 
-                                    <LoadingButton
-                                        type="submit"
-                                        loading={status === 'loading'}
-                                        loadingLabel="Sending…"
-                                        className="w-full px-6 py-3.5 rounded-xl bg-white text-[#101718] font-black text-sm uppercase tracking-tight transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
-                                    >
-                                        Send Message
-                                        <PaperPlaneRight size={16} weight="bold" />
-                                    </LoadingButton>
+                                        <div>
+                                            <label htmlFor="contact-name" className={labelClass}>Full Name</label>
+                                            <input
+                                                id="contact-name"
+                                                name="name"
+                                                type="text"
+                                                autoComplete="name"
+                                                className={inputClass}
+                                                placeholder="John Doe"
+                                                value={form.name}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
 
-                                    <p className="text-xs text-white/40 text-center">
-                                        We'll respond within 24 hours. No spam, ever.
-                                    </p>
-                                </form>
-                            )}
-                        </div>
+                                        <div>
+                                            <label htmlFor="contact-email" className={labelClass}>Email Address</label>
+                                            <input
+                                                id="contact-email"
+                                                name="email"
+                                                type="email"
+                                                autoComplete="email"
+                                                className={inputClass}
+                                                placeholder="john@example.com"
+                                                value={form.email}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="contact-company" className={labelClass}>
+                                                Company <span className="normal-case font-normal text-white/40">(Optional)</span>
+                                            </label>
+                                            <input
+                                                id="contact-company"
+                                                name="company"
+                                                type="text"
+                                                autoComplete="organization"
+                                                className={inputClass}
+                                                placeholder="Acme Inc."
+                                                value={form.company}
+                                                onChange={handleChange}
+                                                required={false}
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="contact-goal" className={labelClass}>What's your goal?</label>
+                                            <textarea
+                                                id="contact-goal"
+                                                name="goal"
+                                                rows={4}
+                                                className={`${inputClass} resize-none`}
+                                                placeholder="Example: Build a booking system to reduce no-shows by 40%"
+                                                value={form.goal}
+                                                onChange={handleChange}
+                                                required
+                                            />
+                                        </div>
+
+                                        {status === 'error' && (
+                                            <Motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                className="flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20"
+                                            >
+                                                <Warning size={18} weight="fill" className="text-red-400 shrink-0 mt-0.5" />
+                                                <p className="text-sm text-red-300">{errorMsg}</p>
+                                            </Motion.div>
+                                        )}
+
+                                        <LoadingButton
+                                            type="submit"
+                                            loading={status === 'loading'}
+                                            loadingLabel="Sending…"
+                                            className="w-full px-6 py-3.5 rounded-xl bg-white text-[#101718] font-black text-sm uppercase tracking-tight transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 cursor-pointer"
+                                        >
+                                            Send Message
+                                            <PaperPlaneRight size={16} weight="bold" />
+                                        </LoadingButton>
+
+                                        <div className="mt-4 pt-4 border-t border-white/8 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => setMode('wizard')}
+                                                className="text-xs text-primary hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                                            >
+                                                <Sparkle size={13} weight="fill" />
+                                                <span>Want guided recommendations? Use interactive system scoper</span>
+                                                <ArrowRight size={12} weight="bold" />
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+                        )}
                     </Motion.div>
                 </div>
             </div>
