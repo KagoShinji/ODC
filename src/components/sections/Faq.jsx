@@ -1,73 +1,107 @@
 import { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { CaretDown, Sparkle } from '@phosphor-icons/react';
+
+const easeOut = [0.22, 1, 0.36, 1];
 
 const faqs = [
     {
-        question: 'How much does a typical project cost?',
-        answer: 'Pricing depends on scope, complexity, and timeline. Most projects start with a strategy call so we can recommend a right-sized plan and budget.',
+        question: 'What services does OdysseyPH IT Solutions specialize in?',
+        answer: 'OdysseyPH designs and builds custom business systems, healthcare clinic management platforms, multi-venue court booking software (like ODC-Courts), and responsive web applications for businesses, medical practices, and government agencies in the Philippines.',
     },
     {
-        question: 'How long does delivery usually take?',
-        answer: 'Smaller websites can launch in 3 to 5 weeks. Larger web and mobile platforms may take 8 to 16 weeks with iterative milestones.',
+        question: 'Does OdysseyPH build custom clinic and medical management systems?',
+        answer: 'Yes. OdysseyPH develops secure clinical management solutions featuring electronic medical records (EMR), patient appointment scheduling, billing, and doctor workflows—proven in deployments like Odyssey Family Clinic, CPRMed, and specialist orthopedic institutes.',
     },
     {
-        question: 'Can you work with our existing systems?',
-        answer: 'Yes. We often integrate with existing CRMs, appointment tools, payment gateways, and analytics platforms to avoid unnecessary rebuilds.',
+        question: 'What is ODC-Courts and what sports venues use OdysseyPH systems?',
+        answer: 'ODC-Courts is a specialized court reservation network for sports centers and pickleball venues. OdysseyPH systems power online reservations and court operations for venues like The Pickle Point Cebu, Jump Serve Sports Center (Mandaue & Mactan), KennyDink Moalboal, Nickleball Avenue, and Sosyal Dinkers Davao.',
     },
     {
-        question: 'Do you build solutions for clinics and service businesses?',
-        answer: 'Yes. We regularly build scheduling, inquiry, and operations workflows for clinics, retail teams, and service-based companies.',
+        question: 'Where is OdysseyPH IT Solutions located, and do you serve clients nationwide?',
+        answer: 'OdysseyPH is headquartered in Cebu, Philippines, providing custom software engineering and digital transformation services to clients across Cebu, Metro Manila, Davao, Northern Mindanao, and international markets.',
     },
     {
-        question: 'Do you provide support after launch?',
-        answer: 'Yes. We offer post-launch support, performance monitoring, and continuous improvements based on your growth goals.',
+        question: 'What technology stack does OdysseyPH use for software development?',
+        answer: 'OdysseyPH engineers high-performance web and mobile systems utilizing React, Node.js, modern cloud infrastructure (Firebase, Google Cloud), RESTful APIs, and responsive mobile-first interfaces with enterprise-grade security.',
+    },
+    {
+        question: 'How fast can OdysseyPH launch a custom business system or website?',
+        answer: 'Depending on project scope, custom web portals and core workflow systems are typically developed and deployed in agile sprints ranging from 2 to 6 weeks, backed by continuous staging demos and post-launch support.',
     },
 ];
 
-export function FaqSection() {
+export function FAQSection() {
     const [openIndex, setOpenIndex] = useState(0);
 
+    const toggleFAQ = (index) => {
+        setOpenIndex((prev) => (prev === index ? -1 : index));
+    };
+
+    // Schema.org FAQPage JSON-LD
+    const faqSchema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: faqs.map((faq) => ({
+            '@type': 'Question',
+            name: faq.question,
+            acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+            },
+        })),
+    };
+
     return (
-        <section className="ambient-light-section ambient-faq pt-24 md:pt-32 pb-20 relative overflow-hidden">
-            <div className="section-ambient-orb section-ambient-orb-right" />
-            <div className="container mx-auto px-6 md:px-12 max-w-4xl relative z-10">
-                <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="text-center mb-12"
-                >
-                    <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">FAQ</span>
-                    <h2 className="text-3xl md:text-5xl font-bold mb-5 tracking-tight">
-                        Answers Before We Start
+        <section id="faq" className="landing-section faq-section py-20 relative overflow-hidden">
+            {/* Embedded Schema for Answer Engines */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+            />
+
+            <div className="landing-shell max-w-5xl mx-auto px-4 md:px-6">
+                <div className="text-center mb-12">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold uppercase tracking-widest text-primary mb-4">
+                        <Sparkle size={14} weight="fill" className="text-primary" />
+                        <span>Direct Answers & FAQ</span>
+                    </div>
+                    <h2 className="text-3xl md:text-5xl font-display font-black text-white tracking-tight mb-4">
+                        Frequently Asked Questions
                     </h2>
-                    <p className="text-muted-foreground text-lg leading-relaxed">
-                        Quick answers to common questions about pricing, timelines, and collaboration.
+                    <p className="text-white/60 max-w-xl mx-auto text-base md:text-lg leading-relaxed">
+                        Clear, factual answers about our custom software engineering capabilities, healthcare systems, and court booking platforms.
                     </p>
-                </Motion.div>
+                </div>
 
                 <div className="space-y-4">
-                    {faqs.map((item, index) => {
+                    {faqs.map((faq, index) => {
                         const isOpen = openIndex === index;
-
                         return (
                             <div
-                                key={item.question}
-                                className={`rounded-2xl border overflow-hidden transition-colors duration-200 ${
+                                key={index}
+                                className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
                                     isOpen
-                                        ? 'bg-primary/5 border-primary/30'
-                                        : 'bg-white border-border/70'
+                                        ? 'bg-white/[0.07] border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
+                                        : 'bg-white/[0.03] border-white/10 hover:border-white/15'
                                 }`}
                             >
                                 <button
-                                    className="w-full px-5 md:px-6 py-4 text-left flex items-center justify-between gap-4"
-                                    onClick={() => setOpenIndex(isOpen ? -1 : index)}
+                                    type="button"
+                                    onClick={() => toggleFAQ(index)}
+                                    className="w-full py-5 px-6 flex items-center justify-between text-left gap-4 focus:outline-none cursor-pointer"
                                     aria-expanded={isOpen}
                                 >
-                                    <span className={`font-semibold tracking-tight transition-colors ${isOpen ? 'text-primary' : 'text-foreground/95'}`}>{item.question}</span>
-                                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform text-primary/60 ${isOpen ? 'rotate-180' : ''}`} />
+                                    <span className="text-base md:text-lg font-semibold text-white tracking-tight">
+                                        {faq.question}
+                                    </span>
+                                    <span
+                                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white/70 transition-transform duration-300 ${
+                                            isOpen ? 'rotate-180 bg-primary/20 text-primary border-primary/30' : ''
+                                        }`}
+                                    >
+                                        <CaretDown size={16} weight="bold" />
+                                    </span>
                                 </button>
 
                                 <AnimatePresence initial={false}>
@@ -76,10 +110,11 @@ export function FaqSection() {
                                             initial={{ height: 0, opacity: 0 }}
                                             animate={{ height: 'auto', opacity: 1 }}
                                             exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.2 }}
-                                            className="px-5 md:px-6"
+                                            transition={{ duration: 0.35, ease: easeOut }}
                                         >
-                                            <p className="pb-5 text-muted-foreground leading-relaxed">{item.answer}</p>
+                                            <div className="px-6 pb-6 pt-1 text-sm md:text-base leading-relaxed text-white/70 border-t border-white/5">
+                                                {faq.answer}
+                                            </div>
                                         </Motion.div>
                                     )}
                                 </AnimatePresence>
@@ -87,15 +122,9 @@ export function FaqSection() {
                         );
                     })}
                 </div>
-
-                <div className="text-center mt-10 rounded-2xl bg-secondary/50 border border-border/70 p-6">
-                    <p className="text-foreground/85 mb-4">Still have questions? Let us discuss your project goals directly.</p>
-                    <a href="#contact">
-                        <Button className="rounded-full px-7">Talk to Our Team</Button>
-                    </a>
-                </div>
             </div>
         </section>
     );
 }
 
+export default FAQSection;
