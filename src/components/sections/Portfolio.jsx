@@ -202,7 +202,7 @@ export function PortfolioSection() {
                                 <div className="aspect-4/3 overflow-hidden">
                                     <img
                                         src={project.image}
-                                        alt={project.title}
+                                        alt={`${project.title} - ${project.impact} developed by OdysseyPH IT Solutions`}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                     />
                                 </div>
@@ -284,7 +284,7 @@ export function PortfolioSection() {
                             <div className="w-full md:w-1/2 h-64 md:h-auto min-h-75 relative bg-secondary/10 flex items-center justify-center p-4">
                                 <img
                                     src={currentProject.image}
-                                    alt={currentProject.title}
+                                    alt={`${currentProject.title} preview - ${currentProject.category} system by OdysseyPH`}
                                     className="w-full h-full object-contain rounded-lg"
                                 />
                             </div>

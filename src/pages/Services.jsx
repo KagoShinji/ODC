@@ -1,4 +1,5 @@
 import { ServicesSection } from '../components/sections/Services';
+import { FAQSection } from '../components/sections/FAQ';
 import { usePageSEO } from '../hooks/usePageSEO';
 
 export function Services() {
@@ -11,6 +12,7 @@ export function Services() {
     return (
         <div className="pt-10">
             <ServicesSection />
+            <FAQSection />
         </div>
     );
 }

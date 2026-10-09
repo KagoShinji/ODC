@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion as Motion } from 'framer-motion';
 import { usePageSEO } from '../hooks/usePageSEO';
+import { FAQSection } from '../components/sections/FAQ';
 import {
     ArrowRight,
     ArrowSquareOut,
@@ -654,6 +655,7 @@ export function Home() {
             <UnifiedPortfolioSection />
             <TrustedClientsSection />
             <PartnershipValueSection />
+            <FAQSection />
             <FinalCta />
         </div>
     );
