@@ -19,13 +19,41 @@ const ClientMOAPage = lazy(() => import('./pages/ClientMOAPage'));
 const ClientInvoicePage = lazy(() => import('./pages/ClientInvoicePage'));
 const FeedbackForm = lazy(() => import('./pages/FeedbackForm'));
 
+function shouldSkipSplash() {
+  if (typeof window === 'undefined') return true;
+  try {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const isBot = /bot|googlebot|crawler|spider|robot|crawling|gptbot|chatgpt|perplexity|claudebot|slurp|duckduckbot|facebookexternalhit|bingbot|applebot/i.test(ua);
+    if (isBot) return true;
+    if (sessionStorage.getItem('odc_splash_seen') === '1') return true;
+  } catch {
+    // Ignore storage/UA errors
+  }
+  return false;
+}
+
 function PublicSite() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !shouldSkipSplash());
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 2000);
+    if (!isLoading) {
+      try {
+        sessionStorage.setItem('odc_splash_seen', '1');
+      } catch {
+        // Ignore storage error
+      }
+      return;
+    }
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      try {
+        sessionStorage.setItem('odc_splash_seen', '1');
+      } catch {
+        // Ignore storage error
+      }
+    }, 1500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isLoading]);
 
   return (
     <AnimatePresence mode="wait">
