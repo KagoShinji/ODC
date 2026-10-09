@@ -62,10 +62,6 @@ export function FAQSection() {
 
             <div className="landing-shell max-w-5xl mx-auto px-4 md:px-6">
                 <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-semibold uppercase tracking-widest text-primary mb-4">
-                        <Sparkle size={14} weight="fill" className="text-primary" />
-                        <span>Direct Answers & FAQ</span>
-                    </div>
                     <h2 className="text-3xl md:text-5xl font-display font-black text-white tracking-tight mb-4">
                         Frequently Asked Questions
                     </h2>
@@ -80,11 +76,10 @@ export function FAQSection() {
                         return (
                             <div
                                 key={index}
-                                className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
-                                    isOpen
-                                        ? 'bg-white/[0.07] border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
-                                        : 'bg-white/[0.03] border-white/10 hover:border-white/15'
-                                }`}
+                                className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isOpen
+                                    ? 'bg-white/[0.07] border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
+                                    : 'bg-white/[0.03] border-white/10 hover:border-white/15'
+                                    }`}
                             >
                                 <button
                                     type="button"
@@ -96,9 +91,8 @@ export function FAQSection() {
                                         {faq.question}
                                     </span>
                                     <span
-                                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white/70 transition-transform duration-300 ${
-                                            isOpen ? 'rotate-180 bg-primary/20 text-primary border-primary/30' : ''
-                                        }`}
+                                        className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-white/5 border border-white/10 text-white/70 transition-transform duration-300 ${isOpen ? 'rotate-180 bg-primary/20 text-primary border-primary/30' : ''
+                                            }`}
                                     >
                                         <CaretDown size={16} weight="bold" />
                                     </span>

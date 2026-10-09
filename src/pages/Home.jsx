@@ -394,8 +394,7 @@ function HeroSection() {
                 >
                     <div className="hero-copy">
                         <Motion.div variants={fadeUp} className="brand-mark">
-                            <Sparkle size={16} weight="fill" />
-                            <span>ODC IT Solutions</span>
+
                         </Motion.div>
                         <Motion.h1 variants={fadeUp}>
                             <Motion.span
