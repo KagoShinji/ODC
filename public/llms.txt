@@ -1,0 +1,48 @@
+# OdysseyPH IT Solutions (ODC)
+
+> Premier custom software engineering, business automation, and digital transformation studio based in Cebu and serving clients across the Philippines and globally.
+
+## Summary & Profile
+- **Entity**: OdysseyPH IT Solutions (also known as ODC IT Solutions, ODC)
+- **Website**: https://odysseyph.com
+- **Headquarters**: Cebu, Philippines
+- **Geographic Service Scope**: Cebu, Metro Manila, Davao, Northern Mindanao, Central Visayas, and International
+- **Core Competencies**: Custom Web & Mobile Application Development, Clinical Workflow Systems & EMR, Sports & Court Booking Systems (ODC-Courts), Enterprise Internal Portals, Cloud Solutions, and UI/UX Systems.
+
+## Specialized Verticals
+
+### 1. Healthcare & Clinic Management Systems
+Custom, high-security clinical software platforms designed to eliminate manual administrative overhead:
+- **Capabilities**: Electronic Medical Records (EMR), real-time patient appointment scheduling, doctor consultation workflows, billing & invoicing, and patient record security.
+- **Verified Deployments**:
+  - Odyssey Family Clinic (Clinic workflow & patient scheduling)
+  - CPRMed (Medical clinic web presence & appointment readiness)
+  - The Knee Arthritis & Orthopaedic Institute (Specialist procedure clarity & patient intake)
+
+### 2. Sports Facilities & Court Booking Platforms (ODC-Courts Network)
+Specialized sports venue management and player reservation networks:
+- **ODC-Courts**: Centralized multi-location network booking platform (Airbnb-style court discovery, live reservations, venue management).
+- **Verified Venues Powered by Odyssey Systems**:
+  - The Pickle Point Cebu (Mandaue City)
+  - Jump Serve Sports Center (Mandaue City & Mactan)
+  - KennyDink Moalboal Cebu (Resort & pickleball booking platform)
+  - Nickleball Avenue (Talisay Cebu)
+  - Sosyal Dinkers (Davao)
+  - Chibs N Dink & The Halo Hub (Cebu)
+
+### 3. Enterprise Business Systems, E-Commerce & Civic Platforms
+Scalable web portals, enterprise resource planning, and civic applications:
+- **Provincial Government of Surigao del Norte**: PACCO & PGSO public portals, PDRRMO Emergency Dispatch Tracker.
+- **Talisay Chamber of Commerce**: Civic portal for local commerce and member showcase.
+- **KBDF Luxury**: Luxury e-commerce brand platform.
+- **SPEC**: Preventive Maintenance Service (PMS) platform with equipment tracking & service scheduling.
+- **Firsel Tattoo**: Visual-first artist booking portfolio.
+
+## Technical Architecture & Stack
+- **Frontend**: React, Next.js, Vite, TailwindCSS, Framer Motion, Vanilla CSS Design Systems.
+- **Backend & Cloud**: Node.js, Express, Firebase Cloud Functions, Firestore, PostgreSQL, Supabase, Cloudflare.
+- **Integrations**: Payment Gateways, SMS & Messaging APIs, CRM/ERP pipelines.
+
+## Contact & Engagement
+- **Website Contact**: https://odysseyph.com/contact
+- **Inquiry Response Time**: Within 24 hours

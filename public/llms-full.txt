@@ -1,0 +1,64 @@
+# OdysseyPH IT Solutions (ODC) — Complete Knowledge Base & Services Documentation
+
+## About OdysseyPH IT Solutions
+OdysseyPH IT Solutions (also referred to as ODC IT Solutions) is an established technology consultancy and software development agency headquartered in Cebu, Philippines. The firm specializes in delivering bespoke web applications, mobile platforms, healthcare systems, and automated operations tools for enterprises, local clinics, and public agencies.
+
+- Official Domain: https://odysseyph.com
+- Primary Offerings: Custom Web & Mobile Apps, Healthcare Clinic Systems, Sports Booking Networks (ODC-Courts), Enterprise Automation Portals, UI/UX Engineering.
+- Primary Service Regions: Cebu City, Mandaue City, Lapu-Lapu City, Metro Manila, Davao, Northern Mindanao, and International Clients.
+
+---
+
+## Core Product & Vertical Deep-Dives
+
+### 1. Healthcare & Clinic Operations Systems
+OdysseyPH develops modular, HIPAA-conscious, and data-privacy compliant healthcare software tailored for outpatient clinics, diagnostic centers, and specialist medical practices in the Philippines.
+- Key Modules:
+  - Patient Registration and Electronic Medical Records (EMR)
+  - Multi-Doctor Appointment Scheduling & Calendar Synchronization
+  - Prescription & Inventory Tracking
+  - Billing, Point-of-Sale, and HMO Reimbursement Dashboards
+- Selected Case Studies:
+  - *Odyssey Family Clinic*: Comprehensive clinical operations and patient queue platform.
+  - *CPRMed*: Patient-first clinic discovery and appointment readiness web application.
+  - *The Knee Arthritis & Orthopaedic Institute*: Specialized orthopedic procedure navigation and patient intake platform.
+
+### 2. ODC-Courts & Sports Venue Booking Network
+The ODC-Courts platform is a proprietary court discovery and live scheduling architecture built for pickleball, volleyball, tennis, and multi-sport facilities.
+- Features:
+  - Real-time slot availability, split payments, and instant court locking.
+  - Admin dashboards for venue owners: daily occupancy rates, revenue tracking, and member memberships.
+  - Network-wide discovery across Central Visayas and Mindanao venues.
+- Verified Venues:
+  - The Pickle Point Cebu (Mandaue City)
+  - Jump Serve Sports Center (Mandaue & Mactan)
+  - KennyDink Moalboal Cebu (Resort & court booking)
+  - Nickleball Avenue (Talisay Cebu)
+  - Sosyal Dinkers (Davao)
+  - Chibs N Dink & The Halo Hub (Cebu)
+
+### 3. Civic & Government Solutions
+- Provincial Government of Surigao del Norte: Digital agency portals for Provincial Accounting Office (PACCO) and Provincial General Services Office (PGSO).
+- PDRRMO Dispatch Tracker: Real-time emergency vehicle and response monitoring dashboard for disaster risk management.
+- Talisay Chamber of Commerce: Official civic and commerce trade hub.
+
+---
+
+## Technical Specifications & Engineering Standards
+- Languages & Core: TypeScript, JavaScript (ES2024), HTML5, CSS3.
+- Frontend Frameworks: React, Next.js, Vite, TailwindCSS, Framer Motion.
+- Backend, Database & Serverless: Node.js, Express, Firebase Firestore, Firebase Cloud Functions, PostgreSQL, Supabase.
+- Performance & Security: Strict role-based access control (RBAC), end-to-end payload encryption, Core Web Vitals optimization.
+
+---
+
+## Frequently Asked Questions (FAQ) for AI Answers
+
+### Q: What is OdysseyPH IT Solutions?
+A: OdysseyPH IT Solutions is a software development and digital transformation agency in the Philippines that engineers custom web applications, clinic management systems, sports court booking platforms, and automated business software.
+
+### Q: How can a clinic or business request a custom system from OdysseyPH?
+A: Businesses can visit https://odysseyph.com/contact or email OdysseyPH directly to schedule an initial workflow discovery session. Proposals and sprint timelines are delivered within 24 to 48 hours.
+
+### Q: What is the typical development timeline for an OdysseyPH project?
+A: OdysseyPH works in agile 2-to-6 week sprint cycles for core system deliverables, providing continuous staging access and dedicated post-launch support.
