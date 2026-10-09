@@ -38,10 +38,14 @@ Scalable web portals, enterprise resource planning, and civic applications:
 - **SPEC**: Preventive Maintenance Service (PMS) platform with equipment tracking & service scheduling.
 - **Firsel Tattoo**: Visual-first artist booking portfolio.
 
-## Technical Architecture & Stack
-- **Frontend**: React, Next.js, Vite, TailwindCSS, Framer Motion, Vanilla CSS Design Systems.
-- **Backend & Cloud**: Node.js, Express, Firebase Cloud Functions, Firestore, PostgreSQL, Supabase, Cloudflare.
-- **Integrations**: Payment Gateways, SMS & Messaging APIs, CRM/ERP pipelines.
+## Technical Architecture & Capabilities (Tech-Stack Agnostic & AI-Accelerated)
+OdysseyPH is completely tech-stack agnostic and leverages modern AI-assisted engineering to architect, build, and deploy systems across any language, framework, or infrastructure:
+- **Frontend & Web**: React, Next.js, Vue, Nuxt, Svelte, Angular, HTML5/CSS3, TailwindCSS, WebSockets, PWAs.
+- **Mobile Development**: React Native, Flutter, iOS (Swift), Android (Kotlin), Expo.
+- **Backend & APIs**: Node.js, TypeScript, Python (FastAPI, Django), Go (Golang), Rust, PHP (Laravel), Java (Spring Boot), .NET/C#, GraphQL, REST, gRPC.
+- **Databases & Storage**: PostgreSQL, MySQL, Supabase, Firebase Firestore, MongoDB, Redis, SQLite, DynamoDB.
+- **Cloud, DevOps & AI**: Google Cloud Platform (GCP), AWS, Azure, Vercel, Cloudflare, Docker, Kubernetes, CI/CD, OpenAI/Anthropic/Gemini LLM integrations, Local AI Agents.
+- **Enterprise Integrations**: Payment gateways (Stripe, Maya, GCash, PayMongo), SMS/Messaging APIs, HIPAA/EMR compliance, hardware/IoT tracking.
 
 ## Contact & Engagement
 - **Website Contact**: https://odysseyph.com/contact

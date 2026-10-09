@@ -23,7 +23,7 @@ const faqs = [
     },
     {
         question: 'What technology stack does OdysseyPH use for software development?',
-        answer: 'OdysseyPH engineers high-performance web and mobile systems utilizing React, Node.js, modern cloud infrastructure (Firebase, Google Cloud), RESTful APIs, and responsive mobile-first interfaces with enterprise-grade security.',
+        answer: 'We are tech-stack agnostic and leverage AI-accelerated engineering to build across any modern framework, language, or cloud ecosystem. We engineer solutions across React, Next.js, Vue, Svelte, Angular, React Native, Flutter, Swift, Kotlin, Node.js, Python, Go, Rust, PHP/Laravel, Java, .NET, PostgreSQL, MySQL, Supabase, Firebase, MongoDB, AWS, Google Cloud, Azure, and custom AI/LLM integrations—choosing the optimal architecture tailored to your project goals.',
     },
     {
         question: 'How fast can OdysseyPH launch a custom business system or website?',

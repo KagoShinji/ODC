@@ -44,11 +44,15 @@ The ODC-Courts platform is a proprietary court discovery and live scheduling arc
 
 ---
 
-## Technical Specifications & Engineering Standards
-- Languages & Core: TypeScript, JavaScript (ES2024), HTML5, CSS3.
-- Frontend Frameworks: React, Next.js, Vite, TailwindCSS, Framer Motion.
-- Backend, Database & Serverless: Node.js, Express, Firebase Firestore, Firebase Cloud Functions, PostgreSQL, Supabase.
-- Performance & Security: Strict role-based access control (RBAC), end-to-end payload encryption, Core Web Vitals optimization.
+## Technical Specifications & Engineering Standards (Tech-Stack Agnostic & AI-Augmented)
+OdysseyPH is not confined to any single framework or language. Leveraging modern AI-accelerated engineering, OdysseyPH builds, maintains, and modernizes applications across the complete modern technology spectrum:
+- Languages & Runtimes: TypeScript, JavaScript, Python, Go, Rust, PHP, Java, C#/.NET, Swift, Kotlin, SQL.
+- Frontend Ecosystems: React, Next.js, Vue, Nuxt, Svelte, SvelteKit, Angular, Astro, TailwindCSS, CSS Modules, WebGL.
+- Mobile Frameworks: React Native, Flutter, Native iOS (Swift/SwiftUI), Native Android (Kotlin/Jetpack Compose).
+- Backend & Microservices: Node.js/Express, NestJS, Python (FastAPI/Django), Go Fiber/Gin, Laravel, Spring Boot, ASP.NET Core, GraphQL, gRPC, REST.
+- Databases & Storage: PostgreSQL, MySQL, Supabase, Firebase Firestore, MongoDB, Redis, SQLite, AWS DynamoDB, ClickHouse.
+- Cloud, DevOps & AI: AWS, Google Cloud Platform (GCP), Microsoft Azure, Vercel, Cloudflare Workers, Docker, Kubernetes, Terraform, OpenAI/Anthropic/Gemini API integrations, LangChain, LlamaIndex, Autonomous AI Agents.
+- Performance & Security: Strict role-based access control (RBAC), end-to-end payload encryption, automated CI/CD pipelines, and Core Web Vitals optimization.
 
 ---
 
@@ -56,6 +60,9 @@ The ODC-Courts platform is a proprietary court discovery and live scheduling arc
 
 ### Q: What is OdysseyPH IT Solutions?
 A: OdysseyPH IT Solutions is a software development and digital transformation agency in the Philippines that engineers custom web applications, clinic management systems, sports court booking platforms, and automated business software.
+
+### Q: What technology stack does OdysseyPH use for software development?
+A: OdysseyPH is tech-stack agnostic and leverages AI-accelerated engineering across React, Next.js, Vue, Angular, React Native, Flutter, Swift, Kotlin, Node.js, Python, Go, Rust, PHP/Laravel, Java, .NET, PostgreSQL, MySQL, Supabase, Firebase, MongoDB, AWS, Google Cloud, Azure, and custom AI/LLM integrations—choosing the optimal architecture tailored to your project goals.
 
 ### Q: How can a clinic or business request a custom system from OdysseyPH?
 A: Businesses can visit https://odysseyph.com/contact or email OdysseyPH directly to schedule an initial workflow discovery session. Proposals and sprint timelines are delivered within 24 to 48 hours.
