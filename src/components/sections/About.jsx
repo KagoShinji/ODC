@@ -1,4 +1,5 @@
 import { motion as Motion } from 'framer-motion';
+import { fadeUp, fadeUpSoft, maskUp, reveal, stagger } from '../../lib/motion';
 import { CheckCircle2, Users, Award, Clock } from 'lucide-react';
 
 const stats = [
@@ -15,9 +16,7 @@ export function AboutSection() {
             <div className="container mx-auto px-6 md:px-12 relative z-10">
                 <div className="grid lg:grid-cols-2 gap-16 items-center">
                     <Motion.div
-                        initial={{ opacity: 0, x: -50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
+                        {...reveal({ variants: fadeUp })}
                         className="relative"
                     >
                         <div className="relative z-10 rounded-2xl overflow-hidden border border-border/30 shadow-xl">
@@ -30,10 +29,7 @@ export function AboutSection() {
 
                         {/* Floating stats card */}
                         <Motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.3 }}
+                            {...reveal({ delay: 0.25, variants: fadeUpSoft, margin: '0px' })}
                             className="absolute -bottom-6 -right-6 bg-white rounded-2xl p-4 shadow-xl border border-border/50 flex gap-5 z-20"
                         >
                             {stats.map((stat, i) => (
@@ -48,11 +44,7 @@ export function AboutSection() {
                         </Motion.div>
                     </Motion.div>
 
-                    <Motion.div
-                        initial={{ opacity: 0, x: 50 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                    >
+                    <Motion.div {...reveal({ delay: 0.08, variants: maskUp })}>
                         <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">About Us</span>
                         <h2 className="text-3xl md:text-4xl font-bold mb-6 tracking-tight">
                             Driven by Innovation, <br /><span className="text-primary">Powered by Technology</span>
@@ -65,10 +57,7 @@ export function AboutSection() {
                             {['Expert Team of Developers & Designers', 'Agile Development Methodology', '24/7 Support & Maintenance', 'Scalable & Secure Solutions'].map((item, index) => (
                                 <Motion.div
                                     key={index}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    whileInView={{ opacity: 1, x: 0 }}
-                                    viewport={{ once: true }}
-                                    transition={{ delay: 0.1 + index * 0.1 }}
+                                    {...reveal({ delay: 0.15 + index * stagger.base, variants: fadeUpSoft, margin: '0px' })}
                                     className="flex items-center gap-3"
                                 >
                                     <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

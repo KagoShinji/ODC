@@ -1,7 +1,20 @@
-import { useState } from 'react';
-import { motion as Motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion as Motion, useInView } from 'framer-motion';
 import { usePageSEO } from '../hooks/usePageSEO';
 import { ClientProofBento } from '../components/sections/ClientProofBento';
+import {
+    ease,
+    fadeUp,
+    gsap,
+    maskUp,
+    mq,
+    reveal,
+    revealChild,
+    stagger,
+    staggerContainer,
+    useGSAP,
+    useReducedMotionSafe,
+} from '../lib/motion';
 import {
     ArrowRight,
     ArrowSquareOut,
@@ -15,22 +28,6 @@ import {
     Sparkle,
     Trophy,
 } from '@phosphor-icons/react';
-
-const easeOut = [0.22, 1, 0.36, 1];
-
-const fadeUp = {
-    hidden: { opacity: 0, y: 36, filter: 'blur(10px)' },
-    show: { opacity: 1, y: 0, filter: 'blur(0px)' },
-};
-
-const sectionMotion = {
-    initial: 'hidden',
-    whileInView: 'show',
-    viewport: { once: true, margin: '-90px' },
-    transition: { duration: 0.85, ease: easeOut },
-    variants: fadeUp,
-};
-
 
 const businessSystemShowcases = [
     {
@@ -285,7 +282,7 @@ function PremiumButton({ href, children, tone = 'light' }) {
 
 function SectionHeader({ eyebrow, title, copy, align = 'left' }) {
     return (
-        <Motion.div {...sectionMotion} className={`section-header ${align === 'center' ? 'mx-auto text-center' : ''}`}>
+        <Motion.div {...reveal({ variants: maskUp })} className={`section-header ${align === 'center' ? 'mx-auto text-center' : ''}`}>
             {eyebrow ? <span className="reference-eyebrow">{eyebrow}</span> : null}
             <h2>{title}</h2>
             {copy ? <p>{copy}</p> : null}
@@ -301,7 +298,7 @@ function HeroShowcase() {
             <Motion.div
                 initial={{ opacity: 0, y: 42, rotate: -1.6 }}
                 animate={{ opacity: 1, y: 0, rotate: 0 }}
-                transition={{ duration: 0.9, delay: 0.28, ease: easeOut }}
+                transition={{ duration: 0.9, delay: 0.28, ease: ease.out }}
                 style={{ position: 'absolute', inset: 0, zIndex: 1 }}
             >
                 <Motion.a
@@ -328,7 +325,7 @@ function HeroShowcase() {
             <Motion.div
                 initial={{ opacity: 0, y: 42, x: 24, rotate: 5 }}
                 animate={{ opacity: 1, y: 0, x: 0, rotate: 0 }}
-                transition={{ duration: 0.95, delay: 0.42, ease: easeOut }}
+                transition={{ duration: 0.95, delay: 0.42, ease: ease.out }}
                 style={{ position: 'absolute', inset: 0, zIndex: 2 }}
             >
                 <Motion.a
@@ -355,8 +352,30 @@ function HeroShowcase() {
 }
 
 function HeroSection() {
+    const heroRef = useRef(null);
+    const reducedMotion = useReducedMotionSafe();
+
+    // Scroll-out depth: grid drifts slower, copy eases back, devices lift forward.
+    useGSAP(() => {
+        const mm = gsap.matchMedia();
+        const scrub = (vars) => ({
+            ease: 'none',
+            scrollTrigger: { trigger: heroRef.current, start: 'top top', end: 'bottom top', scrub: true },
+            ...vars,
+        });
+
+        mm.add(mq.tabletUp, () => {
+            gsap.to('.reference-grid-lines', scrub({ y: 80 }));
+            gsap.to('.hero-copy', scrub({ y: -80, opacity: 0.6 }));
+            gsap.to('.hero-showcase', scrub({ y: -140 }));
+        });
+        mm.add(mq.mobile, () => {
+            gsap.to('.hero-copy', scrub({ y: -30, opacity: 0.75 }));
+        });
+    }, { scope: heroRef });
+
     return (
-        <section id="home" className="reference-hero premium-hero">
+        <section id="home" ref={heroRef} className="reference-hero premium-hero">
             <div className="reference-grid-lines" />
             <Motion.div
                 className="ambient ambient-hero"
@@ -367,7 +386,7 @@ function HeroSection() {
                 <Motion.div
                     initial="hidden"
                     animate="show"
-                    variants={{ show: { transition: { staggerChildren: 0.12, delayChildren: 0.18 } } }}
+                    variants={staggerContainer(0.1, 0.18)}
                     className="hero-layout"
                 >
                     <div className="hero-copy">
@@ -385,7 +404,7 @@ function HeroSection() {
                                     backgroundClip: 'text',
                                     color: 'transparent'
                                 }}
-                                animate={{ backgroundPosition: ['0% center', '200% center'] }}
+                                animate={reducedMotion ? undefined : { backgroundPosition: ['0% center', '200% center'] }}
                                 transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
                             >
                                 Automated systems for teams buried in manual work.
@@ -413,15 +432,27 @@ function HeroSection() {
 
 function BrowserStack({ title, projects }) {
     const [activeIndex, setActiveIndex] = useState(null);
+    const stackRef = useRef(null);
+    // The stack fans out of a single card the first time it scrolls into view.
+    const fanned = useInView(stackRef, { once: true, amount: 0.35 });
+    const [settled, setSettled] = useState(false);
+
+    useEffect(() => {
+        if (!fanned) return;
+        const timer = setTimeout(() => setSettled(true), 900);
+        return () => clearTimeout(timer);
+    }, [fanned]);
 
     return (
-        <div className="browser-stack-column">
+        <Motion.div className="browser-stack-column" {...revealChild(fadeUp)}>
             <h3 className="stack-category-title">{title}</h3>
-            <div className="browser-stack-container" style={{ height: '550px', marginTop: '200px', perspective: '1000px' }}>
+            <div ref={stackRef} className="browser-stack-container" style={{ height: '550px', marginTop: '200px', perspective: '1000px' }}>
                 {projects.map((project, i) => {
                     const isActive = activeIndex === i;
                     // Front item is index 0. Subsequent items have lower z-index.
                     const zIndex = isActive ? 100 : projects.length - i;
+                    const restY = fanned ? -(i * 45) : 0;
+                    const restScale = fanned ? 1 - (i * 0.05) : 1 - (i * 0.01);
 
                     return (
                         <Motion.div
@@ -429,9 +460,9 @@ function BrowserStack({ title, projects }) {
                             className={`stacked-browser ${project.tablet ? 'tablet-mockup' : ''} ${isActive ? 'is-expanded' : ''}`}
                             initial={false}
                             animate={{
-                                y: isActive ? 50 : -(i * 45), // items stack upwards and backwards
+                                y: isActive ? 50 : restY, // items stack upwards and backwards
                                 x: 0,
-                                scale: isActive ? 1.05 : 1 - (i * 0.05), // get smaller as they go back
+                                scale: isActive ? 1.05 : restScale, // get smaller as they go back
                                 opacity: isActive ? 1 : 1 - (i * 0.08), // fade slightly as they go back
                                 zIndex: zIndex
                             }}
@@ -441,7 +472,7 @@ function BrowserStack({ title, projects }) {
                                 transition: { duration: 0.2 }
                             } : {}}
                             onClick={() => setActiveIndex(isActive ? null : i)}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 30, delay: settled ? 0 : i * 0.05 }}
                             style={
                                 project.isCoreSystem
                                     ? {
@@ -505,7 +536,7 @@ function BrowserStack({ title, projects }) {
                     );
                 })}
             </div>
-        </div>
+        </Motion.div>
     );
 }
 
@@ -520,11 +551,17 @@ function UnifiedPortfolioSection() {
                     align="center"
                 />
 
-                <div className="portfolio-stacks-grid">
+                <Motion.div
+                    className="portfolio-stacks-grid"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, margin: '-80px' }}
+                    variants={staggerContainer(stagger.base)}
+                >
                     <BrowserStack title="Commercial Systems" projects={businessSystemShowcases} />
                     <BrowserStack title="Civic & Government" projects={governmentShowcases} />
                     <BrowserStack title="Sports Platforms" projects={pickleballShowcases} />
-                </div>
+                </Motion.div>
             </div>
         </section>
     );
@@ -532,18 +569,33 @@ function UnifiedPortfolioSection() {
 
 
 function PartnershipValueSection() {
+    const sectionRef = useRef(null);
+
+    useGSAP(() => {
+        const mm = gsap.matchMedia();
+        mm.add(mq.motionOk, () => {
+            gsap.fromTo('.pillar-progress', { scaleX: 0 }, {
+                scaleX: 1,
+                ease: 'none',
+                scrollTrigger: { trigger: '.premium-ready-grid', start: 'top 85%', end: 'bottom 55%', scrub: 0.4 },
+            });
+        });
+    }, { scope: sectionRef });
+
     return (
-        <section id="partnership" className="landing-section ready-section premium-ready-section" style={{ paddingBottom: '4rem' }}>
+        <section id="partnership" ref={sectionRef} className="landing-section ready-section premium-ready-section" style={{ paddingBottom: '4rem' }}>
             <div className="landing-shell">
                 <SectionHeader eyebrow="Partnership" title="Built for speed without losing polish." align="center" />
-                <div className="ready-grid premium-ready-grid" style={{ marginTop: '4rem' }}>
+                <div className="pillar-progress-track" aria-hidden="true">
+                    <span className="pillar-progress" />
+                </div>
+                <div className="ready-grid premium-ready-grid" style={{ marginTop: '2.5rem' }}>
                     {deliveryPillars.map((card, index) => {
                         const Icon = card.icon;
                         return (
                             <Motion.article
                                 key={card.title}
-                                {...sectionMotion}
-                                transition={{ duration: 0.75, delay: index * 0.08, ease: easeOut }}
+                                {...reveal({ delay: index * stagger.base })}
                             >
                                 <Icon size={25} weight="duotone" />
                                 <h3>{card.title}</h3>
@@ -558,10 +610,23 @@ function PartnershipValueSection() {
 }
 
 function FinalCta() {
+    const sectionRef = useRef(null);
+
+    useGSAP(() => {
+        const mm = gsap.matchMedia();
+        mm.add(mq.tabletUp, () => {
+            gsap.fromTo('.final-system-window', { y: 60 }, {
+                y: -40,
+                ease: 'none',
+                scrollTrigger: { trigger: sectionRef.current, start: 'top bottom', end: 'bottom top', scrub: true },
+            });
+        });
+    }, { scope: sectionRef });
+
     return (
-        <section id="contact" className="landing-section ready-section premium-ready-section">
+        <section id="contact" ref={sectionRef} className="landing-section ready-section premium-ready-section">
             <div className="landing-shell">
-                <Motion.div {...sectionMotion} className="final-cta premium-final-cta">
+                <Motion.div {...reveal()} className="final-cta premium-final-cta">
                     <div>
                         <span className="reference-eyebrow">Build with ODC</span>
                         <h2>Turn the workflow you keep explaining into the system your team actually uses.</h2>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Button } from '../ui/Button';
+import { ease, fadeUpSoft, maskUp, reveal } from '../../lib/motion';
 import { X } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -154,9 +155,7 @@ export function PortfolioSection() {
             <div className="section-ambient-orb section-ambient-orb-left" />
             <div className="container mx-auto px-6 md:px-12 relative z-10">
                 <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
+                    {...reveal({ variants: maskUp })}
                     className="mb-12 md:mb-20 text-center"
                 >
                     <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">Selected Works</span>
@@ -193,9 +192,9 @@ export function PortfolioSection() {
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.3 }}
+                                transition={{ duration: 0.3, ease: ease.out }}
                                 key={project.id}
-                                className="group cursor-pointer bg-white rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 overflow-hidden"
+                                className="group cursor-pointer bg-white rounded-2xl border border-border/60 shadow-sm hover:shadow-md hover:border-primary/20 transition-[box-shadow,border-color] duration-300 overflow-hidden"
                                 onClick={() => openProject(project)}
                                 whileHover={{ y: -4 }}
                             >
@@ -227,9 +226,7 @@ export function PortfolioSection() {
 
                 {!isPortfolioPage && (
                     <Motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
+                        {...reveal({ variants: fadeUpSoft })}
                         className="mt-12 border-t border-border/60 pt-8"
                     >
                         <div className="text-center mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-6">

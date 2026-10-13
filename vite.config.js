@@ -12,6 +12,7 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'motion-vendor': ['framer-motion'],
+          'gsap-vendor': ['gsap', 'gsap/ScrollTrigger', '@gsap/react'],
           'ui-vendor': ['lucide-react'],
           'firebase-firestore': ['firebase/firestore'],
           'firebase-auth': ['firebase/auth'],

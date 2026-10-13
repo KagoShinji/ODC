@@ -5020,3 +5020,26 @@ body::before {
 .stacked-browser.tablet-mockup.is-expanded .browser-viewport {
     max-height: 1000px;
 }
+
+/* Scroll motion: partnership progress line (scaleX scrubbed by GSAP) */
+.pillar-progress-track {
+  position: relative;
+  height: 1px;
+  margin: 3rem auto 0;
+  max-width: 64rem;
+  overflow: hidden;
+  background: rgba(220, 236, 234, 0.08);
+}
+
+.pillar-progress {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  background: linear-gradient(90deg, rgba(188, 236, 242, 0), #bcecf2 40%, #edc27f);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pillar-progress {
+    transform: none;
+  }
+}

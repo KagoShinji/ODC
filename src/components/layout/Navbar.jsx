@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence, useMotionValueEvent, useScroll } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
+import { ease } from '../../lib/motion';
 
 export function Navbar() {
     const [scrolled, setScrolled] = useState(false);
+    const [hidden, setHidden] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const { scrollY } = useScroll();
 
-    useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 50);
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    // Hide on scroll down, reveal on scroll up. A small dead zone keeps
+    // trackpad jitter from flickering the bar.
+    useMotionValueEvent(scrollY, 'change', (latest) => {
+        const previous = scrollY.getPrevious() ?? 0;
+        const delta = latest - previous;
+        setScrolled(latest > 40);
+        if (latest < 120) setHidden(false);
+        else if (delta > 6) setHidden(true);
+        else if (delta < -6) setHidden(false);
+    });
 
     useEffect(() => {
         if (!location.hash) return;
@@ -60,12 +68,12 @@ export function Navbar() {
         <Motion.div
             className="fixed top-0 left-0 right-0 z-50 px-4 pt-4"
             initial={{ y: -100 }}
-            animate={{ y: 0 }}
-            transition={{ duration: 0.5 }}
+            animate={{ y: hidden && !mobileMenuOpen ? '-130%' : '0%' }}
+            transition={{ duration: 0.3, ease: ease.out }}
         >
             <nav
                 className={cn(
-                    'mx-auto max-w-5xl rounded-full border px-5 py-2.5 transition-all duration-300 backdrop-blur-xl',
+                    'mx-auto max-w-5xl rounded-full border px-5 py-2.5 transition-[background-color,border-color,box-shadow] duration-300 backdrop-blur-xl',
                     scrolled
                         ? 'border-white/12 bg-[#101718]/82 shadow-2xl shadow-black/20'
                         : 'border-white/10 bg-[#101718]/38'

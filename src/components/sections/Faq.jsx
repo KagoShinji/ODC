@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { CaretDown, Sparkle } from '@phosphor-icons/react';
+import { ease, fadeUpSoft, maskUp, reveal, revealChild, staggerContainer } from '../../lib/motion';
 
-const easeOut = [0.22, 1, 0.36, 1];
+const easeOut = ease.out;
 
 const faqs = [
     {
@@ -61,22 +62,29 @@ export function FAQSection() {
             />
 
             <div className="landing-shell max-w-5xl mx-auto px-4 md:px-6">
-                <div className="text-center mb-12">
+                <Motion.div {...reveal({ variants: maskUp })} className="text-center mb-12">
                     <h2 className="text-3xl md:text-5xl font-display font-black text-white tracking-tight mb-4">
                         Frequently Asked Questions
                     </h2>
                     <p className="text-white/60 max-w-xl mx-auto text-base md:text-lg leading-relaxed">
                         Clear, factual answers about our custom software engineering capabilities, healthcare systems, and court booking platforms.
                     </p>
-                </div>
+                </Motion.div>
 
-                <div className="space-y-4">
+                <Motion.div
+                    className="space-y-4"
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, margin: '-60px' }}
+                    variants={staggerContainer(0.05)}
+                >
                     {faqs.map((faq, index) => {
                         const isOpen = openIndex === index;
                         return (
-                            <div
+                            <Motion.div
                                 key={index}
-                                className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isOpen
+                                {...revealChild(fadeUpSoft, 0.5)}
+                                className={`rounded-2xl border transition-[background-color,border-color,box-shadow] duration-300 overflow-hidden ${isOpen
                                     ? 'bg-white/[0.07] border-white/20 shadow-[0_0_30px_rgba(0,0,0,0.3)]'
                                     : 'bg-white/[0.03] border-white/10 hover:border-white/15'
                                     }`}
@@ -112,10 +120,10 @@ export function FAQSection() {
                                         </Motion.div>
                                     )}
                                 </AnimatePresence>
-                            </div>
+                            </Motion.div>
                         );
                     })}
-                </div>
+                </Motion.div>
             </div>
         </section>
     );

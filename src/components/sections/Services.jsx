@@ -1,4 +1,6 @@
+import { useRef } from 'react';
 import { motion as Motion } from 'framer-motion';
+import { fadeUpSoft, gsap, maskUp, mq, reveal, stagger, useGSAP } from '../../lib/motion';
 import { Code, Smartphone, Cloud, Database, Palette, ArrowRight, Layers } from 'lucide-react';
 
 const services = [
@@ -35,16 +37,28 @@ const services = [
 ];
 
 export function ServicesSection() {
+    const sectionRef = useRef(null);
+
+    // Progress line fills as the service grid scrolls through the viewport.
+    useGSAP(() => {
+        const mm = gsap.matchMedia();
+        mm.add(mq.motionOk, () => {
+            gsap.fromTo('.services-progress', { scaleX: 0 }, {
+                scaleX: 1,
+                ease: 'none',
+                scrollTrigger: { trigger: '.services-grid', start: 'top 85%', end: 'bottom 60%', scrub: 0.4 },
+            });
+        });
+    }, { scope: sectionRef });
+
     return (
-        <section id="services" className="ambient-light-section ambient-services pt-24 md:pt-32 pb-20 relative overflow-hidden">
+        <section id="services" ref={sectionRef} className="ambient-light-section ambient-services pt-24 md:pt-32 pb-20 relative overflow-hidden">
             <div className="section-ambient-orb section-ambient-orb-right" />
 
             <div className="container mx-auto px-6 md:px-12 relative z-10">
                 <Motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="mb-16 md:mb-20 text-center"
+                    {...reveal({ variants: maskUp })}
+                    className="mb-10 md:mb-14 text-center"
                 >
                     <span className="text-xs font-semibold text-primary uppercase tracking-widest mb-3 block">Our Expertise</span>
                     <h2 className="text-3xl md:text-5xl font-bold mb-5 tracking-tight">
@@ -55,16 +69,17 @@ export function ServicesSection() {
                     </p>
                 </Motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="mx-auto mb-10 h-px max-w-3xl overflow-hidden bg-border/60 md:mb-14" aria-hidden="true">
+                    <span className="services-progress block h-full origin-left bg-gradient-to-r from-primary/0 via-primary to-primary/60" />
+                </div>
+
+                <div className="services-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {services.map((service, index) => (
                         <Motion.div
                             key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: 0.05 + index * 0.08 }}
-                            whileHover={{ y: -5 }}
-                            className="group relative bg-white rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-lg hover:border-primary/25 transition-all duration-300"
+                            {...reveal({ delay: (index % 3) * stagger.base + Math.floor(index / 3) * 0.04, variants: fadeUpSoft })}
+                            whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                            className="group relative bg-white rounded-2xl p-6 border border-border/60 shadow-sm hover:shadow-lg hover:border-primary/25 transition-[box-shadow,border-color] duration-300"
                         >
                             {/* Service number */}
                             <span className="absolute top-5 right-6 text-xs font-bold font-mono text-border/70 group-hover:text-primary/35 transition-colors select-none">

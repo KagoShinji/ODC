@@ -1,5 +1,16 @@
 import { motion as Motion } from 'framer-motion';
 import { Check, Star } from 'lucide-react';
+import { fadeUpSoft, maskUp, reveal, revealChild, staggerContainer, useCountUp } from '../../lib/motion';
+
+function CountUp({ value, format }) {
+  const ref = useCountUp(value, format);
+  return <span ref={ref} className="tabular-nums">{format(value)}</span>;
+}
+
+const formatSystems = (v) => `${Math.round(v)}+ systems`;
+const formatRecords = (v) => `${Math.round(v).toLocaleString('en-US')}+`;
+const formatPercent = (v) => `${Math.round(v)}%`;
+const formatVolume = (v) => `₱${Math.round(v)}M+`;
 
 const appIcons = [
   { name: 'Dr. Humba', src: '/logos/drhumbalogonew.png' },
@@ -41,10 +52,7 @@ export function ClientProofBento() {
         
         {/* Editorial Headline */}
         <Motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-50px' }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          {...reveal({ variants: maskUp, margin: '-50px' })}
           className="text-center mb-8 md:mb-10"
         >
           <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-2 leading-none">
@@ -60,11 +68,8 @@ export function ClientProofBento() {
           
           {/* Card 1: Left Tall Fleet Card (spans 5 cols on md+) */}
           <Motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            transition={{ duration: 0.7, delay: 0.05 }}
-            className="md:col-span-5 rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-8 sm:p-10 flex flex-col justify-between shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-all duration-300 min-h-[360px] md:min-h-[460px]"
+            {...reveal({ delay: 0, variants: fadeUpSoft, margin: '-40px' })}
+            className="md:col-span-5 rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-8 sm:p-10 flex flex-col justify-between shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-[border-color] duration-300 min-h-[360px] md:min-h-[460px]"
           >
             {/* Subtle inner card sheen */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-transparent pointer-events-none" />
@@ -95,7 +100,7 @@ export function ClientProofBento() {
             {/* Bottom: Stat and description */}
             <div className="relative z-10 pt-4">
               <span className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white block mb-2">
-                25+ systems
+                <CountUp value={25} format={formatSystems} />
               </span>
               <span className="text-2xl sm:text-3xl font-medium text-white/40 block leading-snug">
                 running on odyssey
@@ -108,11 +113,8 @@ export function ClientProofBento() {
             
             {/* Card 2: Top Right Wide Operations Metric */}
             <Motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.7, delay: 0.12 }}
-              className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-8 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-all duration-300 flex flex-col justify-between"
+              {...reveal({ delay: 0.08, variants: fadeUpSoft, margin: '-40px' })}
+              className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-8 sm:p-10 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-[border-color] duration-300 flex flex-col justify-between"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-transparent pointer-events-none" />
 
@@ -127,7 +129,7 @@ export function ClientProofBento() {
               {/* Stat & Label */}
               <div className="relative z-10 pt-8 sm:pt-10">
                 <div className="text-5xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-2">
-                  140,000+
+                  <CountUp value={140000} format={formatRecords} />
                 </div>
                 <div className="text-base sm:text-lg text-white/45 font-medium">
                   court reservations & patient records processed
@@ -140,11 +142,8 @@ export function ClientProofBento() {
               
               {/* Card 3: Ratings & Satisfaction */}
               <Motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.7, delay: 0.18 }}
-                className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-7 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-all duration-300 flex flex-col justify-between"
+                {...reveal({ delay: 0.16, variants: fadeUpSoft, margin: '-40px' })}
+                className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-7 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-[border-color] duration-300 flex flex-col justify-between"
               >
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-transparent pointer-events-none" />
 
@@ -158,7 +157,7 @@ export function ClientProofBento() {
                 {/* Stat & Label */}
                 <div className="relative z-10 pt-6">
                   <div className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-1.5">
-                    100%
+                    <CountUp value={100} format={formatPercent} />
                   </div>
                   <div className="text-sm sm:text-base text-white/45 font-medium leading-snug">
                     client delivery & renewal rate
@@ -168,11 +167,8 @@ export function ClientProofBento() {
 
               {/* Card 4: Revenue / Transaction Volume Impact */}
               <Motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-40px' }}
-                transition={{ duration: 0.7, delay: 0.24 }}
-                className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-7 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-all duration-300 flex flex-col justify-between"
+                {...reveal({ delay: 0.24, variants: fadeUpSoft, margin: '-40px' })}
+                className="rounded-[28px] bg-[#0c121a]/85 border border-white/10 hover:border-white/20 p-7 sm:p-8 shadow-2xl relative overflow-hidden backdrop-blur-xl group transition-[border-color] duration-300 flex flex-col justify-between"
               >
                 <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] via-transparent to-transparent pointer-events-none" />
 
@@ -188,7 +184,7 @@ export function ClientProofBento() {
                 {/* Stat & Label */}
                 <div className="relative z-10 pt-6">
                   <div className="text-4xl sm:text-5xl font-extrabold tracking-tight text-white mb-1.5">
-                    ₱30M+
+                    <CountUp value={30} format={formatVolume} />
                   </div>
                   <div className="text-sm sm:text-base text-white/45 font-medium leading-snug">
                     platform transaction volume handled
@@ -204,21 +200,24 @@ export function ClientProofBento() {
 
         {/* Foundation: Client Logo Grid */}
         <Motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.3 }}
+          {...reveal({ variants: fadeUpSoft })}
           className="pt-6 border-t border-white/[0.08]"
         >
           <p className="text-center text-xs uppercase tracking-[0.22em] text-white/35 font-semibold mb-8">
             Trusted by Philippine enterprises, medical practices & sports operators
           </p>
 
-          <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-8 sm:gap-x-12 sm:gap-y-10 md:gap-x-16 max-w-6xl mx-auto px-4">
+          <Motion.div
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: '-40px' }}
+            variants={staggerContainer(0.03, 0.1)}
+            className="flex flex-wrap justify-center items-center gap-x-8 gap-y-8 sm:gap-x-12 sm:gap-y-10 md:gap-x-16 max-w-6xl mx-auto px-4"
+          >
             {clientLogos.map((item, index) => (
+              <Motion.div key={`${item.name}-${index}`} {...revealChild(fadeUpSoft, 0.5)}>
               <div
-                key={`${item.name}-${index}`}
-                className="flex justify-center items-center w-24 h-12 sm:w-28 sm:h-14 md:w-36 md:h-16 transition-all duration-300 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105"
+                className="flex justify-center items-center w-24 h-12 sm:w-28 sm:h-14 md:w-36 md:h-16 transition-[opacity,filter,transform] duration-300 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105"
                 title={item.name}
               >
                 <img
@@ -228,8 +227,9 @@ export function ClientProofBento() {
                   className="max-w-full max-h-full object-contain"
                 />
               </div>
+              </Motion.div>
             ))}
-          </div>
+          </Motion.div>
         </Motion.div>
 
       </div>

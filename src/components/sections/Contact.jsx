@@ -5,22 +5,9 @@ import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import LoadingButton from '../ui/LoadingButton';
 import { ContactWizard } from '../contact/ContactWizard';
+import { ease, fadeUp } from '../../lib/motion';
 
-const easeOut = [0.22, 1, 0.36, 1];
-
-const fadeUp = {
-    hidden: { opacity: 0, y: 36, filter: 'blur(10px)' },
-    show: { opacity: 1, y: 0, filter: 'blur(0px)' },
-};
-
-// eslint-disable-next-line no-unused-vars
-const sectionMotion = {
-    initial: 'hidden',
-    whileInView: 'show',
-    viewport: { once: true, margin: '-90px' },
-    transition: { duration: 0.85, ease: easeOut },
-    variants: fadeUp,
-};
+const easeOut = ease.out;
 
 const inputClass = 'w-full px-4 py-3.5 bg-white/5 border border-white/10 focus:border-white/30 focus:outline-none rounded-xl transition-all duration-300 text-white placeholder:text-white/40 backdrop-blur-sm focus:bg-white/8 focus:shadow-[0_0_24px_rgba(255,255,255,0.08)]';
 
