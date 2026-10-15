@@ -59,6 +59,7 @@ const AdminDomains = lazy(() => import('./AdminDomains'));
 const AdminStaff = lazy(() => import('./AdminStaff'));
 const AdminAllowances = lazy(() => import('./AdminAllowances'));
 const AdminDemos = lazy(() => import('./AdminDemos'));
+const AdminTasks = lazy(() => import('./AdminTasks'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -396,10 +397,11 @@ function AdminDashboard({ firebaseUser }) {
     const [staffLoading, setStaffLoading] = useState(true);
     const [userAllowedTabs, setUserAllowedTabs] = useState([]);
     const [userAllowedActions, setUserAllowedActions] = useState([]);
-    const [activeTab, setActiveTab] = useState('contacts');
+    const [activeTab, setActiveTab] = useState('tasks');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [expandedSystems, setExpandedSystems] = useState([]);
     const [activeSubTabs, setActiveSubTabs] = useState({
+        tasks: 'mine',
         demos: 'calendar',
         allowances: 'overview',
         invoices: 'invoices',
@@ -499,8 +501,11 @@ function AdminDashboard({ firebaseUser }) {
         return () => { isMounted = false; };
     }, [firebaseUser.email, superAdmin]);
 
+    // The task board is shared by every active staff member; suspended accounts lose it with everything else.
+    const taskBoardVisible = superAdmin || staffProfile?.status !== 'inactive';
+
     // Calculate visible navigation tabs for current user
-    const visibleTabs = ALL_ADMIN_NAVIGATIONS.filter(tab => tab.id === 'allowances'
+    const visibleTabs = ALL_ADMIN_NAVIGATIONS.filter(tab => tab.id === 'tasks' ? taskBoardVisible : tab.id === 'allowances'
         ? superAdmin || allowanceState.context?.access?.active
         : tab.id === 'demos' ? superAdmin || demoState.context?.access?.active
         : superAdmin || userAllowedTabs.includes(tab.id));
@@ -589,7 +594,7 @@ function AdminDashboard({ firebaseUser }) {
         );
     });
 
-    const hasPermission = (tabId) => tabId === 'allowances' ? superAdmin || allowanceState.context?.access?.active : tabId === 'demos' ? superAdmin || demoState.context?.access?.active : superAdmin || userAllowedTabs.includes(tabId);
+    const hasPermission = (tabId) => tabId === 'tasks' ? taskBoardVisible : tabId === 'allowances' ? superAdmin || allowanceState.context?.access?.active : tabId === 'demos' ? superAdmin || demoState.context?.access?.active : superAdmin || userAllowedTabs.includes(tabId);
 
     // Permission checker function passed down to child components
     const can = useCallback((actionId) => {
@@ -597,13 +602,15 @@ function AdminDashboard({ firebaseUser }) {
         if (actionId?.startsWith('allowances:')) return allowanceState.context?.access?.active === true && allowanceState.context.access.actions?.includes(actionId);
         if (superAdmin) return true;
         if (!actionId) return false;
+        // Task actions are explicit grants; seeing the board does not imply posting rights.
+        if (actionId.startsWith('tasks:')) return taskBoardVisible && userAllowedActions.includes(actionId);
         const [tabId] = actionId.split(':');
         if (!userAllowedTabs.includes(tabId)) return false;
         if (Array.isArray(userAllowedActions) && userAllowedActions.length > 0) {
             return userAllowedActions.includes(actionId);
         }
         return true;
-    }, [superAdmin, userAllowedTabs, userAllowedActions, allowanceState.context, demoState.context]);
+    }, [superAdmin, userAllowedTabs, userAllowedActions, allowanceState.context, demoState.context, taskBoardVisible]);
 
     const visibleSubTabs = (tab) => (tab.subTabs || []).filter(subTab =>
         !subTab.requiresAction || can(subTab.requiresAction));
@@ -853,6 +860,10 @@ function AdminDashboard({ firebaseUser }) {
                 {/* Main content */}
                 <main className="admin-main">
                 <Suspense key={activeTab} fallback={<p role="status">Loading module…</p>}>
+
+                {activeTab === 'tasks' && hasPermission('tasks') && (
+                    <AdminTasks firebaseUser={firebaseUser} can={can} initialSection={activeSubTabs.tasks} onSectionChange={(id) => syncSubSystem('tasks', id)} />
+                )}
 
                 {activeTab === 'contacts' && hasPermission('contacts') && (
                     <>

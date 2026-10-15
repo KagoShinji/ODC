@@ -663,6 +663,37 @@ service cloud.firestore {
     match /allowanceFuelReceipts/{id} { allow read: if allowanceRead(); }
     match /allowanceReferenceFuelClaims/{id} { allow read: if allowanceRead(); }
     match /allowanceLiquidations/{id}/revisions/{revision} { allow read: if active('allowances') && (resource.data.ownerUid == request.auth.uid || allowanceReviewer()); }
+
+    // Task board: every signed-in staff member can see tasks; creators and task managers edit,
+    // assignees may only move status, tick checklist items and post progress notes.
+    function taskManager() { return operationsRoot() || staffAction('tasks:manage'); }
+    function taskCreator() { return taskManager() || staffAction('tasks:create'); }
+    function validTask(data) {
+      return data.keys().hasOnly(['title', 'description', 'priority', 'status', 'dueAt', 'assignees', 'assigneeEmails', 'checklist', 'activity',
+          'createdByUid', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'completedAt']) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
+        data.description is string && data.description.size() <= 5000 &&
+        data.priority in ['low', 'medium', 'high', 'urgent'] &&
+        data.status in ['todo', 'in_progress', 'blocked', 'done'] &&
+        data.dueAt is timestamp &&
+        data.assignees is list && data.assigneeEmails is list && data.assigneeEmails.size() <= 30 &&
+        data.checklist is list && data.checklist.size() <= 50 &&
+        data.activity is list && data.activity.size() <= 60;
+    }
+    function taskAssignee() { return request.auth.token.email != null && resource.data.assigneeEmails.hasAny([request.auth.token.email.lower()]); }
+    match /tasks/{taskId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && taskCreator() && validTask(request.resource.data) &&
+        request.resource.data.status == 'todo' && request.resource.data.createdByUid == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update: if request.auth != null && validTask(request.resource.data) &&
+        request.resource.data.createdByUid == resource.data.createdByUid && request.resource.data.createdAt == resource.data.createdAt &&
+        (resource.data.createdByUid == request.auth.uid || taskManager() ||
+          (taskAssignee() &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checklist', 'activity', 'updatedAt', 'completedAt']) &&
+            request.resource.data.checklist.size() == resource.data.checklist.size()));
+      allow delete: if request.auth != null && (resource.data.createdByUid == request.auth.uid || taskManager());
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

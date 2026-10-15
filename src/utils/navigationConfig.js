@@ -11,10 +11,22 @@ import {
   Hammer,
   MailSearch,
   ShieldCheck,
+  ListChecks,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
 export const ALL_ADMIN_NAVIGATIONS = [
+  {
+    id: 'tasks', label: 'Task Board', desc: 'Team to-dos, deadlines & progress (visible to all staff)', icon: ListChecks, color: '#5eead4',
+    subTabs: [
+      { id: 'mine', label: 'My tasks' },
+      { id: 'board', label: 'Team board' },
+    ],
+    actions: [
+      { id: 'tasks:create', label: 'Post Tasks', desc: 'Create tasks, set deadlines and assign staff' },
+      { id: 'tasks:manage', label: 'Manage All Tasks', desc: "Edit, reassign or delete anyone's tasks" },
+    ],
+  },
   {
     id: 'demos', label: 'Demo Scheduling', desc: 'Sales bookings & presenter availability', icon: CalendarBlank, color: '#d9a66a',
     subTabs: [
