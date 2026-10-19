@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, X, Search, CalendarClock, CheckCircle2, Circle, ListChecks, AlertTriangle, Clock, Trash2, Pencil, MessageSquarePlus } from 'lucide-react';
+import { Plus, X, Search, CalendarClock, CheckCircle2, Circle, ListChecks, AlertTriangle, Clock, Trash2, Pencil, MessageSquarePlus, Share2, Check, Copy } from 'lucide-react';
 import LoadingButton from '../components/ui/LoadingButton';
 import { useSystemModal } from '../components/ui/SystemModalContext';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
@@ -68,22 +68,70 @@ function Avatars({ people }) {
   );
 }
 
+async function shareTaskHelper(task, now, onCopied) {
+  const shareUrl = `${window.location.origin}/task/${task.id}`;
+  const shareTitle = `Task: ${task.title}`;
+  const assigneesText = task?.assignees?.length 
+    ? `Assigned to: ${task.assignees.map(a => a.name).join(', ')}` 
+    : 'ODC Team Workspace';
+  const shareText = `Task: "${task.title}". ${assigneesText}. Due: ${formatDue(task.dueAt, now)}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Navigator share error:', err);
+      }
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    onCopied?.();
+  } catch (err) {
+    console.warn('Clipboard write error:', err);
+  }
+}
+
 function TaskCard({ task, now, onOpen, compact = false }) {
+  const [copied, setCopied] = useState(false);
   const done = (task.checklist || []).filter(i => i.done).length;
   const total = (task.checklist || []).length;
+
+  const handleShareClick = e => {
+    e.stopPropagation();
+    shareTaskHelper(task, now, () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
-    <button type="button" className={`task-card task-card-${dueState(task, now)}`} onClick={() => onOpen(task.id)}>
-      <span className="task-card-top">
-        <PriorityPill priority={task.priority} />
-        {!compact && <StatusPill status={task.status} />}
-      </span>
-      <strong className="task-card-title">{task.title}</strong>
-      <span className="task-card-meta">
-        <DueLabel task={task} now={now} />
-        {total > 0 && <span className="task-checklist-count"><ListChecks size={13} aria-hidden="true" />{done}/{total}</span>}
-      </span>
-      <Avatars people={task.assignees} />
-    </button>
+    <div className="task-card-wrapper">
+      <button type="button" className={`task-card task-card-${dueState(task, now)}`} onClick={() => onOpen(task.id)}>
+        <span className="task-card-top">
+          <PriorityPill priority={task.priority} />
+          {!compact && <StatusPill status={task.status} />}
+        </span>
+        <strong className="task-card-title">{task.title}</strong>
+        <span className="task-card-meta">
+          <DueLabel task={task} now={now} />
+          {total > 0 && <span className="task-checklist-count"><ListChecks size={13} aria-hidden="true" />{done}/{total}</span>}
+        </span>
+        <Avatars people={task.assignees} />
+      </button>
+      <button
+        type="button"
+        className="task-card-share-btn"
+        title={copied ? 'Link copied!' : 'Share task link'}
+        aria-label={`Share link for ${task.title}`}
+        onClick={handleShareClick}
+      >
+        {copied ? <Check size={13} style={{ color: 'var(--task-done)' }} /> : <Share2 size={13} />}
+      </button>
+    </div>
   );
 }
 
@@ -202,8 +250,17 @@ function activityText(item) {
 function TaskDetail({ task, now, canEdit, canUpdate, onEdit, onDelete, onStatus, onNote, onToggleItem, busy, error }) {
   const [note, setNote] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [copied, setCopied] = useState(false);
   const checklist = task.checklist || [];
   const activity = [...(task.activity || [])].reverse();
+
+  const handleShare = () => {
+    shareTaskHelper(task, now, () => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   return (
     <div className="task-detail">
       {error && <p className="task-error" role="alert">{error}</p>}
@@ -211,6 +268,16 @@ function TaskDetail({ task, now, canEdit, canUpdate, onEdit, onDelete, onStatus,
         <StatusPill status={task.status} />
         <PriorityPill priority={task.priority} />
         <DueLabel task={task} now={now} />
+        <button
+          type="button"
+          className={`task-detail-share-btn ${copied ? 'is-copied' : ''}`}
+          onClick={handleShare}
+          title="Share or copy public task link"
+          style={{ marginLeft: 'auto' }}
+        >
+          {copied ? <Check size={13} /> : <Share2 size={13} />}
+          <span>{copied ? 'Link Copied' : 'Share Task'}</span>
+        </button>
       </div>
       <dl className="task-detail-grid">
         <dt>Assigned to</dt>

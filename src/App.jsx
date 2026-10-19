@@ -18,6 +18,7 @@ const AcceptancePage = lazy(() => import('./pages/AcceptancePage'));
 const ClientMOAPage = lazy(() => import('./pages/ClientMOAPage'));
 const ClientInvoicePage = lazy(() => import('./pages/ClientInvoicePage'));
 const FeedbackForm = lazy(() => import('./pages/FeedbackForm'));
+const PublicTaskView = lazy(() => import('./pages/PublicTaskView'));
 
 function shouldSkipSplash() {
   if (typeof window === 'undefined') return true;
@@ -88,6 +89,7 @@ function AppRoutes() {
       <Route path="/acceptance/:id" element={<AcceptancePage />} />
       <Route path="/moa/:id" element={<ClientMOAPage />} />
       <Route path="/invoice/:id" element={<ClientInvoicePage />} />
+      <Route path="/task/:id" element={<PublicTaskView />} />
       <Route path="/feedback" element={<FeedbackForm />} />
       <Route path="/feedback/:id" element={<FeedbackForm />} />
       {/* All other routes go to the Public Site which handles its own 404s */}

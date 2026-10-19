@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { collection, doc, addDoc, deleteDoc, getDocs, onSnapshot, query, orderBy, limit, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, addDoc, deleteDoc, getDocs, onSnapshot, query, orderBy, limit, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
 import { TASK_LIMITS } from '../utils/taskTracker';
 
@@ -44,6 +44,12 @@ export function subscribeTasks(onData, onError) {
     snap => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
     onError,
   );
+}
+
+export async function getTask(taskId) {
+  const snap = await getDoc(doc(db, 'tasks', taskId));
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
 }
 
 export async function listAssignableStaff() {
