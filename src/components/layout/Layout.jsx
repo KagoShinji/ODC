@@ -3,6 +3,7 @@ import { ArrowRight } from '@phosphor-icons/react';
 import { useLocation } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { ScrollManager, ScrollProgress } from './ScrollEffects';
+import { HalloweenDecor } from './HalloweenDecor';
 import { ease } from '../../lib/motion';
 
 export function Layout({ children }) {
@@ -14,6 +15,7 @@ export function Layout({ children }) {
                 <ScrollManager />
                 <ScrollProgress />
                 <Navbar />
+                <HalloweenDecor />
                 <Motion.main
                     key={pathname}
                     className="grow overflow-x-hidden"

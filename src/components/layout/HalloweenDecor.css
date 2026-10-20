@@ -1,0 +1,291 @@
+/* Seasonal Halloween layer — decorative only, sits under the navbar. */
+
+.hw-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Cobwebs: neutral silk with a faint shadow so they read on dark and light sections. */
+.hw-web {
+  position: absolute;
+  top: 0;
+  width: clamp(120px, 15vw, 220px);
+  height: auto;
+  filter: drop-shadow(0 0 1px rgba(10, 16, 17, 0.35));
+  opacity: 0.75;
+}
+
+.hw-web-left {
+  left: 0;
+}
+
+.hw-web-right {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.hw-web-spoke {
+  stroke: rgba(222, 232, 230, 0.7);
+  stroke-width: 0.9;
+}
+
+.hw-web-ring {
+  stroke: rgba(222, 232, 230, 0.55);
+  stroke-width: 0.7;
+}
+
+/* Spider dropping from the right-hand web. */
+.hw-spider {
+  position: absolute;
+  top: 0;
+  right: clamp(46px, 6vw, 92px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  animation: hw-spider-drop 7s ease-in-out infinite;
+}
+
+.hw-spider-thread {
+  width: 1px;
+  height: clamp(90px, 14vw, 150px);
+  background: linear-gradient(to bottom, rgba(222, 232, 230, 0.2), rgba(222, 232, 230, 0.75));
+}
+
+.hw-spider-body {
+  width: clamp(22px, 2.4vw, 32px);
+  margin-top: -2px;
+  filter: drop-shadow(0 0 1px rgba(255, 196, 120, 0.9)) drop-shadow(0 0 7px rgba(238, 131, 39, 0.55));
+}
+
+.hw-spider-legs {
+  stroke: #15191a;
+  stroke-width: 1.6;
+}
+
+.hw-spider-abdomen,
+.hw-spider-head {
+  fill: #15191a;
+}
+
+.hw-spider-eye {
+  fill: #ff9a3c;
+  animation: hw-flicker 3.2s steps(1) infinite;
+}
+
+@keyframes hw-spider-drop {
+  0%, 100% { transform: translateY(-38%) rotate(0deg); }
+  45% { transform: translateY(0) rotate(2.5deg); }
+  60% { transform: translateY(-6%) rotate(-2deg); }
+  75% { transform: translateY(-2%) rotate(1deg); }
+}
+
+/* Bats cross the screen now and then; most of each cycle they're off-screen. */
+.hw-bat {
+  position: absolute;
+  top: var(--hw-top);
+  left: 0;
+  width: var(--hw-size);
+  transform: translateX(-12vw);
+  animation: hw-bat-fly var(--hw-dur) linear var(--hw-delay) infinite;
+}
+
+.hw-bat-svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 1px rgba(255, 196, 120, 0.85)) drop-shadow(0 0 8px rgba(238, 131, 39, 0.6));
+}
+
+.hw-bat-wings,
+.hw-bat-head {
+  fill: #121617;
+}
+
+.hw-bat-wings {
+  transform-box: fill-box;
+  transform-origin: center 60%;
+  animation: hw-bat-flap 0.32s ease-in-out infinite alternate;
+}
+
+@keyframes hw-bat-fly {
+  0% { transform: translate(-12vw, 0) rotate(4deg); }
+  10% { transform: translate(20vw, -4vh) rotate(-3deg); }
+  20% { transform: translate(52vw, 3vh) rotate(5deg); }
+  30% { transform: translate(84vw, -5vh) rotate(-4deg); }
+  38%, 100% { transform: translate(112vw, -2vh) rotate(3deg); }
+}
+
+@keyframes hw-bat-flap {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.35); }
+}
+
+/* Jack-o'-lantern resting in the bottom-left corner. */
+.hw-pumpkin {
+  position: absolute;
+  left: clamp(10px, 2vw, 28px);
+  bottom: clamp(8px, 1.6vw, 22px);
+  width: clamp(58px, 7vw, 96px);
+  animation: hw-pumpkin-bob 5s ease-in-out infinite;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hw-pumpkin:hover {
+  animation: hw-pumpkin-wiggle 0.5s ease-in-out infinite;
+}
+
+.hw-pumpkin svg {
+  position: relative;
+  display: block;
+  width: 100%;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.35));
+}
+
+.hw-pumpkin-glow {
+  position: absolute;
+  inset: 18% 4% -10%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 170, 70, 0.55), rgba(255, 120, 30, 0.18) 60%, transparent);
+  filter: blur(10px);
+  animation: hw-glow 2.6s ease-in-out infinite;
+}
+
+.hw-pumpkin-face path {
+  fill: #ffd56a;
+  animation: hw-candle 2.6s ease-in-out infinite;
+}
+
+@keyframes hw-pumpkin-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-3px) rotate(1.5deg); }
+}
+
+.hw-pumpkin-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ee8327;
+  color: #15191a;
+  font-family: var(--font-display);
+  font-size: clamp(10px, 0.9vw, 12px);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgba(238, 131, 39, 0.45);
+  animation: hw-label-bounce 1.6s ease-in-out infinite;
+}
+
+.hw-pumpkin-label::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-top-color: #ee8327;
+}
+
+@keyframes hw-label-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes hw-pumpkin-wiggle {
+  0%, 100% { transform: rotate(-6deg) scale(1.06); }
+  50% { transform: rotate(6deg) scale(1.06); }
+}
+
+@keyframes hw-candle {
+  0%, 100% { fill: #ffd56a; }
+  20% { fill: #ffbf47; }
+  35% { fill: #ffe08a; }
+  55% { fill: #ffb43a; }
+  70% { fill: #ffd56a; }
+}
+
+@keyframes hw-glow {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  30% { opacity: 0.6; transform: scale(0.96); }
+  55% { opacity: 1; transform: scale(1.04); }
+}
+
+@keyframes hw-flicker {
+  0%, 92% { opacity: 1; }
+  93%, 96% { opacity: 0.2; }
+}
+
+/* Mini jumpscare: a ghost lunges at the viewer, the room dims, then it's gone. */
+.hw-scare {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.85));
+  animation: hw-scare-dim 1.1s ease-out forwards;
+}
+
+.hw-ghost {
+  width: min(70vmin, 520px);
+  filter: drop-shadow(0 0 30px rgba(220, 240, 255, 0.45));
+  animation: hw-ghost-lunge 1.1s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+}
+
+.hw-ghost-body {
+  fill: #eef4f2;
+}
+
+.hw-ghost-hole {
+  fill: #0c1011;
+}
+
+.hw-ghost-pupil {
+  fill: #ff3b1f;
+  filter: drop-shadow(0 0 4px #ff3b1f);
+}
+
+@keyframes hw-scare-dim {
+  0% { opacity: 0; }
+  8%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes hw-ghost-lunge {
+  0% { transform: scale(0.15) translateY(40%); opacity: 0; }
+  14% { transform: scale(1.12) rotate(-3deg); opacity: 1; }
+  22% { transform: scale(1) rotate(3deg); }
+  30% { transform: scale(1.04) rotate(-2deg); }
+  38%, 70% { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .hw-web {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hw-layer *,
+  .hw-layer *::before,
+  .hw-layer *::after {
+    animation: none !important;
+  }
+
+  .hw-bat {
+    display: none;
+  }
+}
+
+@media print {
+  .hw-layer {
+    display: none;
+  }
+}
