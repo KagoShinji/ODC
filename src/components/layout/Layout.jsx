@@ -40,6 +40,26 @@ export function Layout({ children }) {
                                 (c) {new Date().getFullYear()} ODC IT Solutions. All rights reserved.
                             </p>
                         </div>
+                        <div className="flex flex-col gap-4 md:items-end">
+                            <a
+                                href="https://verify.bir.gov.ph/correspondence/c9241e25c7124474aa284e88c4872cc8"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Verify our BIR registration"
+                                className="block w-full max-w-[400px] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-0.5"
+                            >
+                                <img
+                                    src="/images/bir-registration-badge.png"
+                                    alt="BIR Registration Seal Badge 2026, RSN 083RC20260000011855. Scan the QR code or click to verify."
+                                    width="2897"
+                                    height="880"
+                                    loading="lazy"
+                                    className="h-auto w-full"
+                                />
+                                <span className="mt-2 block text-center text-[10px] font-bold uppercase tracking-[0.12em] text-[#101718]/42">
+                                    BIR Registered · Tap or scan to verify
+                                </span>
+                            </a>
                         <div className="flex flex-wrap items-center gap-3 md:justify-end">
                             <a href="/contact" className="inline-flex items-center gap-3 rounded-full bg-[#101718] py-2 pl-5 pr-2 text-xs font-black text-[#edf9f5] transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] hover:-translate-y-0.5 active:scale-[0.985]">
                                 Talk to Odyssey
@@ -47,6 +67,7 @@ export function Layout({ children }) {
                                     <ArrowRight size={14} weight="bold" />
                                 </span>
                             </a>
+                        </div>
                         </div>
                     </div>
                 </footer>
