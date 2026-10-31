@@ -22,6 +22,12 @@ service cloud.firestore {
       allow list, create, update, delete: if request.auth != null;
     }
 
+    // Acknowledgement receipts: readable by direct link (tracking), managed by staff.
+    match /receipts/{docId} {
+      allow get: if true;
+      allow list, create, update, delete: if request.auth != null;
+    }
+
     match /expenses/{docId} {
       function linked(data) { return data.get('source', '') == 'allowance_liquidation' || data.keys().hasAny(['liquidationId', 'allowanceAccountId']); }
       allow read: if request.auth != null;

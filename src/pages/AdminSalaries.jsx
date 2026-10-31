@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
 import { useSystemModal } from '../components/ui/SystemModalContext';
 import LoadingButton from '../components/ui/LoadingButton';
+import { printPayslip, nextPayslipNumber, payslipNumberOf } from '../utils/payslipDocument';
 import {
   collection,
   getDocs,
@@ -24,7 +25,6 @@ import {
   XCircle,
   AlertTriangle,
   User,
-  Info,
   DollarSign,
   Briefcase,
   Layers,
@@ -32,6 +32,7 @@ import {
   X,
   CreditCard,
   Clock,
+  FileText,
 } from 'lucide-react';
 
 const S = {
@@ -271,6 +272,9 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
     e.preventDefault();
     if (!payingStaff) return;
     setSaving(true);
+    // Open the payslip window now, while the click still counts as a user gesture.
+    const printWindow = window.open('', '_blank');
+    let payslip = null;
 
     try {
       // 1. Create a corresponding expense record
@@ -295,6 +299,7 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
 
       // 2. Create the salary payout record with link to expense doc
       const payoutPayload = {
+        payslipNumber: nextPayslipNumber(payouts, selectedMonth),
         staffId: payingStaff.id,
         staffName: payingStaff.name,
         role: payingStaff.role,
@@ -312,7 +317,8 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
         createdBy: firebaseUser.email,
       };
 
-      await addDoc(collection(db, 'salaryPayouts'), payoutPayload);
+      const payoutRef = await addDoc(collection(db, 'salaryPayouts'), payoutPayload);
+      payslip = { ...payoutPayload, id: payoutRef.id };
 
       setShowPayModal(false);
       setPayingStaff(null);
@@ -320,8 +326,12 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
     } catch (err) {
       console.error('Error recording salary payment:', err);
       setModalAlert('Failed to record payment. Please check your network and try again.');
+      printWindow?.close();
     } finally {
       setSaving(false);
+    }
+    if (payslip && !printPayslip(payslip, printWindow)) {
+      modal.info({ title: 'Payslip ready', message: `${payslip.payslipNumber} was saved. Your browser blocked the print window — use Payslip in Payout History.` });
     }
   };
 
@@ -651,21 +661,11 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                             {member.isPaid ? (
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
                                 <button
-                                  onClick={() => {
-                                    modal.info({ title: `Payment details for ${member.name}`, message:
-                                      `Month: ${selectedMonth}\n` +
-                                      `Base Salary: ₱${fmt(member.payout.baseSalary)}\n` +
-                                      `Bonus: ₱${fmt(member.payout.bonus)}\n` +
-                                      `Deductions: ₱${fmt(member.payout.deductions)}\n` +
-                                      `Net Paid: ₱${fmt(member.payout.netPaid)}\n` +
-                                      `Paid At: ${member.payout.paidAt}\n` +
-                                      `Method: ${member.payout.paymentMethod}\n` +
-                                      `Reference #: ${member.payout.referenceNumber || 'N/A'}\n` +
-                                      `Notes: ${member.payout.notes || 'None'}` });
-                                  }}
+                                  onClick={() => printPayslip(member.payout)}
                                   style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}
+                                  title={payslipNumberOf(member.payout)}
                                 >
-                                  <Info size={13} /> View Receipt
+                                  <FileText size={13} /> Payslip
                                 </button>
                                 {canDeleteSalary && (
                                   <LoadingButton
@@ -793,15 +793,13 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Payroll Month</th>
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Method</th>
                       <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Net Amount</th>
-                      {canDeleteSalary && (
-                        <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Action</th>
-                      )}
+                      <th style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', textAlign: 'right' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {payouts.length === 0 ? (
                       <tr>
-                        <td colSpan={canDeleteSalary ? "6" : "5"} style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
+                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.3)' }}>
                           No salary payments recorded yet.
                         </td>
                       </tr>
@@ -810,7 +808,10 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                         const monthLabel = MONTHS_LIST.find(m => m.val === p.month)?.label || p.month;
                         return (
                           <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background 0.2s' }}>
-                            <td style={{ padding: '18px 24px', color: 'rgba(255,255,255,0.8)' }}>{p.paidAt}</td>
+                            <td style={{ padding: '18px 24px', color: 'rgba(255,255,255,0.8)' }}>
+                              {p.paidAt}
+                              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>{payslipNumberOf(p)}</div>
+                            </td>
                             <td style={{ padding: '18px 24px', fontWeight: 600, color: '#fff' }}>
                               {p.staffName}
                               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{p.role}</div>
@@ -823,17 +824,22 @@ export default function AdminSalaries({ firebaseUser, isSuperAdmin, can, initial
                               )}
                             </td>
                             <td style={{ padding: '18px 24px', color: '#34d399', textAlign: 'right', fontWeight: 600 }}>₱{fmt(p.netPaid)}</td>
-                            {canDeleteSalary && (
-                              <td style={{ padding: '18px 24px', textAlign: 'right' }}>
-                                <LoadingButton
-                                  onClick={() => handleDeletePayout(p)}
-                                  loadingLabel="Deleting payout…"
-                                  style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171', marginLeft: 'auto' }}
-                                >
-                                  <Trash2 size={13} /> Delete Payout
-                                </LoadingButton>
-                              </td>
-                            )}
+                            <td style={{ padding: '18px 24px' }}>
+                              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                <button onClick={() => printPayslip(p)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.8)' }}>
+                                  <FileText size={13} /> Payslip
+                                </button>
+                                {canDeleteSalary && (
+                                  <LoadingButton
+                                    onClick={() => handleDeletePayout(p)}
+                                    loadingLabel="Deleting payout…"
+                                    style={{ ...S.btn, background: 'rgba(239,68,68,0.1)', color: '#f87171' }}
+                                  >
+                                    <Trash2 size={13} /> Delete Payout
+                                  </LoadingButton>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })

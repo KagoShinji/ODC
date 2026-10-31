@@ -42,7 +42,7 @@ const getSigFontSizePrint = (name) => {
 };
 // eslint-disable-next-line react-refresh/only-export-components
 export function printCertificate(coa) {
-  const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+  const logoUrl = window.location.origin + '/brand/odc-mark.svg';
 
   const hasScope = coa.scope && coa.scope.length > 0;
   const formattedScope = hasScope ? `
@@ -91,7 +91,7 @@ export function printCertificate(coa) {
     body { font-family: 'Inter', sans-serif; font-size: 14px; color: #111; background: #fff; line-height: 1.6; }
     .pg { width: 794px; padding: 60px 80px; margin: 0 auto; position: relative; min-height: 1123px; display: flex; flex-direction: column; justify-content: space-between; }
     .hd { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eaeaea; padding-bottom: 25px; }
-    .logo img { height: 75px; width: auto; display: block; margin: 0 auto 10px; }
+    .logo img { height: 64px; width: auto; display: block; margin: 0 auto 10px; }
     .ci { text-align: center; line-height: 1.4; color: #555; font-size: 11px; }
     .ci strong { font-size: 13px; color: #111; }
     

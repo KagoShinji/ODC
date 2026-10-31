@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ShieldCheck, Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw, PenTool, Clock } from 'lucide-react';
+import { Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw, PenTool, Clock } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
 
@@ -289,7 +289,7 @@ export default function ClientMOAPage() {
   const triggerPrint = () => {
     // We import printMOA from AdminMOA or we redefine it
     // REDEFINE locally to ensure self-contained zero-import errors
-    const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+    const logoUrl = window.location.origin + '/brand/odc-mark.svg';
     const formattedItems = (moa.scope || []).map(group => `
       <div class="scope-group">
         <h4>${group.title}</h4>
@@ -345,7 +345,7 @@ body { font-family: 'Times New Roman', Times, serif; font-size: 14px; color: #00
 .pg { width: 794px; padding: 60px 80px; margin: 0 auto; position: relative; }
 .pg-break { page-break-after: always; }
 .hd { text-align: center; margin-bottom: 40px; }
-.logo img { height: 80px; width: auto; display: block; margin: 0 auto 10px; }
+.logo img { height: 64px; width: auto; display: block; margin: 0 auto 10px; }
 .ci { text-align: center; line-height: 1.4; color: #333; font-size: 12px; }
 .ci strong { font-size: 14px; }
 .ttl { text-align: center; font-size: 20px; font-weight: bold; padding: 20px 0 30px; letter-spacing: 1px; }
@@ -598,14 +598,7 @@ li { margin-bottom: 5px; }
 
       {/* Top logo */}
       <div style={{ zIndex: 1, marginBottom: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(255,106,26,0.35)',
-        }}>
-          <ShieldCheck size={20} color="#fff" />
-        </div>
+        <img src="/brand/odc-mark-reverse.svg" alt="ODC" style={{ height: 38, width: 'auto', display: 'block' }} />
         <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 

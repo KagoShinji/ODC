@@ -35,7 +35,6 @@ import {
     Trash2,
     RefreshCw,
     Search,
-    ShieldCheck,
     ShieldAlert,
     Calendar,
     Globe,
@@ -528,6 +527,23 @@ function AdminDashboard({ firebaseUser }) {
         }
     }, [activeTab, activeSystemHasSubTabs]);
 
+    // Mobile drawer: lock page scroll, close on Escape and when widening past the drawer breakpoint
+    useEffect(() => {
+        if (!sidebarOpen) return undefined;
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        const onKey = (e) => { if (e.key === 'Escape') setSidebarOpen(false); };
+        const desktop = window.matchMedia('(min-width: 901px)');
+        const onDesktop = (e) => { if (e.matches) setSidebarOpen(false); };
+        window.addEventListener('keydown', onKey);
+        desktop.addEventListener('change', onDesktop);
+        return () => {
+            document.body.style.overflow = previousOverflow;
+            window.removeEventListener('keydown', onKey);
+            desktop.removeEventListener('change', onDesktop);
+        };
+    }, [sidebarOpen]);
+
     const selectSystem = (id, hasSubTabs = false) => {
         setActiveTab(id);
         if (hasSubTabs) {
@@ -716,14 +732,7 @@ function AdminDashboard({ firebaseUser }) {
                         >
                             {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
                         </button>
-                        <div style={{
-                            width: 36, height: 36, borderRadius: 10,
-                            background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(255,106,26,0.35)',
-                        }}>
-                            <ShieldCheck size={18} color="#fff" />
-                        </div>
+                        <img src="/brand/odc-app-icon.svg" alt="ODC" style={{ width: 36, height: 36, display: 'block', flexShrink: 0 }} />
                         <div>
                             <span style={{ fontWeight: 700, fontSize: 16 }}>ODC Admin</span>
                             <span style={{
@@ -780,9 +789,19 @@ function AdminDashboard({ firebaseUser }) {
                             <span className="admin-sidebar-eyebrow">Workspace</span>
                             <h2>Systems</h2>
                         </div>
-                        <span className="admin-sidebar-count" aria-label={`${visibleTabs.length} available systems`}>
-                            {visibleTabs.length}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <span className="admin-sidebar-count" aria-label={`${visibleTabs.length} available systems`}>
+                                {visibleTabs.length}
+                            </span>
+                            <button
+                                type="button"
+                                className="admin-sidebar-close"
+                                onClick={() => setSidebarOpen(false)}
+                                aria-label="Close systems navigation"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
                     </div>
 
                     <nav className="admin-sidebar-nav">

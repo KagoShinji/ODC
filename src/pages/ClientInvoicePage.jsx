@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ShieldCheck, Printer, CheckCircle2, FileText, Globe, Award, Sparkles, RefreshCw, CreditCard, DollarSign, Clock } from 'lucide-react';
+import { Printer, CheckCircle2, FileText, Globe, Award, Sparkles, RefreshCw, CreditCard, DollarSign, Clock } from 'lucide-react';
 
 const CO = {
   address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
@@ -274,7 +274,7 @@ export default function ClientInvoicePage() {
     const displayNum = (inv.invoiceNumber || '').replace(/^INV-/, 'SOA-');
     // Redefine printInvoice locally for public access consistency
     const total = (inv.items || []).reduce((s, item) => s + Number(item.amount || 0), 0);
-    const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+    const logoUrl = window.location.origin + '/brand/odc-mark.svg';
     const rows = (inv.items || []).map(i =>
       `<tr><td class="td">${i.service || ''}</td><td class="td ar">${Number(i.amount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td></tr>`
     ).join('');
@@ -310,7 +310,7 @@ export default function ClientInvoicePage() {
 body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
 .pg{width:794px;min-height:1100px;padding:50px 60px;margin:0 auto}
 .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-.logo img{height:80px;width:auto;display:block}
+.logo img{height:60px;width:auto;display:block}
 .ci{text-align:right;line-height:1.9;color:#555;font-size:11px}
 .ci a{color:#e85d04}
 .ttl{text-align:center;font-size:20px;font-weight:700;letter-spacing:5px;padding:10px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;margin:20px 0}
@@ -418,14 +418,7 @@ th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border
 
       {/* Top logo */}
       <div style={{ zIndex: 1, marginBottom: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(255,106,26,0.35)',
-        }}>
-          <ShieldCheck size={20} color="#fff" />
-        </div>
+        <img src="/brand/odc-mark-reverse.svg" alt="ODC" style={{ height: 38, width: 'auto', display: 'block' }} />
         <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 

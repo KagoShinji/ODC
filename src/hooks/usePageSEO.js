@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 const BASE_URL = 'https://odysseyph.com';
-const DEFAULT_IMAGE = 'https://odysseyph.com/images/odc.jpg';
+const DEFAULT_IMAGE = 'https://odysseyph.com/brand/og-image.jpg';
 
 /**
  * Custom hook to dynamically manage document title, canonical URL, and OpenGraph/Twitter meta tags per route.

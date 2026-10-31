@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { db } from '../lib/firebase';
 // eslint-disable-next-line no-unused-vars
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase, Copy, Check, Award, PenTool, ChevronDown, ChevronUp, Download, Search, Filter } from 'lucide-react';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp, onSnapshot, writeBatch } from 'firebase/firestore';
+import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, CreditCard, DollarSign, TrendingUp, TrendingDown, FileText, ArrowDownRight, ArrowUpRight, Briefcase, Copy, Check, Award, PenTool, ChevronDown, ChevronUp, Download, Search, Filter, Receipt, Link2 } from 'lucide-react';
 import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
+import { buildReceipt, printReceipt, receiptLink, todayIso, PAYMENT_METHODS } from '../utils/acknowledgementReceipt';
 
 const CO = {
   address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
@@ -75,7 +76,7 @@ const calcTotal = (items) => (items || []).reduce((s, i) => s + Number(i.amount 
 
 function printInvoice(inv) {
   const total = calcTotal(inv.items);
-  const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+  const logoUrl = window.location.origin + '/brand/odc-mark.svg';
   const rows = (inv.items || []).map(i =>
     `<tr><td class="td">${i.service || ''}</td><td class="td ar">${fmt(i.amount)}</td></tr>`
   ).join('');
@@ -111,7 +112,7 @@ function printInvoice(inv) {
 body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
 .pg{width:794px;min-height:1100px;padding:50px 60px;margin:0 auto}
 .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-.logo img{height:80px;width:auto;display:block}
+.logo img{height:60px;width:auto;display:block}
 .ci{text-align:right;line-height:1.9;color:#555;font-size:11px}
 .ci a{color:#e85d04}
 .ttl{text-align:center;font-size:20px;font-weight:700;letter-spacing:5px;padding:10px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;margin:20px 0}
@@ -214,7 +215,7 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
     return acc;
   }, {});
 
-  const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+  const logoUrl = window.location.origin + '/brand/odc-mark.svg';
 
   // Group by month
   const monthlyMap = {};
@@ -358,7 +359,7 @@ function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue 
 body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
 .pg{width:794px;min-height:1100px;padding:50px 60px;margin:0 auto}
 .hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-.logo img{height:80px;width:auto;display:block}
+.logo img{height:60px;width:auto;display:block}
 .ci{text-align:right;line-height:1.9;color:#555;font-size:11px}
 .ci a{color:#e85d04}
 .ttl{text-align:center;font-size:20px;font-weight:700;letter-spacing:5px;padding:10px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;margin:20px 0}
@@ -553,6 +554,15 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const [payMethod, setPayMethod] = useState('');
   const [payRef, setPayRef] = useState('');
   const [payConfirming, setPayConfirming] = useState(false);
+  const [payDate, setPayDate] = useState(today());
+  const [payAccountName, setPayAccountName] = useState('');
+  const [payPreparedBy, setPayPreparedBy] = useState('');
+
+  // Acknowledgement Receipts State (receipts/{invoiceId})
+  const [receipts, setReceipts] = useState([]);
+  const [receiptSearch, setReceiptSearch] = useState('');
+  const [receiptsError, setReceiptsError] = useState('');
+  const [receiptsListenKey, setReceiptsListenKey] = useState(0);
   const [viewInv, setViewInv] = useState(null);
 
   // Expenses State
@@ -579,10 +589,10 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
   const [selectedInvoices, setSelectedInvoices] = useState([]);
 
   // Sub-Navigation State
-  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'invoices' | 'expenses' | 'summary'
+  const [activeSubTab, setActiveSubTab] = useState(initialSubTab); // 'invoices' | 'receipts' | 'expenses' | 'summary'
 
   useEffect(() => {
-    if (['invoices', 'expenses', 'summary'].includes(initialSubTab)) {
+    if (['invoices', 'receipts', 'expenses', 'summary'].includes(initialSubTab)) {
       setActiveSubTab(initialSubTab);
     }
   }, [initialSubTab]);
@@ -678,6 +688,19 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
     };
   }, []);
 
+  // Listen to acknowledgement receipts (payment history). A Firestore listener stops for good
+  // after an error, so surface it and allow re-subscribing instead of silently showing stale data.
+  useEffect(() => {
+    const qReceipts = query(collection(db, 'receipts'), orderBy('createdAt', 'desc'));
+    return onSnapshot(qReceipts, (snap) => {
+      setReceipts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setReceiptsError('');
+    }, (err) => {
+      console.error("Error listening to receipts:", err);
+      setReceiptsError(err.message || 'Could not load receipts.');
+    });
+  }, [receiptsListenKey]);
+
   // Invoice Items Management
   const addItem = () => setForm(f => ({ ...f, items: [...f.items, { id: Date.now(), service: '', amount: '' }] }));
   const removeItem = (id) => setForm(f => ({ ...f, items: f.items.filter(i => i.id !== id) }));
@@ -711,16 +734,55 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
     setSaving(false);
   };
 
-  const openPayModal = (inv) => { setPayModal({ inv }); setPayMethod(''); setPayRef(''); };
+  const defaultAccountName = (method) => method === 'gotyme' ? CO.bankAccountName : CO.approvedBy;
+  const choosePayMethod = (method) => { setPayMethod(method); setPayAccountName(method === 'cash' ? '' : defaultAccountName(method)); };
+
+  // Opens for unpaid invoices (record payment + issue AR) and for paid ones without an AR yet.
+  const openPayModal = (inv) => {
+    setPayModal({ inv });
+    const method = inv.paymentMethod || '';
+    setPayMethod(method);
+    setPayRef(inv.referenceNumber || '');
+    setPayAccountName(method && method !== 'cash' ? defaultAccountName(method) : '');
+    const paidAt = inv.paidAt?.toDate ? inv.paidAt.toDate() : null;
+    setPayDate(paidAt ? paidAt.toISOString().split('T')[0] : today());
+    setPayPreparedBy(inv.preparedSigneeName || inv.preparedBy || CO.preparedBy);
+  };
 
   const confirmPayment = async () => {
     if (!payMethod) return;
     if (payMethod !== 'cash' && !payRef.trim()) return;
     setPayConfirming(true);
-    const update = { status: 'paid', paidAt: serverTimestamp(), paymentMethod: payMethod, referenceNumber: payMethod !== 'cash' ? payRef.trim() : null };
-    await updateDoc(doc(db, 'invoices', payModal.inv.id), update);
-    setInvoices(prev => prev.map(i => i.id === payModal.inv.id ? { ...i, ...update, paidAt: new Date() } : i));
+    // Open the print window now, while the click still counts as a user gesture.
+    const printWindow = window.open('', '_blank');
+    const inv = payModal.inv;
+    const receipt = buildReceipt(inv, { method: payMethod, reference: payRef, accountName: payAccountName, paymentDate: payDate || todayIso(), preparedBy: payPreparedBy }, firebaseUser.email);
+    const update = {
+      status: 'paid',
+      paymentMethod: payMethod,
+      referenceNumber: receipt.referenceNumber,
+      receiptId: inv.id,
+      receiptNumber: receipt.receiptNumber,
+      ...(inv.status === 'paid' ? {} : { paidAt: serverTimestamp() }),
+    };
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'invoices', inv.id), update);
+      batch.set(doc(db, 'receipts', inv.id), { ...receipt, createdAt: serverTimestamp() });
+      await batch.commit();
+    } catch (err) {
+      console.error(err);
+      printWindow?.close();
+      showAlert('Receipt not issued', err.message || 'Failed to record payment. Please try again.', 'warning');
+      setPayConfirming(false);
+      return;
+    }
+    // Show it right away; the receipts listener replaces this with the stored copy.
+    setReceipts(prev => [{ id: inv.id, ...receipt, createdAt: new Date() }, ...prev.filter(r => r.id !== inv.id)]);
     setPayModal(null);
+    if (!printReceipt(receipt, printWindow)) {
+      showAlert('Receipt issued', `${receipt.receiptNumber} was saved. Your browser blocked the print window — use Print in the Receipts tab.`, 'info');
+    }
     setPayConfirming(false);
   };
 
@@ -948,6 +1010,14 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
 
   // Pre-calculations
   const paid = invoices.filter(i => i.status === 'paid');
+  const receiptsByInvoice = Object.fromEntries(receipts.map(r => [r.invoiceId || r.id, r]));
+  const filteredReceipts = receipts.filter(r => {
+    const q = receiptSearch.trim().toLowerCase();
+    const matchMonth = globalMonthFilter === 'All' || (r.paymentDate || '').startsWith(globalMonthFilter);
+    return matchMonth && (!q || [r.receiptNumber, r.invoiceNumber, r.billTo, r.project, r.referenceNumber].some(v => (v || '').toLowerCase().includes(q)));
+  });
+  const receiptsTotal = filteredReceipts.reduce((s, r) => s + (r.total || 0), 0);
+  const awaitingReceipt = paid.filter(i => !receiptsByInvoice[i.id]);
   const unpaid = invoices.filter(i => i.status !== 'paid');
   const revenue = paid.reduce((s, i) => s + (i.total || 0), 0);
 
@@ -1252,6 +1322,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
       <div className="admin-tabs-wrapper" style={{ display: 'flex', gap: 10, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 12 }}>
         {[
           { id: 'invoices', label: 'Invoices', count: invoices.length, Icon: FileText },
+          { id: 'receipts', label: 'Receipts', count: receipts.length, Icon: Receipt },
           { id: 'expenses', label: 'Expenses', count: expenses.length, Icon: Briefcase },
           { id: 'summary', label: 'Financial Summary', count: null, Icon: TrendingUp }
         ].map(tab => {
@@ -1452,7 +1523,10 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                 {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                               </button>
                             </td>
-                            <td style={{ padding: '18px 24px', fontWeight: 700, color: '#fff', verticalAlign: 'middle' }}>{inv.invoiceNumber}</td>
+                            <td style={{ padding: '18px 24px', fontWeight: 700, color: '#fff', verticalAlign: 'middle' }}>
+                              {inv.invoiceNumber}
+                              {receiptsByInvoice[inv.id] && <div style={{ color: '#34d399', fontSize: 11, fontWeight: 600, marginTop: 4 }}>{receiptsByInvoice[inv.id].receiptNumber}</div>}
+                            </td>
                             <td style={{ padding: '18px 24px', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: `${avatar.color}20`, color: avatar.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700 }}>
@@ -1500,6 +1574,12 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                 )}
 
                                 <button onClick={() => printInvoice(inv)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print Invoice"><Printer size={14} /> <span className="hide-on-mobile">Print</span></button>
+
+                                {receiptsByInvoice[inv.id] ? (
+                                  <button onClick={() => printReceipt(receiptsByInvoice[inv.id])} style={{ ...S.btn, background: 'rgba(52,211,153,0.12)', color: '#34d399' }} title={`Print ${receiptsByInvoice[inv.id].receiptNumber}`}><Receipt size={14} /> <span className="hide-on-mobile">AR</span></button>
+                                ) : inv.status === 'paid' && canPayInvoice && (
+                                  <button onClick={() => openPayModal(inv)} style={{ ...S.btn, background: 'rgba(255,154,74,0.12)', color: '#ff9a4a' }} title="Issue Acknowledgement Receipt"><Receipt size={14} /> <span className="hide-on-mobile">Issue AR</span></button>
+                                )}
 
                                 {canEditInvoice && (
                                   <button onClick={() => openEdit(inv)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', padding: 8 }} title="Edit"><Edit2 size={14} /></button>
@@ -1582,7 +1662,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                                     )}
 
                                     {inv.status !== 'paid' && canPayInvoice && (
-                                      <button onClick={() => openPayModal(inv)} style={{ ...S.btn, width: '100%', justifyContent: 'center', background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)' }} title="Mark as Paid"><CreditCard size={14} /> Mark As Paid</button>
+                                      <button onClick={() => openPayModal(inv)} style={{ ...S.btn, width: '100%', justifyContent: 'center', background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)' }} title="Mark as Paid & issue receipt"><CreditCard size={14} /> Mark As Paid</button>
                                     )}
 
                                     {canDeleteInvoice && (
@@ -1611,6 +1691,95 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                 {renderPagination(invoicePage, invoiceTotalPages, setInvoicePage)}
               </div>
             </>
+          )}
+        </>
+      )}
+
+      {/* 1b. RECEIPTS TAB — acknowledgement receipt / payment history */}
+      {activeSubTab === 'receipts' && (
+        <>
+          <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16, marginBottom: 28 }}>
+            <div style={{ ...S.card, background: 'rgba(255,255,255,0.02)' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Receipts Issued</div>
+              <div style={{ color: '#fff', fontSize: 28, fontWeight: 700 }}>{filteredReceipts.length}</div>
+            </div>
+            <div style={{ ...S.card, border: '1px solid rgba(52,211,153,0.15)', background: 'linear-gradient(135deg, rgba(52,211,153,0.02), rgba(255,255,255,0.03))' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Amount Received</div>
+              <div style={{ color: '#34d399', fontSize: 28, fontWeight: 700 }}>₱{fmt(receiptsTotal)}</div>
+            </div>
+            <div style={{ ...S.card, border: '1px solid rgba(255,154,74,0.15)', background: 'linear-gradient(135deg, rgba(255,154,74,0.02), rgba(255,255,255,0.03))' }}>
+              <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Paid, No Receipt Yet</div>
+              <div style={{ color: '#ff9a4a', fontSize: 28, fontWeight: 700 }}>{awaitingReceipt.length}</div>
+              {awaitingReceipt.length > 0 && <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 6 }}>Use “Issue AR” on the invoice row.</div>}
+            </div>
+          </div>
+
+          {receiptsError && (
+            <div style={{ ...S.card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 16, border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.08)', color: '#fca5a5', fontSize: 13 }}>
+              <span>Receipts could not be loaded: {receiptsError}</span>
+              <button onClick={() => setReceiptsListenKey(k => k + 1)} style={{ ...S.btn, background: 'rgba(255,255,255,0.08)', color: '#fff' }}><RefreshCw size={13} /> Retry</button>
+            </div>
+          )}
+
+          {globalMonthFilter !== 'All' && (
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginBottom: 12 }}>Showing receipts with a payment date in the selected month only.</div>
+          )}
+
+          <div style={{ position: 'relative', marginBottom: 16, maxWidth: 420 }}>
+            <Search size={14} style={{ position: 'absolute', left: 12, top: 12, color: 'rgba(255,255,255,0.4)' }} />
+            <input style={{ ...S.inp, paddingLeft: 36, background: 'rgba(0,0,0,0.2)' }} placeholder="Search AR / SOA no., client, or reference..." value={receiptSearch} onChange={e => setReceiptSearch(e.target.value)} />
+          </div>
+
+          {filteredReceipts.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)' }}>No acknowledgement receipts yet. Receipts are issued when an invoice is marked as paid.</div>
+          ) : (
+            <div className="admin-table-card" style={{ ...S.card, padding: 0, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+                <thead style={{ background: 'rgba(0,0,0,0.2)' }}>
+                  <tr>
+                    {['Tracking No.', 'Client / Project', 'Payment Date', 'Method', 'Amount', ''].map((l, i) => (
+                      <th key={i} style={{ ...{ padding: '16px 24px', color: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', borderBottom: '1px solid rgba(255,255,255,0.05)', textAlign: 'left' }, textAlign: i >= 4 ? 'right' : 'left' }}>{l}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReceipts.map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ color: '#fff', fontWeight: 700 }}>{r.receiptNumber}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>{r.invoiceNumber}</div>
+                      </td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{r.billTo}</div>
+                        <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>{r.project}</div>
+                      </td>
+                      <td style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>
+                        {fmtDate(r.paymentDate)}
+                        {r.issuedBy && <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, marginTop: 4 }}>by {r.issuedBy}</div>}
+                      </td>
+                      <td style={{ padding: '16px 24px', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                        {PAYMENT_METHODS[r.paymentMethod] || r.paymentMethod}
+                        {r.referenceNumber && <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 4 }}>Ref. {r.referenceNumber}</div>}
+                      </td>
+                      <td style={{ padding: '16px 24px', textAlign: 'right', color: '#34d399', fontWeight: 700, fontSize: 15 }}>₱{fmt(r.total)}</td>
+                      <td style={{ padding: '16px 24px' }}>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(receiptLink(r.id)).then(() => { setCopiedId(`ar-${r.id}`); setTimeout(() => setCopiedId(null), 2000); })}
+                            style={{ ...S.btn, background: copiedId === `ar-${r.id}` ? 'rgba(52,211,153,0.15)' : 'rgba(96,165,250,0.1)', color: copiedId === `ar-${r.id}` ? '#34d399' : '#60a5fa' }}
+                            title="Copy client receipt link"
+                          >
+                            {copiedId === `ar-${r.id}` ? <Check size={12} /> : <Link2 size={12} />}
+                            <span className="hide-on-mobile">{copiedId === `ar-${r.id}` ? 'Copied!' : 'Copy Link'}</span>
+                          </button>
+                          <button onClick={() => printReceipt(r)} style={{ ...S.btn, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }} title="Print receipt"><Printer size={14} /> <span className="hide-on-mobile">Print</span></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
@@ -2069,7 +2238,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
           <div onClick={() => setPayModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', zIndex: 200 }} />
           <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', background: '#0f1218', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: 32, zIndex: 201, width: '100%', maxWidth: 440 }}>
             <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>Mark as Paid</h3>
+              <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, margin: 0 }}>{payModal.inv.status === 'paid' ? 'Issue Acknowledgement Receipt' : 'Mark as Paid'}</h3>
               <button onClick={() => setPayModal(null)} style={{ ...S.btn, background: 'none', color: 'rgba(255,255,255,0.5)', padding: 4 }}><X size={16} /></button>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 20 }}>{payModal.inv.invoiceNumber} · {payModal.inv.billTo} · <span style={{ color: '#ff9a4a', fontWeight: 700 }}>₱{fmt(payModal.inv.total)}</span></div>
@@ -2077,7 +2246,7 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
               <label style={S.lbl}>Payment Method</label>
               <div className="admin-metrics-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 8 }}>
                 {[{ id: 'cash', label: '💵 Cash' }, { id: 'gotyme', label: '🏦 GoTyme' }, { id: 'maribank', label: '🏧 MariBank' }, { id: 'gcash', label: '📱 GCash' }].map(({ id, label }) => (
-                  <button key={id} type="button" onClick={() => setPayMethod(id)} style={{ ...S.btn, justifyContent: 'center', padding: '12px 0', background: payMethod === id ? 'rgba(255,106,26,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${payMethod === id ? 'rgba(255,106,26,0.6)' : 'rgba(255,255,255,0.1)'}`, color: payMethod === id ? '#ff9a4a' : 'rgba(255,255,255,0.6)', fontWeight: payMethod === id ? 700 : 400, borderRadius: 12 }}>{label}</button>
+                  <button key={id} type="button" onClick={() => choosePayMethod(id)} style={{ ...S.btn, justifyContent: 'center', padding: '12px 0', background: payMethod === id ? 'rgba(255,106,26,0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${payMethod === id ? 'rgba(255,106,26,0.6)' : 'rgba(255,255,255,0.1)'}`, color: payMethod === id ? '#ff9a4a' : 'rgba(255,255,255,0.6)', fontWeight: payMethod === id ? 700 : 400, borderRadius: 12 }}>{label}</button>
                 ))}
               </div>
             </div>
@@ -2087,10 +2256,29 @@ export default function AdminInvoices({ firebaseUser, isSuperAdmin, can, initial
                 <input style={S.inp} value={payRef} onChange={e => setPayRef(e.target.value)} placeholder="e.g. REF-20260506-001" autoFocus />
               </div>
             )}
+            {payMethod && payMethod !== 'cash' && (
+              <div style={{ marginBottom: 18 }}>
+                <label style={S.lbl}>Account Name (received into)</label>
+                <input style={S.inp} value={payAccountName} onChange={e => setPayAccountName(e.target.value)} />
+              </div>
+            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+              <div>
+                <label style={S.lbl}>Payment Date</label>
+                <input type="date" style={{ ...S.inp, colorScheme: 'dark' }} value={payDate} onChange={e => setPayDate(e.target.value)} />
+              </div>
+              <div>
+                <label style={S.lbl}>Receipt Prepared By</label>
+                <input style={S.inp} value={payPreparedBy} onChange={e => setPayPreparedBy(e.target.value)} />
+              </div>
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Receipt size={13} /> Issues acknowledgement receipt {payModal.inv.invoiceNumber?.replace(/^(SOA|INV)-/, 'AR-')}
+            </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
               <button onClick={() => setPayModal(null)} style={{ ...S.btn, flex: 1, justifyContent: 'center', background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}>Cancel</button>
               <button onClick={confirmPayment} disabled={!payMethod || (payMethod !== 'cash' && !payRef.trim()) || payConfirming} style={{ ...S.btn, flex: 2, justifyContent: 'center', background: (!payMethod || (payMethod !== 'cash' && !payRef.trim())) ? 'rgba(52,211,153,0.2)' : 'linear-gradient(135deg,#34d399,#059669)', color: '#fff', fontWeight: 600, padding: '12px 0', boxShadow: '0 4px 14px rgba(52,211,153,0.2)' }}>
-                <CreditCard size={15} /> {payConfirming ? 'Confirming…' : 'Confirm Payment'}
+                <CreditCard size={15} /> {payConfirming ? 'Issuing…' : payModal.inv.status === 'paid' ? 'Issue Receipt' : 'Confirm Payment'}
               </button>
             </div>
           </div>

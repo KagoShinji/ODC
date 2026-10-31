@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, query, where, orderBy, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import { Plus, X, RefreshCw, Eye, MessageSquare, Clock, Send, ShieldCheck, LogOut, ArrowLeft, ExternalLink } from 'lucide-react';
+import { Plus, X, RefreshCw, Eye, MessageSquare, Clock, Send, LogOut, ArrowLeft, ExternalLink } from 'lucide-react';
 import { PortalLogin } from '../components/ui/PortalLogin';
 import LoadingButton from '../components/ui/LoadingButton';
 
@@ -157,9 +157,7 @@ function ClientDashboard({ firebaseUser }) {
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,13,20,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '0 24px' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', height: 72, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #3b82f6, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(59,130,246,0.35)' }}>
-              <ShieldCheck size={20} color="#fff" />
-            </div>
+            <img src="/brand/odc-app-icon.svg" alt="ODC" style={{ width: 40, height: 40, display: 'block', flexShrink: 0 }} />
             <div>
               <span style={{ fontWeight: 700, fontSize: 18 }}>Client Portal</span>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 12 }}>Welcome back, {firebaseUser.displayName || firebaseUser.email.split('@')[0]}</div>

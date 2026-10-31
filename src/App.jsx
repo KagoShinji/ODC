@@ -17,6 +17,7 @@ const Pricing = lazy(() => import('./pages/Pricing'));
 const AcceptancePage = lazy(() => import('./pages/AcceptancePage'));
 const ClientMOAPage = lazy(() => import('./pages/ClientMOAPage'));
 const ClientInvoicePage = lazy(() => import('./pages/ClientInvoicePage'));
+const ClientReceiptPage = lazy(() => import('./pages/ClientReceiptPage'));
 const FeedbackForm = lazy(() => import('./pages/FeedbackForm'));
 const PublicTaskView = lazy(() => import('./pages/PublicTaskView'));
 
@@ -89,6 +90,7 @@ function AppRoutes() {
       <Route path="/acceptance/:id" element={<AcceptancePage />} />
       <Route path="/moa/:id" element={<ClientMOAPage />} />
       <Route path="/invoice/:id" element={<ClientInvoicePage />} />
+      <Route path="/receipt/:id" element={<ClientReceiptPage />} />
       <Route path="/task/:id" element={<PublicTaskView />} />
       <Route path="/feedback" element={<FeedbackForm />} />
       <Route path="/feedback/:id" element={<FeedbackForm />} />

@@ -30,7 +30,7 @@ export function Layout({ children }) {
                     <div className="relative mx-auto grid w-[min(1480px,calc(100%-clamp(1rem,5vw,5.5rem)))] items-end gap-8 md:grid-cols-[1fr_auto]">
                         <div>
                             <div className="mb-5 inline-flex items-center gap-2 font-display text-sm font-black tracking-[-0.04em]">
-                                <img src="/images/odc.jpg" alt="ODC Logo" className="h-6 w-6 rounded-full object-cover" />
+                                <img src="/brand/odc-app-icon.svg" alt="ODC Logo" className="h-6 w-6" />
                                 OdysseyPH IT Solutions
                             </div>
                             <p className="max-w-xl text-sm leading-relaxed text-[#101718]/58">

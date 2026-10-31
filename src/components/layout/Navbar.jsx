@@ -85,7 +85,7 @@ export function Navbar() {
                         onClick={() => scrollToSection('home')}
                         className="inline-flex items-center gap-2 text-sm font-display font-black tracking-[-0.04em] text-white transition-colors hover:opacity-80"
                     >
-                        <img src="/images/odc.jpg" alt="ODC Logo" className="h-6 w-6 rounded-full object-cover" />
+                        <img src="/brand/odc-app-icon.svg" alt="ODC Logo" className="h-6 w-6" />
                         Odyssey
                     </button>
 

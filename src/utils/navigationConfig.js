@@ -95,6 +95,7 @@ export const ALL_ADMIN_NAVIGATIONS = [
     color: '#34d399',
     subTabs: [
       { id: 'invoices', label: 'Invoices' },
+      { id: 'receipts', label: 'Receipts' },
       { id: 'expenses', label: 'Expenses' },
       { id: 'summary', label: 'Financial summary' },
     ],

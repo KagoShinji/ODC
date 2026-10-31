@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 // eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
-import { ShieldCheck, Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw } from 'lucide-react';
+import { Printer, CheckCircle2, ChevronRight, FileText, Globe, Award, Sparkles, RefreshCw } from 'lucide-react';
 import { printCertificate } from './AdminAcceptance';
 import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
@@ -330,14 +330,7 @@ export default function AcceptancePage() {
 
       {/* Top logo */}
       <div style={{ zIndex: 1, marginBottom: 40, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 10,
-          background: 'linear-gradient(135deg, #ff6a1a, #ff9a4a)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 12px rgba(255,106,26,0.35)',
-        }}>
-          <ShieldCheck size={20} color="#fff" />
-        </div>
+        <img src="/brand/odc-mark-reverse.svg" alt="ODC" style={{ height: 38, width: 'auto', display: 'block' }} />
         <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '0.5px' }}>Odysseyph IT Solutions</span>
       </div>
 

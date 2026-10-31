@@ -49,7 +49,7 @@ const getSigFontSizePrint = (name) => {
 };
 
 function printMOA(moa) {
-  const logoUrl = window.location.origin + '/images/odcclearlogo.png';
+  const logoUrl = window.location.origin + '/brand/odc-mark.svg';
 
   const formattedItems = (moa.scope || []).map(group => `
     <div class="scope-group">
@@ -106,7 +106,7 @@ body { font-family: 'Times New Roman', Times, serif; font-size: 14px; color: #00
 .pg { width: 794px; padding: 60px 80px; margin: 0 auto; position: relative; }
 .pg-break { page-break-after: always; }
 .hd { text-align: center; margin-bottom: 40px; }
-.logo img { height: 80px; width: auto; display: block; margin: 0 auto 10px; }
+.logo img { height: 64px; width: auto; display: block; margin: 0 auto 10px; }
 .ci { text-align: center; line-height: 1.4; color: #333; font-size: 12px; }
 .ci strong { font-size: 14px; }
 .ttl { text-align: center; font-size: 20px; font-weight: bold; padding: 20px 0 30px; letter-spacing: 1px; }
