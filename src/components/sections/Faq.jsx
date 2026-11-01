@@ -16,7 +16,7 @@ const faqs = [
     },
     {
         question: 'What is ODC-Courts and what sports venues use OdysseyPH systems?',
-        answer: 'ODC-Courts is a specialized court reservation network for sports centers and pickleball venues. OdysseyPH systems power online reservations and court operations for venues like The Pickle Point Cebu, Jump Serve Sports Center (Mandaue & Mactan), KennyDink Moalboal, Nickleball Avenue, and Sosyal Dinkers Davao.',
+        answer: 'ODC-Courts is a specialized court reservation network for sports centers and pickleball venues. OdysseyPH systems power online reservations and court operations for venues like The Pickle Point Cebu, KennyDink Moalboal, Nickleball Avenue, and Sosyal Dinkers Davao.',
     },
     {
         question: 'Where is OdysseyPH IT Solutions located, and do you serve clients nationwide?',

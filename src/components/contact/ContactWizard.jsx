@@ -107,7 +107,7 @@ const blueprints = {
     sports: {
         title: 'Multi-Venue Court Reservation Network',
         architecture: 'High-concurrency booking engine with real-time slot locking, automated payment webhooks, and venue manager dashboards.',
-        reference: 'ODC-Courts, The Pickle Point Cebu & Jump Serve',
+        reference: 'ODC-Courts & The Pickle Point Cebu',
     },
     enterprise: {
         title: 'Operational Enterprise Dashboard & Process Engine',

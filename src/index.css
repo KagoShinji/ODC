@@ -848,6 +848,87 @@ section {
   display: block;
 }
 
+/* Client logo wall: two infinite rows in opposite directions, paused on hover */
+.client-marquee-rows {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+}
+
+.client-marquee {
+  --client-marquee-duration: 48s;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+}
+
+.client-marquee.is-reverse {
+  --client-marquee-duration: 56s;
+}
+
+.client-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: client-marquee var(--client-marquee-duration) linear infinite;
+  will-change: transform;
+}
+
+.client-marquee.is-reverse .client-marquee-track {
+  animation-direction: reverse;
+}
+
+.client-marquee:hover .client-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Spacing lives on the item (not flex gap) so each duplicated half is exactly 50% wide */
+.client-marquee-item {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(6rem, 14vw, 9rem);
+  height: clamp(3rem, 6vw, 4rem);
+  margin-right: clamp(2rem, 5vw, 4rem);
+  opacity: 0.4;
+  filter: grayscale(1);
+  transition: opacity 300ms ease, filter 300ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.client-marquee-item:hover {
+  opacity: 1;
+  filter: grayscale(0);
+  transform: translateY(-2px) scale(1.08);
+}
+
+.client-marquee-item img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+
+@keyframes client-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .client-marquee {
+    mask-image: none;
+  }
+
+  .client-marquee-track {
+    width: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 1.5rem;
+    animation: none;
+  }
+
+  .client-marquee-item[aria-hidden='true'] {
+    display: none;
+  }
+}
+
 .integration-marquees {
   display: grid;
   gap: 0.85rem;
@@ -1228,10 +1309,6 @@ section {
   --business-accent: #8fe1da;
 }
 
-.business-system-card.jumpserve {
-  --business-accent: #ff8e3c;
-}
-
 .business-system-card.kennydink {
   --business-accent: #a3e635;
 }
@@ -1602,7 +1679,6 @@ section {
 
 .pickleball-card.pickle  { --pb-accent: #7ee3cf; }
 .pickleball-card.kennydink { --pb-accent: #a3e635; }
-.pickleball-card.jumpserve { --pb-accent: #ff8e3c; }
 
 /* Featured card — enhanced border glow */
 .pickleball-card.is-featured {

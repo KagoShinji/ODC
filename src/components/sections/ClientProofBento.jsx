@@ -1,6 +1,6 @@
 import { motion as Motion } from 'framer-motion';
 import { Check, Star } from 'lucide-react';
-import { fadeUpSoft, maskUp, reveal, revealChild, staggerContainer, useCountUp } from '../../lib/motion';
+import { fadeUpSoft, maskUp, reveal, useCountUp } from '../../lib/motion';
 
 function CountUp({ value, format }) {
   const ref = useCountUp(value, format);
@@ -26,9 +26,7 @@ export const clientLogos = [
   { name: 'Man and Paddle', src: '/logos/manandpaddle.png' },
   { name: 'KennyDink', src: '/logos/kennydinklogo.png' },
   { name: 'Talisay Chamber', src: '/logos/talisaychamber.png' },
-  { name: 'Jump Serve Mandaue', src: '/logos/jumpservemandaue.png' },
   { name: 'CPRMED', src: '/logos/cprmedlogo.png' },
-  { name: 'Jump Serve Mactan', src: '/logos/jumpservemactan.png' },
   { name: 'Pickleball Avenue', src: '/logos/nickleballavenue.png' },
   { name: 'The Pickle Point Cebu', src: '/logos/thepicklepoint.png' },
   { name: 'Firsel Tattoo', src: '/logos/firseltattoonew.png' },
@@ -40,6 +38,9 @@ export const clientLogos = [
   { name: 'The Halo Hub', src: '/logos/thehalohub.jpg' },
   { name: 'KBDF Luxury', src: '/logos/kbdflogotext.jpg' },
 ];
+
+// Two marquee rows moving in opposite directions; alternate logos so both rows mix industries.
+const logoRows = [clientLogos.filter((_, i) => i % 2 === 0), clientLogos.filter((_, i) => i % 2 === 1)];
 
 export function ClientProofBento() {
   return (
@@ -207,29 +208,29 @@ export function ClientProofBento() {
             Trusted by Philippine enterprises, medical practices & sports operators
           </p>
 
-          <Motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: '-40px' }}
-            variants={staggerContainer(0.03, 0.1)}
-            className="flex flex-wrap justify-center items-center gap-x-8 gap-y-8 sm:gap-x-12 sm:gap-y-10 md:gap-x-16 max-w-6xl mx-auto px-4"
-          >
-            {clientLogos.map((item, index) => (
-              <Motion.div key={`${item.name}-${index}`} {...revealChild(fadeUpSoft, 0.5)}>
-              <div
-                className="flex justify-center items-center w-24 h-12 sm:w-28 sm:h-14 md:w-36 md:h-16 transition-[opacity,filter,transform] duration-300 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105"
-                title={item.name}
-              >
-                <img
-                  src={item.src}
-                  alt={`${item.name} logo`}
-                  loading="lazy"
-                  className="max-w-full max-h-full object-contain"
-                />
+          <div className="client-marquee-rows">
+            {logoRows.map((row, rowIndex) => (
+              <div key={rowIndex} className={`client-marquee ${rowIndex % 2 ? 'is-reverse' : ''}`}>
+                <div className="client-marquee-track">
+                  {[...row, ...row].map((item, index) => (
+                    <div
+                      key={`${item.name}-${index}`}
+                      className="client-marquee-item"
+                      title={item.name}
+                      aria-hidden={index >= row.length || undefined}
+                    >
+                      <img
+                        src={item.src}
+                        alt={index < row.length ? `${item.name} logo` : ''}
+                        loading="lazy"
+                        draggable="false"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-              </Motion.div>
             ))}
-          </Motion.div>
+          </div>
         </Motion.div>
 
       </div>

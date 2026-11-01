@@ -31,7 +31,6 @@ The ODC-Courts platform is a proprietary court discovery and live scheduling arc
   - Network-wide discovery across Central Visayas and Mindanao venues.
 - Verified Venues:
   - The Pickle Point Cebu (Mandaue City)
-  - Jump Serve Sports Center (Mandaue & Mactan)
   - KennyDink Moalboal Cebu (Resort & court booking)
   - Nickleball Avenue (Talisay Cebu)
   - Sosyal Dinkers (Davao)

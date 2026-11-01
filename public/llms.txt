@@ -24,7 +24,6 @@ Specialized sports venue management and player reservation networks:
 - **ODC-Courts**: Centralized multi-location network booking platform (Airbnb-style court discovery, live reservations, venue management).
 - **Verified Venues Powered by Odyssey Systems**:
   - The Pickle Point Cebu (Mandaue City)
-  - Jump Serve Sports Center (Mandaue City & Mactan)
   - KennyDink Moalboal Cebu (Resort & pickleball booking platform)
   - Nickleball Avenue (Talisay Cebu)
   - Sosyal Dinkers (Davao)

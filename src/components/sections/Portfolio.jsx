@@ -65,14 +65,6 @@ const projects = [
         impact: 'Gym management system'
     },
     {
-        id: 8,
-        title: 'Jump Serve Sports Center Mandaue',
-        category: 'Systems',
-        image: '/jumpserve.png',
-        description: 'A high-energy sports center website built for court discovery, schedule browsing, and fast reservation intent for volleyball and multi-sport facilities.',
-        impact: 'Sports facility website'
-    },
-    {
         id: 9,
         title: 'KennyDink Moalboal Cebu',
         category: 'Systems',
@@ -87,14 +79,6 @@ const projects = [
         image: '/images/supportteach.png',
         description: 'An educational platform built for structured learning delivery, student progress tracking, and teacher-driven course management with clean workflow-first UI.',
         impact: 'LMS & progress tracker'
-    },
-    {
-        id: 11,
-        title: 'Jump Serve Mactan',
-        category: 'Systems',
-        image: '/jumpservemactan.png',
-        description: 'A dedicated pickleball facility website in Mactan built for court discovery and reservations.',
-        impact: 'Sports facility website'
     },
     {
         id: 12,
