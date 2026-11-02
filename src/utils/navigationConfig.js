@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ListChecks,
   Target,
+  ScrollText,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -140,6 +141,16 @@ export const ALL_ADMIN_NAVIGATIONS = [
       { id: 'moa:edit', label: 'Edit MOA', desc: 'Update agreement terms and clauses' },
       { id: 'moa:sign', label: 'Sign as Provider', desc: 'Affix provider signature on agreement' },
       { id: 'moa:delete', label: 'Delete MOA', desc: 'Permanently remove agreement documents' },
+    ],
+  },
+  {
+    id: 'officeorders',
+    label: 'Office Orders',
+    desc: 'Company directives, signatures & tracking',
+    icon: ScrollText,
+    color: '#ff6a13',
+    actions: [
+      { id: 'officeorders:manage', label: 'Manage Office Orders', desc: 'Draft, issue, sign and revoke office orders' },
     ],
   },
   {
