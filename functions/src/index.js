@@ -11,6 +11,7 @@ import { ACTIONS, DEFAULT_POLICY, DomainError, check, idValue } from './domain.j
 import { executeCommand } from './commands.js';
 export { demoContext, demoDashboard, demoAvailableSlots, demoBookingHistory, demoCommand, sendDemoReminders, revokeSuspendedDemoAccess } from './demos.js';
 export { staffModulePermissions } from './staffPermissions.js';
+export { sendSalesReminders, sendSalesWeeklySummary } from './sales.js';
 
 initializeApp();
 const db = getFirestore();

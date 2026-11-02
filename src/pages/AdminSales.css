@@ -1,0 +1,126 @@
+/* Sales Management — builds on the task board tokens in AdminTasks.css */
+.sales-module{--sales-accent:#7dd3fc}
+.sales-module .task-module{padding:0;max-width:none}
+.sales-push{margin-left:auto!important}
+.sales-span{grid-column:1/-1}
+.sales-grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sales-grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sales-subhead{margin:28px 0 12px!important}
+.sales-module button.sales-link,.sales-dialog button.sales-link{padding:0;border:0;background:none;color:var(--task-accent);text-align:left;font-size:inherit;justify-content:flex-start}
+.sales-module button.sales-link:hover,.sales-dialog button.sales-link:hover{background:none;text-decoration:underline}
+.sales-overdue{color:var(--task-overdue)!important;font-weight:550}
+
+/* Stage pills */
+.sales-stage{color:#c3cad6;border-color:#c3cad640}
+.sales-stage-contacted{color:var(--task-progress);border-color:#8fbaf540}
+.sales-stage-interested{color:#a5b4fc;border-color:#a5b4fc40}
+.sales-stage-consultation{color:#c4b5fd;border-color:#c4b5fd40}
+.sales-stage-quotation{color:var(--task-today);border-color:#f5c97a40}
+.sales-stage-negotiation{color:#fdba74;border-color:#fdba7440}
+.sales-stage-converted{color:var(--task-done);border-color:#7fd8a640;background:#7fd8a612}
+.sales-stage-lost{color:#9aa4b3;border-color:#9aa4b335}
+.task-pill.sales-flag{color:var(--task-overdue);border-color:#f2a3a340;margin-left:6px}
+.task-pill.sales-conv-pending{color:var(--task-today);border-color:#f5c97a40}
+.task-pill.sales-conv-confirmed{color:var(--task-done);border-color:#7fd8a640}
+.task-pill.sales-conv-rejected{color:var(--task-overdue);border-color:#f2a3a340}
+
+/* Progress & metrics */
+.sales-progress{display:grid;gap:6px;min-width:0}
+.sales-progress-head{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--task-muted)}
+.sales-progress-head strong{color:#e8ecf3;font-variant-numeric:tabular-nums}
+.sales-progress-head small{color:var(--task-muted);font-weight:400}
+.sales-progress-track{height:8px;border-radius:99px;background:#ffffff10;overflow:hidden}
+.sales-progress-track span{display:block;height:100%;border-radius:inherit;background:var(--sales-accent);transition:width .4s ease}
+.sales-progress-track span.is-met{background:var(--task-done)}
+.sales-progress-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:4px 0 18px}
+.sales-stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:12px}
+.sales-stats .task-stat small{font-size:11px;line-height:1.4}
+
+/* Dashboard */
+.sales-dashboard-grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:22px;align-items:start}
+.sales-dashboard-grid>aside{display:grid;gap:16px}
+.sales-panel{padding:18px 20px;border:1px solid var(--task-line);border-radius:12px;background:#ffffff04;display:grid;gap:12px;align-content:start;margin-bottom:16px}
+.sales-panel>h3{display:flex;align-items:center;gap:8px}
+.sales-associates{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.sales-associate{display:grid;gap:14px;padding:18px;border:1px solid var(--task-line);border-radius:12px;background:#ffffff04}
+.sales-associate header{display:grid;gap:2px}
+.sales-associate h3{font-size:16px!important}
+.sales-mini{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:0}
+.sales-mini div{display:grid;gap:2px}
+.sales-mini dt{color:var(--task-muted);font-size:11px}
+.sales-mini dd{margin:0;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.sales-card-month{display:grid;gap:6px;padding-top:12px;border-top:1px solid var(--task-line)}
+.sales-reminders{list-style:none;margin:0;padding:0;display:grid;gap:2px;max-height:420px;overflow-y:auto}
+.sales-reminders li{display:flex;align-items:flex-start;gap:8px;padding:8px 4px;border-bottom:1px solid #ffffff0c;font-size:12px}
+.sales-reminders li>svg{flex-shrink:0;margin-top:2px}
+.sales-reminders li>span{display:grid;gap:2px;flex:1;min-width:0;overflow-wrap:anywhere}
+.sales-reminders li small{color:var(--task-muted)}
+.sales-reminders li>button{padding:4px 6px}
+.sales-reminder-overdue>svg{color:var(--task-overdue)}
+.sales-reminder-today>svg{color:var(--task-today)}
+.sales-reminder-note>svg{color:var(--sales-accent)}
+
+/* Pipeline */
+.sales-stage-counts{display:flex;flex-wrap:wrap;gap:8px 16px;margin:-6px 0 18px;font-size:13px}
+.sales-stage-counts span{display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.sales-board{display:grid;grid-template-columns:repeat(8,minmax(220px,1fr));gap:12px;align-items:start;overflow-x:auto;padding-bottom:10px}
+.sales-column{transition:border-color .15s,background .15s}
+.sales-column.is-drop{border-color:var(--sales-accent);background:#7dd3fc0a}
+.sales-card{display:grid;gap:8px;padding:12px 13px;border:1px solid var(--task-line);border-left:3px solid #ffffff30;border-radius:9px;background:#ffffff05}
+.sales-card[draggable=true]{cursor:grab}
+.sales-card.task-card-overdue{border-left-color:var(--task-overdue)}
+.sales-module button.sales-card-open{display:grid;justify-items:start;gap:5px;padding:0;border:0;background:none;text-align:left}
+.sales-module button.sales-card-open:hover{background:none}
+.sales-module button.sales-card-open:hover .task-card-title{text-decoration:underline}
+.sales-card-move select{padding:6px 8px!important;font-size:12px!important}
+
+/* Tables */
+.sales-table-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:-8px 0 14px}
+.sales-table-wrap{overflow-x:auto;border:1px solid var(--task-line);border-radius:10px;margin-bottom:16px}
+.sales-table{width:100%;border-collapse:collapse;font-size:13px}
+.sales-table th,.sales-table td{padding:11px 14px;text-align:left;border-bottom:1px solid #ffffff0d;vertical-align:top}
+.sales-table thead th{position:sticky;top:0;background:#141a25;color:var(--task-muted);font-size:11px;font-weight:550;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.sales-table tbody th{font-weight:500}
+.sales-table tbody th small{display:block;color:var(--task-muted);font-size:11px;font-weight:400;margin-top:2px}
+.sales-table tbody tr:hover{background:#ffffff05}
+.sales-table td{font-variant-numeric:tabular-nums}
+.sales-report td{text-align:right;white-space:nowrap}
+.sales-report thead th:not(:first-child){text-align:right}
+.sales-report-sub th{padding-left:30px!important;color:var(--task-muted);font-weight:400!important}
+.sales-automation input,.sales-automation select{min-width:110px}
+.sales-automation td:nth-child(3) input{min-width:240px}
+
+/* Lead record */
+.sales-dialog-wide{width:min(880px,calc(100% - 32px))}
+.sales-channels{list-style:none;margin:0 0 16px;padding:0;display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px}
+.sales-channels li{display:inline-flex;align-items:center;gap:6px;min-width:0;overflow-wrap:anywhere}
+.sales-channels svg{color:var(--task-muted);flex-shrink:0}
+.sales-channels a{color:var(--task-accent)}
+.sales-inline-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:end;margin-top:16px}
+.sales-inline-form>button{justify-self:end;grid-column:1/-1}
+.sales-inline-form .task-assignee-option{margin-bottom:10px}
+.sales-dialog .task-status-picker{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.sales-timeline{max-height:360px}
+.sales-timeline-stage_change p:first-child,.sales-timeline-payment_confirmed p:first-child{color:var(--task-done)}
+.sales-notice{padding:12px 15px;border-radius:8px;font-size:13px;margin:0 0 12px!important;border:1px solid #7fd8a640;background:#7fd8a60c;color:#bfeccf}
+.sales-warning{padding:14px 16px;border-radius:8px;border:1px solid #f5c97a40;background:#f5c97a0a;font-size:13px;margin-bottom:16px}
+.sales-warning p:first-child{display:flex;align-items:center;gap:6px;color:var(--task-today)}
+.sales-warning ul{margin:8px 0;padding-left:20px}
+.sales-suggestion{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 15px;margin:0 0 16px;border:1px solid #7dd3fc40;border-radius:8px;background:#7dd3fc0a;font-size:13px}
+.sales-suggestion>span:first-child{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sales-checks{display:grid;gap:4px;margin-bottom:8px}
+.sales-reports-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.sales-reports-list li{padding-bottom:10px;border-bottom:1px solid #ffffff0d}
+.sales-reports-list small{color:var(--task-muted);margin-left:6px}
+.sales-reports-list p{white-space:pre-wrap;margin:4px 0 0!important;color:#d3d9e3}
+
+@media(max-width:1200px){.sales-dashboard-grid{grid-template-columns:1fr}.sales-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:768px){
+  .sales-grid-2,.sales-grid-3,.sales-inline-form,.sales-progress-row{grid-template-columns:1fr}
+  .sales-board{grid-template-columns:1fr;overflow:visible}
+  .sales-mini{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .sales-associates{grid-template-columns:1fr}
+  .sales-push{margin-left:0!important}
+  .sales-dialog-wide{width:calc(100% - 20px)}
+}
+@media(prefers-reduced-motion:reduce){.sales-progress-track span,.sales-column{transition:none}}

@@ -15,7 +15,18 @@
     { "collectionGroup": "allowanceLedger", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "allowanceAuditEvents", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
     { "collectionGroup": "allowanceAttachments", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "liquidationId", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
-    { "collectionGroup": "allowanceAttachments", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "accountId", "order": "ASCENDING" }, { "fieldPath": "date", "order": "ASCENDING" }, { "fieldPath": "purchaseCentavos", "order": "ASCENDING" }] }
+    { "collectionGroup": "allowanceAttachments", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerUid", "order": "ASCENDING" }, { "fieldPath": "accountId", "order": "ASCENDING" }, { "fieldPath": "date", "order": "ASCENDING" }, { "fieldPath": "purchaseCentavos", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesLeads", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "attributedEmail", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesLeads", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerEmail", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] },
+    { "collectionGroup": "salesLeads", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "ownerEmail", "order": "ASCENDING" }, { "fieldPath": "nextFollowUpAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesActivities", "queryScope": "COLLECTION_GROUP", "fields": [{ "fieldPath": "attributedEmail", "order": "ASCENDING" }, { "fieldPath": "at", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesDeals", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "attributedEmail", "order": "ASCENDING" }, { "fieldPath": "confirmedAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesDeals", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "attributedEmail", "order": "ASCENDING" }, { "fieldPath": "leadCreatedAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesLeads", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "stage", "order": "ASCENDING" }, { "fieldPath": "stageChangedAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "tasks", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "category", "order": "ASCENDING" }, { "fieldPath": "dueAt", "order": "ASCENDING" }] },
+    { "collectionGroup": "salesNotifications", "queryScope": "COLLECTION", "fields": [{ "fieldPath": "recipientEmail", "order": "ASCENDING" }, { "fieldPath": "createdAt", "order": "DESCENDING" }] }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "salesActivities", "fieldPath": "at", "indexes": [{ "order": "ASCENDING", "queryScope": "COLLECTION" }, { "order": "DESCENDING", "queryScope": "COLLECTION" }, { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }] }
+  ]
 }

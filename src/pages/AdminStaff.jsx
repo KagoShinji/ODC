@@ -118,6 +118,18 @@ const PRESETS = [
     actions: ['clients:create', 'demos:book', 'allowances:meeting', 'allowances:liquidate', 'allowances:request'],
   },
   {
+    name: 'Sales Associate',
+    desc: 'Own leads, pipeline, sales tasks and conversion requests',
+    tabs: ['tasks', 'sales', 'demos'],
+    actions: ['sales:associate', 'demos:book'],
+  },
+  {
+    name: 'Operations Manager',
+    desc: 'Sales team oversight, lead assignment and conversion review',
+    tabs: ['tasks', 'sales'],
+    actions: ['sales:manage', 'tasks:create', 'tasks:manage'],
+  },
+  {
     name: 'Demo Presenter',
     desc: 'Publish available hours and manage assigned demonstrations',
     tabs: ['demos'],

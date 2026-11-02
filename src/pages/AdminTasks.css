@@ -171,3 +171,4 @@
 }
 @media(prefers-reduced-motion:reduce){.task-skeleton{animation:none}.task-module button,.task-dialog button{transition:none}}
 
+.task-pill.task-category-sales{color:#7dd3fc;background:#7dd3fc14;border-color:#7dd3fc40}

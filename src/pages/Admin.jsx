@@ -59,6 +59,7 @@ const AdminStaff = lazy(() => import('./AdminStaff'));
 const AdminAllowances = lazy(() => import('./AdminAllowances'));
 const AdminDemos = lazy(() => import('./AdminDemos'));
 const AdminTasks = lazy(() => import('./AdminTasks'));
+const AdminSales = lazy(() => import('./AdminSales'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -401,6 +402,7 @@ function AdminDashboard({ firebaseUser }) {
     const [expandedSystems, setExpandedSystems] = useState([]);
     const [activeSubTabs, setActiveSubTabs] = useState({
         tasks: 'mine',
+        sales: 'dashboard',
         demos: 'calendar',
         allowances: 'overview',
         invoices: 'invoices',
@@ -882,6 +884,10 @@ function AdminDashboard({ firebaseUser }) {
 
                 {activeTab === 'tasks' && hasPermission('tasks') && (
                     <AdminTasks firebaseUser={firebaseUser} can={can} initialSection={activeSubTabs.tasks} onSectionChange={(id) => syncSubSystem('tasks', id)} />
+                )}
+
+                {activeTab === 'sales' && hasPermission('sales') && (
+                    <AdminSales firebaseUser={firebaseUser} can={can} isSuperAdmin={superAdmin} initialSection={activeSubTabs.sales} onSectionChange={(id) => syncSubSystem('sales', id)} />
                 )}
 
                 {activeTab === 'contacts' && hasPermission('contacts') && (

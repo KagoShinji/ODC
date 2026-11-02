@@ -676,7 +676,10 @@ service cloud.firestore {
     function taskCreator() { return taskManager() || staffAction('tasks:create'); }
     function validTask(data) {
       return data.keys().hasOnly(['title', 'description', 'priority', 'status', 'dueAt', 'assignees', 'assigneeEmails', 'checklist', 'activity',
-          'createdByUid', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'completedAt']) &&
+          'createdByUid', 'createdByEmail', 'createdByName', 'createdAt', 'updatedAt', 'completedAt',
+          'category', 'salesLeadId', 'salesActivity', 'salesWeek']) &&
+        data.get('category', 'general') in ['general', 'sales'] &&
+        (data.get('category', 'general') == 'sales' || !data.keys().hasAny(['salesLeadId', 'salesActivity', 'salesWeek'])) &&
         data.title is string && data.title.size() > 0 && data.title.size() <= 160 &&
         data.description is string && data.description.size() <= 5000 &&
         data.priority in ['low', 'medium', 'high', 'urgent'] &&
@@ -687,18 +690,196 @@ service cloud.firestore {
         data.activity is list && data.activity.size() <= 60;
     }
     function taskAssignee() { return request.auth.token.email != null && resource.data.assigneeEmails.hasAny([request.auth.token.email.lower()]); }
+    // Sales tasks live on the same board. Sales staff may post them for themselves; managers for anyone;
+    // anyone in sales may endorse a prospect to a developer. Sales tasks are never public by link.
+    function salesTask(data) { return data.get('category', 'general') == 'sales'; }
+    function salesTaskCreator(data) {
+      return salesTask(data) && salesMember() && data.assigneeEmails.size() >= 1 && data.assigneeEmails.size() <= 5 &&
+        (data.assigneeEmails.hasOnly([myEmail()]) || salesManager() || data.get('salesActivity', '') == 'demo_endorsement');
+    }
     match /tasks/{taskId} {
-      allow get: if true;
+      allow get: if request.auth != null || resource == null || !salesTask(resource.data);
       allow list: if request.auth != null;
-      allow create: if request.auth != null && taskCreator() && validTask(request.resource.data) &&
+      allow create: if request.auth != null && (taskCreator() || salesTaskCreator(request.resource.data)) && validTask(request.resource.data) &&
         request.resource.data.status == 'todo' && request.resource.data.createdByUid == request.auth.uid && request.resource.data.createdAt == request.time;
       allow update: if request.auth != null && validTask(request.resource.data) &&
         request.resource.data.createdByUid == resource.data.createdByUid && request.resource.data.createdAt == resource.data.createdAt &&
-        (resource.data.createdByUid == request.auth.uid || taskManager() ||
+        request.resource.data.get('category', 'general') == resource.data.get('category', 'general') &&
+        (resource.data.createdByUid == request.auth.uid || taskManager() || (salesTask(resource.data) && salesManager()) ||
           (taskAssignee() &&
             request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checklist', 'activity', 'updatedAt', 'completedAt']) &&
             request.resource.data.checklist.size() == resource.data.checklist.size()));
       allow delete: if request.auth != null && (resource.data.createdByUid == request.auth.uid || taskManager());
+    }
+
+    // ─── Sales management ───
+    // Authority comes only from Staff Management grants (sales:*). Identity is the login email, as on the task board.
+    function myEmail() { return request.auth.token.email.lower(); }
+    function salesProfile() { return record('staff', record('staffLoginIdentities', request.auth.uid).staffId); }
+    function salesGrant(actions) { return operationsRoot() || (request.auth != null && salesProfile().status == 'active' && salesProfile().allowedActions.hasAny(actions)); }
+    function salesMember() { return salesGrant(['sales:associate', 'sales:manage', 'sales:confirm', 'sales:targets']); }
+    function salesManager() { return salesGrant(['sales:manage', 'sales:confirm']); }
+    function salesViewer() { return salesGrant(['sales:manage', 'sales:confirm', 'sales:targets']); }
+    function salesConfirmer() { return salesGrant(['sales:confirm']); }
+    function salesTargeter() { return salesGrant(['sales:targets']); }
+    function leadBefore(id) { return record('salesLeads', id); }
+    function leadAfter(id) { return afterRecord('salesLeads', id); }
+    function dealAfter(id) { return afterRecord('salesDeals', id); }
+    function salesText(value, min, max) { return value is string && value.size() >= min && value.size() <= max; }
+    function salesMoney(value) { return value is int && value >= 0 && value <= 10000000000; }
+    function optionalTime(value) { return value == null || value is timestamp; }
+    function unchanged(keys) { return !request.resource.data.diff(resource.data).affectedKeys().hasAny(keys); }
+    function stampedByMe(data) { return data.updatedAt == request.time && data.updatedByUid == request.auth.uid; }
+
+    function validLead(d) {
+      return d.keys().hasOnly(['businessName', 'industry', 'location', 'contactName', 'contactNumber', 'facebookUrl', 'websiteUrl', 'email', 'source', 'notes',
+          'qualified', 'disqualifyReason', 'ownerEmail', 'ownerName', 'attributedEmail', 'attributedName', 'stage', 'stageChangedAt', 'lostReason', 'lostNotes',
+          'nextFollowUpAt', 'duplicateKeys', 'possibleDuplicateOf', 'duplicateStatus', 'firstContactedAt', 'firstResponseAt', 'conversionStatus', 'convertedAt',
+          'createdAt', 'createdByUid', 'createdByEmail', 'createdByName', 'updatedAt', 'updatedByUid']) &&
+        salesText(d.businessName, 1, 200) && salesText(d.industry, 1, 80) && salesText(d.source, 1, 80) &&
+        salesText(d.location, 0, 200) && salesText(d.contactName, 0, 120) && salesText(d.contactNumber, 0, 40) && salesText(d.facebookUrl, 0, 500) &&
+        salesText(d.websiteUrl, 0, 500) && salesText(d.email, 0, 200) && salesText(d.notes, 0, 5000) &&
+        (d.contactNumber.size() > 0 || d.email.size() > 0 || d.facebookUrl.size() > 0 || d.websiteUrl.size() > 0) &&
+        d.qualified is bool && salesText(d.disqualifyReason, 0, 500) && (d.qualified || d.disqualifyReason.size() > 0) &&
+        salesText(d.ownerEmail, 3, 200) && salesText(d.ownerName, 0, 200) && salesText(d.attributedEmail, 3, 200) && salesText(d.attributedName, 0, 200) &&
+        d.stage in ['new', 'contacted', 'interested', 'consultation', 'quotation', 'negotiation', 'converted', 'lost'] && d.stageChangedAt is timestamp &&
+        (d.stage == 'lost' ? d.lostReason in ['not_interested', 'no_response', 'budget', 'existing_system', 'postponed', 'other_provider', 'other'] : d.lostReason == '') &&
+        salesText(d.lostNotes, 0, 1000) && optionalTime(d.nextFollowUpAt) && (!(d.stage in ['converted', 'lost']) || d.nextFollowUpAt == null) &&
+        d.duplicateKeys is list && d.duplicateKeys.size() <= 10 && d.possibleDuplicateOf is list && d.possibleDuplicateOf.size() <= 20 &&
+        d.duplicateStatus in ['none', 'pending_review', 'not_duplicate', 'duplicate'] &&
+        optionalTime(d.firstContactedAt) && optionalTime(d.firstResponseAt) &&
+        d.conversionStatus in ['none', 'pending', 'confirmed', 'rejected'] && optionalTime(d.convertedAt) && stampedByMe(d);
+    }
+    // Converted is reached only together with a confirmed deal; a confirmed client is locked.
+    function leadConversionOk(before, d, id) {
+      return before.stage == 'converted'
+        ? d.stage == 'converted' && d.conversionStatus == before.conversionStatus && d.convertedAt == before.convertedAt
+        : (d.stage == 'converted'
+          ? salesConfirmer() && d.conversionStatus == 'confirmed' && d.convertedAt == request.time && dealAfter(id).status == 'confirmed'
+          : d.convertedAt == null && d.conversionStatus != 'confirmed' && (d.conversionStatus == before.conversionStatus || d.conversionStatus == dealAfter(id).status));
+    }
+    function leadMilestonesOk(before, d) {
+      return (before.firstContactedAt == null || d.firstContactedAt == before.firstContactedAt) && (before.firstResponseAt == null || d.firstResponseAt == before.firstResponseAt) &&
+        (d.stage == before.stage ? d.stageChangedAt == before.stageChangedAt : d.stageChangedAt == request.time);
+    }
+    match /salesLeads/{leadId} {
+      allow read: if salesViewer() || (salesMember() && (resource.data.ownerEmail == myEmail() || resource.data.attributedEmail == myEmail()));
+      allow create: if salesMember() && validLead(request.resource.data) &&
+        request.resource.data.createdByUid == request.auth.uid && request.resource.data.createdByEmail == myEmail() && request.resource.data.createdAt == request.time &&
+        request.resource.data.stage == 'new' && request.resource.data.stageChangedAt == request.time && request.resource.data.qualified == true &&
+        request.resource.data.duplicateStatus in ['none', 'pending_review'] && request.resource.data.conversionStatus == 'none' && request.resource.data.convertedAt == null &&
+        request.resource.data.firstContactedAt == null && request.resource.data.firstResponseAt == null &&
+        request.resource.data.attributedEmail == request.resource.data.ownerEmail && (request.resource.data.ownerEmail == myEmail() || salesManager());
+      allow update: if salesMember() && validLead(request.resource.data) &&
+        unchanged(['createdAt', 'createdByUid', 'createdByEmail', 'createdByName', 'attributedEmail', 'attributedName']) &&
+        leadConversionOk(resource.data, request.resource.data, leadId) && leadMilestonesOk(resource.data, request.resource.data) &&
+        (salesManager() || (resource.data.ownerEmail == myEmail() &&
+          unchanged(['ownerEmail', 'ownerName', 'qualified', 'disqualifyReason', 'duplicateStatus', 'possibleDuplicateOf']) &&
+          request.resource.data.conversionStatus in [resource.data.conversionStatus, 'pending']));
+      allow delete: if false;
+    }
+    // Identifier index for duplicate warnings across owners; it reveals only the matching business name and owner.
+    match /salesLeadKeys/{keyId} {
+      allow get: if salesMember();
+      allow create: if salesMember() && request.resource.data.keys().hasOnly(['leadId', 'type', 'businessName', 'ownerName', 'createdAt']) &&
+        request.resource.data.createdAt == request.time && request.resource.data.type in ['name', 'phone', 'web', 'fb', 'email'] && keyId.matches(request.resource.data.type + '_.+') &&
+        salesText(request.resource.data.businessName, 1, 200) && salesText(request.resource.data.ownerName, 0, 200) &&
+        (salesManager() || leadAfter(request.resource.data.leadId).ownerEmail == myEmail());
+      allow list, update, delete: if false;
+    }
+    function validActivity(d, leadId) {
+      let lead = leadAfter(leadId);
+      return d.keys().hasOnly(['leadId', 'type', 'notes', 'byUid', 'byEmail', 'byName', 'at', 'attributedEmail', 'ownerEmail', 'industry', 'fromStage', 'toStage', 'scheduledAt', 'detail']) &&
+        d.industry == lead.industry &&
+        d.leadId == leadId && d.byUid == request.auth.uid && d.byEmail == myEmail() && salesText(d.byName, 0, 200) && d.at == request.time &&
+        salesText(d.notes, 0, 2000) && salesText(d.detail, 0, 300) && optionalTime(d.scheduledAt) &&
+        d.attributedEmail == lead.attributedEmail && d.ownerEmail == lead.ownerEmail &&
+        d.type in ['initial_contact', 'follow_up', 'call', 'email', 'response', 'consultation_scheduled', 'consultation', 'demo', 'quotation_sent', 'negotiation', 'note',
+          'created', 'stage_change', 'assignment', 'conversion_requested', 'conversion_rejected', 'payment_confirmed', 'endorsed', 'duplicate_review', 'qualification'] &&
+        (d.type != 'created' || (!exists(/databases/$(database)/documents/salesLeads/$(leadId)) && lead.createdByUid == request.auth.uid)) &&
+        (d.type != 'stage_change' || (d.fromStage == leadBefore(leadId).stage && d.toStage == lead.stage && d.fromStage != d.toStage)) &&
+        (!(d.type in ['assignment', 'duplicate_review', 'qualification', 'conversion_rejected']) || salesManager()) &&
+        (d.type != 'payment_confirmed' || (salesConfirmer() && lead.stage == 'converted'));
+    }
+    match /salesLeads/{leadId}/salesActivities/{activityId} {
+      allow read: if salesViewer() || (salesMember() && (leadBefore(leadId).ownerEmail == myEmail() || leadBefore(leadId).attributedEmail == myEmail()));
+      allow create: if salesMember() && validActivity(request.resource.data, leadId) && (salesManager() || leadAfter(leadId).ownerEmail == myEmail());
+      allow update, delete: if false;
+    }
+    match /{path=**}/salesActivities/{activityId} {
+      allow read: if salesViewer() || (salesMember() && resource.data.attributedEmail == myEmail());
+    }
+    function validDeal(d, leadId) {
+      let lead = leadAfter(leadId);
+      return d.keys().hasOnly(['leadId', 'businessName', 'industry', 'attributedEmail', 'attributedName', 'ownerEmail', 'leadCreatedAt', 'service', 'quotedCentavos', 'finalCentavos',
+          'downPaymentCentavos', 'paymentDate', 'paymentReference', 'requestNotes', 'status', 'submittedByUid', 'submittedByEmail', 'submittedByName', 'submittedAt',
+          'reviewNotes', 'reviewedByUid', 'reviewedByName', 'reviewedAt', 'confirmedAt', 'updatedAt']) &&
+        d.leadId == leadId && d.attributedEmail == lead.attributedEmail && d.leadCreatedAt == lead.createdAt && salesText(d.businessName, 1, 200) && d.industry == lead.industry &&
+        salesText(d['service'], 1, 200) && salesMoney(d.quotedCentavos) && d.quotedCentavos > 0 && salesMoney(d.finalCentavos) && salesMoney(d.downPaymentCentavos) &&
+        salesText(d.paymentDate, 0, 10) && salesText(d.paymentReference, 0, 120) && salesText(d.requestNotes, 0, 1000) && salesText(d.reviewNotes, 0, 1000) &&
+        d.status in ['pending', 'confirmed', 'rejected'] && optionalTime(d.reviewedAt) && optionalTime(d.confirmedAt) && d.updatedAt == request.time;
+    }
+    function dealSubmission(d, leadId) {
+      return d.status == 'pending' && d.submittedByUid == request.auth.uid && d.submittedByEmail == myEmail() && d.submittedAt == request.time &&
+        d.confirmedAt == null && (salesManager() || leadAfter(leadId).ownerEmail == myEmail()) &&
+        leadAfter(leadId).conversionStatus == 'pending' && leadAfter(leadId).stage in ['quotation', 'negotiation'];
+    }
+    match /salesDeals/{leadId} {
+      // A missing deal may be checked by anyone in sales: conversion requests read it inside their transaction.
+      allow read: if salesViewer() || (salesMember() && (resource == null || resource.data.attributedEmail == myEmail() || resource.data.ownerEmail == myEmail()));
+      allow create: if salesMember() && validDeal(request.resource.data, leadId) && dealSubmission(request.resource.data, leadId) && request.resource.data.reviewedAt == null;
+      allow update: if salesMember() && validDeal(request.resource.data, leadId) && resource.data.status != 'confirmed' &&
+        unchanged(['leadId', 'attributedEmail', 'attributedName', 'leadCreatedAt']) && (
+          (resource.data.status == 'rejected' && dealSubmission(request.resource.data, leadId)) ||
+          (resource.data.status == 'pending' && request.resource.data.status == 'pending' && (salesManager() || resource.data.ownerEmail == myEmail()) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['service', 'quotedCentavos', 'finalCentavos', 'downPaymentCentavos', 'paymentDate', 'paymentReference', 'requestNotes', 'updatedAt'])) ||
+          (resource.data.status == 'pending' && request.resource.data.status == 'rejected' && salesManager() && request.resource.data.reviewNotes.size() > 0 &&
+            request.resource.data.reviewedByUid == request.auth.uid && request.resource.data.reviewedAt == request.time && request.resource.data.confirmedAt == null &&
+            leadAfter(leadId).conversionStatus == 'rejected') ||
+          (resource.data.status == 'pending' && request.resource.data.status == 'confirmed' && salesConfirmer() &&
+            request.resource.data.reviewedByUid == request.auth.uid && request.resource.data.reviewedAt == request.time && request.resource.data.confirmedAt == request.time &&
+            request.resource.data.downPaymentCentavos > 0 && request.resource.data.finalCentavos >= request.resource.data.downPaymentCentavos &&
+            request.resource.data.paymentDate.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}') && leadAfter(leadId).stage == 'converted'));
+      allow delete: if false;
+    }
+    match /salesTargets/{effectiveFrom} {
+      allow read: if salesMember();
+      allow create, update: if salesTargeter() && request.resource.data.keys().hasOnly(['weeklyLeadsPerAssociate', 'monthlyLeadsPerAssociate', 'minConversionPercent',
+          'weeklyConversionTarget', 'monthlyConversionTarget', 'effectiveFrom', 'updatedAt', 'updatedByUid', 'updatedByName']) &&
+        request.resource.data.effectiveFrom == effectiveFrom && validDate(effectiveFrom) && stampedByMe(request.resource.data) &&
+        request.resource.data.weeklyLeadsPerAssociate is int && request.resource.data.weeklyLeadsPerAssociate > 0 &&
+        request.resource.data.monthlyLeadsPerAssociate is int && request.resource.data.monthlyLeadsPerAssociate > 0 &&
+        request.resource.data.minConversionPercent is number && request.resource.data.minConversionPercent > 0 && request.resource.data.minConversionPercent <= 100 &&
+        request.resource.data.weeklyConversionTarget is int && request.resource.data.weeklyConversionTarget >= 0 &&
+        request.resource.data.monthlyConversionTarget is int && request.resource.data.monthlyConversionTarget >= 0;
+      allow delete: if false;
+    }
+    match /salesSettings/{id} {
+      allow read: if salesMember();
+      allow create, update: if id == 'current' && salesTargeter() && stampedByMe(request.resource.data) &&
+        request.resource.data.keys().hasOnly(['timezone', 'weekStartsOn', 'categories', 'automation', 'quotationFollowUpDays', 'updatedAt', 'updatedByUid', 'updatedByName']) &&
+        salesText(request.resource.data.timezone, 3, 60) && request.resource.data.weekStartsOn is int && request.resource.data.weekStartsOn >= 0 && request.resource.data.weekStartsOn <= 6 &&
+        request.resource.data.categories is list && request.resource.data.categories.size() > 0 && request.resource.data.categories.size() <= 50 &&
+        request.resource.data.automation is map && request.resource.data.quotationFollowUpDays is int && request.resource.data.quotationFollowUpDays >= 1 && request.resource.data.quotationFollowUpDays <= 30;
+      allow delete: if false;
+    }
+    // Weekly self-reports: the associate's narrative and snapshot. Official KPIs are always recomputed from records.
+    match /salesWeeklyReports/{reportId} {
+      allow read: if salesViewer() || (salesMember() && resource.data.email == myEmail());
+      allow create, update: if salesMember() && reportId == request.resource.data.weekKey + '_' + request.auth.uid && validDate(request.resource.data.weekKey) &&
+        request.resource.data.keys().hasOnly(['weekKey', 'uid', 'email', 'name', 'snapshot', 'notes', 'submittedAt']) && request.resource.data.uid == request.auth.uid &&
+        request.resource.data.email == myEmail() && request.resource.data.snapshot is map && salesText(request.resource.data.notes, 0, 3000) && request.resource.data.submittedAt == request.time;
+      allow delete: if false;
+    }
+    match /salesNotifications/{id} {
+      allow read: if request.auth != null && resource.data.recipientEmail == myEmail();
+      allow create: if salesMember() && request.resource.data.keys().hasOnly(['recipientEmail', 'type', 'title', 'body', 'leadId', 'read', 'createdAt', 'createdByUid']) &&
+        salesText(request.resource.data.recipientEmail, 3, 200) && salesText(request.resource.data.type, 1, 40) && salesText(request.resource.data.title, 1, 200) &&
+        salesText(request.resource.data.body, 0, 1000) && salesText(request.resource.data.leadId, 0, 128) && request.resource.data.read == false &&
+        request.resource.data.createdAt == request.time && request.resource.data.createdByUid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.recipientEmail == myEmail() && request.resource.data.read == true &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if false;
     }
 
     match /{document=**} {

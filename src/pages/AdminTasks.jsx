@@ -38,6 +38,10 @@ function TaskDialog({ title, busy, onClose, children }) {
   );
 }
 
+function SalesPill({ task }) {
+  return task.category === 'sales' ? <span className="task-pill task-category-sales">Sales</span> : null;
+}
+
 function StatusPill({ status }) {
   return <span className={`task-pill task-status-${status}`}>{statusLabel(status)}</span>;
 }
@@ -113,6 +117,7 @@ function TaskCard({ task, now, onOpen, compact = false }) {
       <button type="button" className={`task-card task-card-${dueState(task, now)}`} onClick={() => onOpen(task.id)}>
         <span className="task-card-top">
           <PriorityPill priority={task.priority} />
+          <SalesPill task={task} />
           {!compact && <StatusPill status={task.status} />}
         </span>
         <strong className="task-card-title">{task.title}</strong>
@@ -122,7 +127,7 @@ function TaskCard({ task, now, onOpen, compact = false }) {
         </span>
         <Avatars people={task.assignees} />
       </button>
-      <button
+      {task.category !== 'sales' && <button
         type="button"
         className="task-card-share-btn"
         title={copied ? 'Link copied!' : 'Share task link'}
@@ -130,7 +135,7 @@ function TaskCard({ task, now, onOpen, compact = false }) {
         onClick={handleShareClick}
       >
         {copied ? <Check size={13} style={{ color: 'var(--task-done)' }} /> : <Share2 size={13} />}
-      </button>
+      </button>}
     </div>
   );
 }
@@ -267,8 +272,9 @@ function TaskDetail({ task, now, canEdit, canUpdate, onEdit, onDelete, onStatus,
       <div className="task-detail-pills">
         <StatusPill status={task.status} />
         <PriorityPill priority={task.priority} />
+        <SalesPill task={task} />
         <DueLabel task={task} now={now} />
-        <button
+        {task.category !== 'sales' && <button
           type="button"
           className={`task-detail-share-btn ${copied ? 'is-copied' : ''}`}
           onClick={handleShare}
@@ -277,7 +283,7 @@ function TaskDetail({ task, now, canEdit, canUpdate, onEdit, onDelete, onStatus,
         >
           {copied ? <Check size={13} /> : <Share2 size={13} />}
           <span>{copied ? 'Link Copied' : 'Share Task'}</span>
-        </button>
+        </button>}
       </div>
       <dl className="task-detail-grid">
         <dt>Assigned to</dt>
@@ -368,11 +374,16 @@ function groupByDeadline(list, now) {
   return groups;
 }
 
-export default function AdminTasks({ firebaseUser, can, initialSection, onSectionChange }) {
+/**
+ * The team task board. With `category` it becomes a focused board for one kind of work
+ * (e.g. My Sales Tasks): only that category is loaded and new tasks are filed under it.
+ * `heading` replaces the page title with a one-line description when the board is embedded in another module.
+ */
+export default function AdminTasks({ firebaseUser, can, initialSection, onSectionChange, category = null, onlyMine = false, heading = null, canCreateInCategory = false }) {
   const modal = useSystemModal();
   const myEmail = (firebaseUser.email || '').toLowerCase();
   const isManager = can('tasks:manage');
-  const canCreate = isManager || can('tasks:create');
+  const canCreate = isManager || can('tasks:create') || canCreateInCategory;
 
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -385,6 +396,7 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
   const [search, setSearch] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [dialog, setDialog] = useState(null); // { type: 'form', taskId? } | { type: 'detail', taskId }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -395,7 +407,8 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
   useEffect(() => subscribeTasks(
     list => { setTasks(list); setLoading(false); setLoadError(''); },
     err => { setLoading(false); setLoadError(errorText(err)); },
-  ), []);
+    { category, assigneeEmail: onlyMine ? myEmail : null },
+  ), [category, onlyMine, myEmail]);
 
   useEffect(() => {
     listAssignableStaff().then(setStaff).catch(err => console.error('Could not load staff roster:', err));
@@ -438,6 +451,7 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
 
   const boardTasks = tasks.filter(t => matchesSearch(t)
     && (priorityFilter === 'all' || t.priority === priorityFilter)
+    && (categoryFilter === 'all' || (t.category || 'general') === categoryFilter)
     && (assigneeFilter === 'all' || (assigneeFilter === 'none' ? !(t.assigneeEmails || []).length : (t.assigneeEmails || []).includes(assigneeFilter))));
 
   const activeTask = dialog?.taskId ? tasks.find(t => t.id === dialog.taskId) : null;
@@ -459,7 +473,7 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
         await editTask(firebaseUser, dialog.taskId, form);
         setDialog({ type: 'detail', taskId: dialog.taskId });
       } else {
-        await createTask(firebaseUser, form);
+        await createTask(firebaseUser, form, { category });
         closeDialog();
         modal.success({ title: 'Task posted', message: form.assignees.length ? `Assigned to ${form.assignees.map(a => a.name).join(', ')}.` : 'The task is on the team board.' });
       }
@@ -481,9 +495,13 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
     <div className="task-module">
       <header className="task-heading">
         <div>
-          <p className="task-eyebrow">Team workspace</p>
-          <h2>Task Board</h2>
-          <p>Post tasks with deadlines, assign them to staff, and track what's done.</p>
+          {heading ? <p className="task-muted">{heading}</p> : (
+            <>
+              <p className="task-eyebrow">Team workspace</p>
+              <h2>Task Board</h2>
+              <p>Post tasks with deadlines, assign them to staff, and track what&apos;s done.</p>
+            </>
+          )}
         </div>
         {canCreate && (
           <button type="button" className="task-primary task-heading-action" onClick={() => { setError(''); setDialog({ type: 'form' }); }}>
@@ -528,6 +546,16 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
                 {TASK_PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
               </select>
             </label>
+            {!category && (
+              <label className="task-filter">
+                <span>Category</span>
+                <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                  <option value="all">All tasks</option>
+                  <option value="general">General</option>
+                  <option value="sales">Sales</option>
+                </select>
+              </label>
+            )}
           </>
         )}
       </div>

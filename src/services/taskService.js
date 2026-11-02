@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { collection, doc, getDoc, addDoc, deleteDoc, getDocs, onSnapshot, query, orderBy, limit, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, addDoc, deleteDoc, getDocs, onSnapshot, query, where, orderBy, limit, runTransaction, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
 import { TASK_LIMITS } from '../utils/taskTracker';
 
@@ -38,9 +38,13 @@ function mutateTask(taskId, change) {
   });
 }
 
-export function subscribeTasks(onData, onError) {
+/** All tasks, or only one category (optionally one assignee's) for focused boards such as My Sales Tasks. */
+export function subscribeTasks(onData, onError, { category = null, assigneeEmail = null } = {}) {
+  const scoped = category
+    ? query(tasksRef, where('category', '==', category), ...(assigneeEmail ? [where('assigneeEmails', 'array-contains', assigneeEmail)] : []), limit(1000))
+    : query(tasksRef, orderBy('dueAt', 'asc'), limit(500));
   return onSnapshot(
-    query(tasksRef, orderBy('dueAt', 'asc'), limit(500)),
+    scoped,
     snap => onData(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
     onError,
   );
@@ -61,9 +65,10 @@ export async function listAssignableStaff() {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export function createTask(user, form) {
+export function createTask(user, form, extra = {}) {
   return addDoc(tasksRef, {
     ...taskFields(form),
+    ...(extra.category === 'sales' ? { category: 'sales' } : {}),
     status: 'todo',
     activity: [entry(user, 'created')],
     createdByUid: user.uid,

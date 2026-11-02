@@ -12,6 +12,7 @@ import {
   MailSearch,
   ShieldCheck,
   ListChecks,
+  Target,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -25,6 +26,24 @@ export const ALL_ADMIN_NAVIGATIONS = [
     actions: [
       { id: 'tasks:create', label: 'Post Tasks', desc: 'Create tasks, set deadlines and assign staff' },
       { id: 'tasks:manage', label: 'Manage All Tasks', desc: "Edit, reassign or delete anyone's tasks" },
+    ],
+  },
+  {
+    id: 'sales', label: 'Sales Management', desc: 'Leads, pipeline, KPIs & conversions', icon: Target, color: '#7dd3fc',
+    subTabs: [
+      { id: 'dashboard', label: 'Dashboard' },
+      { id: 'pipeline', label: 'Sales pipeline' },
+      { id: 'leads', label: 'Leads' },
+      { id: 'tasks', label: 'My sales tasks' },
+      { id: 'conversions', label: 'Conversions' },
+      { id: 'reports', label: 'Sales reports' },
+      { id: 'targets', label: 'Sales targets', requiresAction: 'sales:targets' },
+    ],
+    actions: [
+      { id: 'sales:associate', label: 'Sales Associate', desc: 'Add leads, work assigned leads, log activities and request conversions' },
+      { id: 'sales:manage', label: 'Manage Sales Team', desc: 'View all leads, assign and reassign, review conversion requests and reports' },
+      { id: 'sales:confirm', label: 'Confirm Conversions', desc: 'Verify down payments and confirm converted clients' },
+      { id: 'sales:targets', label: 'Sales Targets & Pipeline', desc: 'Change official targets, categories, reporting calendar and task automation' },
     ],
   },
   {
