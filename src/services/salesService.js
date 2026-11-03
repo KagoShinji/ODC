@@ -211,6 +211,49 @@ export async function setQualification(user, leadId, qualified, reason = '') {
   });
 }
 
+/** Who may delete a lead; mirrors leadDeletable() in firestore.rules. */
+export function canDeleteLead(user, role, lead) {
+  if (!lead || lead.stage === 'converted' || ['pending', 'confirmed'].includes(lead.conversionStatus)) return false;
+  return role.isManager || (lead.createdByUid === user.uid && lead.ownerEmail === emailOf(user) && lead.stage === 'new');
+}
+
+/**
+ * Deletes a wrong or incorrect lead together with its activity history, duplicate-check keys, returned deal and
+ * sales tasks, so it no longer counts anywhere (reports read activities across all leads).
+ * The lead goes in the first batch; the rules only allow removing the related records once it is gone.
+ */
+export async function deleteLead(user, role, leadId) {
+  const snap = await getDoc(leadRef(leadId));
+  requireSales(snap.exists(), 'This lead no longer exists.');
+  const lead = { id: leadId, ...snap.data() };
+  requireSales(canDeleteLead(user, role, lead), lead.stage === 'converted' || ['pending', 'confirmed'].includes(lead.conversionStatus)
+    ? 'Converted leads and leads awaiting conversion review cannot be deleted.'
+    : 'Only a sales manager can delete this lead. You can delete leads you added while they are still New.', 'permission-denied');
+
+  const [activities, deal, keySnaps, tasks] = await Promise.all([
+    getDocs(activitiesRef(leadId)),
+    getDoc(dealRef(leadId)),
+    Promise.all((lead.duplicateKeys || []).map(id => getDoc(doc(db, 'salesLeadKeys', id)))),
+    getDocs(query(collection(db, 'tasks'), where('salesLeadId', '==', leadId))),
+  ]);
+  const related = [
+    ...activities.docs.map(d => d.ref),
+    ...(deal.exists() && deal.data().status !== 'confirmed' ? [deal.ref] : []),
+    ...keySnaps.filter(k => k.exists() && k.data().leadId === leadId).map(k => k.ref),
+    ...tasks.docs.filter(t => t.data().category === 'sales').map(t => t.ref),
+  ];
+
+  // Firestore batches hold up to 500 writes.
+  const chunks = [[leadRef(leadId), ...related.slice(0, 449)]];
+  for (let i = 449; i < related.length; i += 450) chunks.push(related.slice(i, i + 450));
+  for (const refs of chunks) {
+    const batch = writeBatch(db);
+    refs.forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+  return lead;
+}
+
 /** Moves a lead to another pipeline stage and returns the automation task suggestion, if any. */
 export async function moveLeadStage(user, leadId, toStage, options = {}) {
   let moved;

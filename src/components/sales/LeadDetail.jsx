@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Phone, Mail, Globe, MapPin, User, Link2, ListPlus } from 'lucide-react';
+import { Pencil, Phone, Mail, Globe, MapPin, User, Link2, ListPlus, Trash2 } from 'lucide-react';
 import LoadingButton from '../ui/LoadingButton';
 import { StagePill } from './SalesUi';
 import LeadForm from './LeadForm';
@@ -8,7 +8,7 @@ import {
 } from '../../../functions/src/salesDomain.js';
 import {
   subscribeLead, subscribeLeadActivities, getDeal, moveLeadStage, logActivity, assignLead, reviewDuplicate, setQualification,
-  requestConversion, applyAutomation, ensureLeadTask, endorseToDeveloper, suggestedTask,
+  requestConversion, applyAutomation, ensureLeadTask, endorseToDeveloper, suggestedTask, canDeleteLead, deleteLead,
 } from '../../services/salesService';
 import { errorText, formatWhen, formatDay } from '../../utils/salesFormat';
 
@@ -164,7 +164,7 @@ function Timeline({ items, timeZone }) {
 }
 
 /** Full lead record: details, workflow actions and the activity timeline. */
-export default function LeadDetail({ ctx, leadId, initialNotice = '', onChanged }) {
+export default function LeadDetail({ ctx, leadId, initialNotice = '', onChanged, onDeleted }) {
   const { user, role, settings, staff } = ctx;
   const [lead, setLead] = useState(undefined);
   const [items, setItems] = useState([]);
@@ -231,6 +231,7 @@ export default function LeadDetail({ ctx, leadId, initialNotice = '', onChanged 
     open && canWork && ['endorse', 'Endorse to developer'],
     role.isManager && open && ['assign', 'Reassign'],
     role.isManager && ['qualify', lead.qualified === false ? 'Mark qualified' : 'Disqualify'],
+    canDeleteLead(user, role, lead) && ['delete', 'Delete lead'],
   ].filter(Boolean);
 
   return (
@@ -341,6 +342,20 @@ export default function LeadDetail({ ctx, leadId, initialNotice = '', onChanged 
               )}
               <LoadingButton type="submit" className={lead.qualified === false ? 'task-primary' : 'task-danger'} loading={busy} loadingLabel="Saving…">{lead.qualified === false ? 'Mark qualified' : 'Disqualify lead'}</LoadingButton>
             </form>
+          )}
+          {panel === 'delete' && (
+            <div className="sales-inline-form">
+              <p className="task-muted sales-span">
+                Delete <strong>{lead.businessName}</strong> permanently, together with its activity history{deal ? ', its returned deal' : ''} and its sales tasks.
+                It will no longer appear in the pipeline or count in any report. This can't be undone.
+              </p>
+              <p className="task-muted sales-span">For a real business that just isn't a fit, use Disqualify or mark it Lost instead so the history is kept.</p>
+              <LoadingButton type="button" className="task-danger" loading={busy} loadingLabel="Deleting…" onClick={async () => {
+                if (!window.confirm(`Delete the lead "${lead.businessName}"? This can't be undone.`)) return;
+                setBusy(true); setError('');
+                try { await deleteLead(user, role, lead.id); onDeleted?.(lead); } catch (err) { setError(errorText(err)); setBusy(false); }
+              }}><Trash2 size={14} aria-hidden="true" /> Delete lead permanently</LoadingButton>
+            </div>
           )}
         </Section>
       )}

@@ -105,7 +105,7 @@ export default function AdminSales({ firebaseUser, can, initialSection, onSectio
       )}
       {dialog?.type === 'lead' && ctx && (
         <SalesDialog title="Lead record" wide onClose={() => { setDialog(null); refresh(); }}>
-          <LeadDetail ctx={ctx} leadId={dialog.id} initialNotice={dialog.notice} onChanged={refresh} />
+          <LeadDetail ctx={ctx} leadId={dialog.id} initialNotice={dialog.notice} onChanged={refresh} onDeleted={() => { setDialog(null); refresh(); }} />
         </SalesDialog>
       )}
     </div>
