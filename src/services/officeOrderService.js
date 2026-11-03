@@ -1,4 +1,4 @@
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
 import { collection, doc, onSnapshot, query, orderBy, runTransaction, serverTimestamp, writeBatch, setDoc } from 'firebase/firestore';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
 import { controlMonthOf, formatControlNumber } from '../utils/officeOrderDocument';
@@ -90,11 +90,19 @@ export async function deleteOfficeOrderDraft(id) {
   await batch.commit();
 }
 
-/** Records a signature for one signer slot. `user` is the signed-in admin, or null when signing via the link. */
-export async function signOfficeOrder(id, slotId, name, user = null) {
-  check(name?.trim().length >= 2, 'Type your full name to sign.');
+/** Collapses spacing so "Juan  Dela Cruz " matches "Juan Dela Cruz" (the rules compare trimmed, lower-cased names). */
+export const normalizeSignerName = value => (value || '').trim().replace(/\s+/g, ' ');
+
+/**
+ * Records a signature for one signer slot. `user` is the signed-in admin; when signing via the link it falls back
+ * to whoever is signed in on this browser, because the rules require signedByUid to match the current session
+ * (empty only when nobody is signed in).
+ */
+export async function signOfficeOrder(id, slotId, name, user = auth.currentUser) {
+  const typed = normalizeSignerName(name);
+  check(typed.length >= 2, 'Type your full name to sign.');
   await setDoc(doc(db, 'officeOrders', id, 'signatures', slotId), {
-    name: name.trim().slice(0, 200), signedAt: serverTimestamp(), signedByUid: user?.uid || '',
+    name: typed.slice(0, 200), signedAt: serverTimestamp(), signedByUid: user?.uid || '',
     userAgent: (navigator.userAgent || '').slice(0, 300),
   });
 }

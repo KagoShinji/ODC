@@ -5,7 +5,7 @@ import LoadingButton from '../components/ui/LoadingButton';
 import OfficeOrderFrame from '../components/officeOrders/OfficeOrderFrame';
 import { SIGNER_KINDS } from '../utils/officeOrderDocument';
 import { longDate } from '../utils/brandDocument';
-import { subscribeOfficeOrder, subscribeSignatures, signOfficeOrder } from '../services/officeOrderService';
+import { subscribeOfficeOrder, subscribeSignatures, signOfficeOrder, normalizeSignerName } from '../services/officeOrderService';
 import { useBrandFonts } from '../hooks/useBrandFonts';
 import './OfficeOrderPage.css';
 
@@ -63,12 +63,17 @@ export default function OfficeOrderPage() {
   const run = async (key, work, success) => {
     setBusy(key); setMessage({ tone: '', text: '' });
     try { await work(); if (success) setMessage({ tone: 'ok', text: success }); } catch (err) {
-      setMessage({ tone: 'error', text: err?.code === 'permission-denied' ? 'This signature could not be saved. It may already be signed, or the name does not match the one on the order.' : err?.message || 'Something went wrong. Please try again.' });
+      setMessage({ tone: 'error', text: err?.code === 'permission-denied' ? 'This signature could not be saved. This line may have just been signed, or the order was revoked. Refresh the page and try again.' : err?.message || 'Something went wrong. Please try again.' });
     } finally { setBusy(''); }
   };
   const sign = e => {
     e.preventDefault();
     if (!agree) { setMessage({ tone: 'error', text: 'Tick the box to confirm you have read and understood the order.' }); return; }
+    // The rules only accept the name listed on the order (ignoring capital letters), so catch a mismatch here with a clear message.
+    if (chosen.name && normalizeSignerName(name).toLowerCase() !== normalizeSignerName(chosen.name).toLowerCase()) {
+      setMessage({ tone: 'error', text: `Type the name exactly as it appears on the order: “${normalizeSignerName(chosen.name)}”. Capital letters don't matter, but spelling, middle initials and periods do.` });
+      return;
+    }
     run('sign', async () => { await signOfficeOrder(order.id, chosen.slot, name); setSlot(''); setName(''); setAgree(false); }, 'Thank you — your signature has been recorded.');
   };
 
