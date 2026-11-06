@@ -30,4 +30,13 @@ public/images/Download/
 .tmp/
 *-debug.log
 
-showreel
+# Media & marketing collateral
+showreel/
+marketing/
+documents/
+
+# Standalone image & asset exports outside public/src
+*.png
+*.svg
+!public/**
+!src/**
