@@ -6,6 +6,8 @@ import { Plus, X, Trash2, Printer, Edit2, RefreshCw, CheckCircle2, Clock, Eye, C
 import CustomModal from '../components/ui/CustomModal';
 import LoadingButton from '../components/ui/LoadingButton';
 import { buildReceipt, printReceipt, receiptLink, todayIso, PAYMENT_METHODS } from '../utils/acknowledgementReceipt';
+import { buildBillingStatementHtml } from '../utils/billingStatementDocument';
+import { openPrintWindow } from '../utils/brandDocument';
 
 const CO = {
   address: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu',
@@ -75,111 +77,9 @@ const getSigFontSizePrint = (name) => {
 const calcTotal = (items) => (items || []).reduce((s, i) => s + Number(i.amount || 0), 0);
 
 function printInvoice(inv) {
-  const total = calcTotal(inv.items);
-  const logoUrl = window.location.origin + '/brand/odc-mark.svg';
-  const rows = (inv.items || []).map(i =>
-    `<tr><td class="td">${i.service || ''}</td><td class="td ar">${fmt(i.amount)}</td></tr>`
-  ).join('');
-
-  const preparedSection = inv.preparedSigned ? `
-    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(inv.preparedSigneeName || inv.preparedBy || CO.preparedBy)}; color: #111; text-align: center; margin-top: 10px; min-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${inv.preparedSigneeName || inv.preparedBy || CO.preparedBy}</div>
-    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
-    <div style="font-size: 8px; color: #777; text-align: center; margin-top: 4px; line-height: 1.3;">
-      DIGITALLY PREPARED & SIGNED<br>
-      Date: ${fmtDateTimeLong(inv.preparedSignedAt)}
-    </div>
-  ` : `
-    <div class="sig-block" style="text-align:center;margin-top:32px;margin-bottom:2px">${inv.preparedBy || CO.preparedBy}</div>
-    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
-  `;
-
-  const approvedSection = inv.approvedSigned ? `
-    <div style="font-family: 'Great Vibes', cursive; font-size: ${getSigFontSizePrint(inv.approvedSigneeName || CO.approvedBy)}; color: #111; text-align: center; margin-top: 10px; min-height: 28px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${inv.approvedSigneeName || CO.approvedBy}</div>
-    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
-    <div style="font-size: 8px; color: #777; text-align: center; margin-top: 4px; line-height: 1.3;">
-      DIGITALLY APPROVED & SIGNED<br>
-      Date: ${fmtDateTimeLong(inv.approvedSignedAt)}
-    </div>
-  ` : `
-    <div class="sig-block" style="text-align:center;margin-top:32px;margin-bottom:2px">${CO.approvedBy}</div>
-    <div class="sig" style="border-bottom: 1px solid #333; margin-top: 4px;"></div>
-  `;
-
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${inv.invoiceNumber}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
-  <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:Arial,sans-serif;font-size:12px;color:#333;background:#fff}
-.pg{width:794px;min-height:1100px;padding:50px 60px;margin:0 auto}
-.hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px}
-.logo img{height:60px;width:auto;display:block}
-.ci{text-align:right;line-height:1.9;color:#555;font-size:11px}
-.ci a{color:#e85d04}
-.ttl{text-align:center;font-size:20px;font-weight:700;letter-spacing:5px;padding:10px 0;border-top:1px solid #ddd;border-bottom:1px solid #ddd;margin:20px 0}
-.det{line-height:2;margin-bottom:22px}
-table{width:100%;border-collapse:collapse;margin-bottom:20px}
-th{background:#f0f0f0;padding:10px 14px;font-size:11px;letter-spacing:1px;border:1px solid #ccc;text-align:center}
-.td{padding:10px 14px;border:1px solid #ccc}
-.ar{text-align:right}
-.sub-row td{border-top:2px solid #ccc;font-weight:600}
-.tot{text-align:right;font-size:22px;font-weight:700;margin:16px 0 24px}
-.pi{margin-bottom:28px;line-height:1.8}
-.ft{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;padding-top:20px;border-top:1px solid #ddd}
-.sig{border-bottom:1px solid #333;margin-top:4px}
-.sig-block{text-align:center;margin-top:32px;margin-bottom:2px}
-.qr-row{display:flex;gap:40px;justify-content:center;margin-top:32px;padding-top:20px;border-top:1px solid #eee}
-.qr-item{text-align:center}
-.qr-item img{width:160px;height:160px;display:block;padding:10px;background:#fff;border:1px solid #ddd;border-radius:8px;image-rendering:crisp-edges}
-.qr-label{font-size:12px;font-weight:700;color:#444;margin-top:8px;letter-spacing:0.5px}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-</style></head><body>
-<div class="pg">
-  <div class="hd">
-    <div class="logo"><img src="${logoUrl}" alt="ODC" /></div>
-    <div class="ci">${CO.address}<br><a href="mailto:${CO.email}">${CO.email}</a><br>${CO.phone}</div>
-  </div>
-  <div class="ttl">BILLING STATEMENT</div>
-  <div class="det">
-    <div><b>Statement #:</b> ${inv.invoiceNumber || ''}</div>
-    <div><b>Statement Date:</b> ${fmtDate(inv.date)}</div>
-    <div><b>Bill To:</b> ${inv.billTo || ''}</div>
-    <div><b>Project:</b> ${inv.project || ''}</div>
-    <div><b>Payment Terms:</b> ${inv.paymentTerms || ''}</div>
-  </div>
-  <table>
-    <thead><tr><th style="width:70%">SERVICE</th><th style="width:30%">AMOUNT</th></tr></thead>
-    <tbody>${rows}</tbody>
-    <tfoot><tr class="sub-row"><td class="td"></td><td class="td ar">${fmt(total)}</td></tr></tfoot>
-  </table>
-  <div class="tot">Total Due: &#8369; ${fmt(total)}</div>
-  <div class="pi"><b>Payment Instruction:</b><br>
-    &nbsp;&nbsp;We kindly request that the payment be prepared either in cash or through a check payable to <b>${CO.approvedBy}</b>, or via bank transfer.
-  </div>
-  <div class="ft">
-    <div><b>Payment Information:</b><br><br>Bank Name: ${CO.bankName}<br>Account No.: ${CO.bankAccount}<br>Account Name: ${CO.bankAccountName}<br><br>Contact Name: ${CO.approvedBy}<br>Number: ${CO.approvedPhone}</div>
-    <div><b>Prepared By:</b><br>${preparedSection}</div>
-    <div><b>Approved By:</b><br>${approvedSection}</div>
-  </div>
-  ${(inv.qrCodes || []).length > 0 ? `
-  <div class="qr-row">
-    ${(inv.qrCodes || []).includes('gotyme') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchgotyme.png" alt="GoTyme QR" /><div class="qr-label">GoTyme — Scan to Pay</div></div>` : ''}
-    ${(inv.qrCodes || []).includes('maribank') ? `<div class="qr-item"><img src="${window.location.origin}/images/jetchmaribank.png" alt="MariBank QR" /><div class="qr-label">MariBank — Scan to Pay</div></div>` : ''}
-  </div>` : ''}
-  <div style="font-size: 8px; color: #777; text-align: center; margin-top: 50px; border-top: 1px dashed #ccc; padding-top: 8px; font-style: italic; line-height: 1.3;">
-    This document is a Statement of Account / Billing Statement and is not valid for claiming input VAT. An Official Receipt will be issued upon payment.
-  </div>
-</div>
-<script>
-  document.fonts.ready.then(function() {
-    setTimeout(function() {
-      window.print();
-    }, 250);
-  });
-</script>
-</body></html>`;
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const html = buildBillingStatementHtml(inv, {}, { origin, autoPrint: true });
+  openPrintWindow(html);
 }
 
 function printFinancialReport(invoices, expenses, scope = 'overall', scopeValue = '', preparedBy = CO.preparedBy) {
