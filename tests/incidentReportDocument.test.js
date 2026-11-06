@@ -12,6 +12,8 @@ import {
   AI_INCIDENT_PROMPT,
   parseIncidentReportText,
   buildIncidentReportHtml,
+  toIsoDate,
+  splitAnnexes,
 } from '../src/utils/incidentReportDocument.js';
 
 test('INCIDENT_REPORT_PREFIX is IR', () => {
@@ -26,6 +28,13 @@ test('formatControlNumber pads sequence to 3 digits', () => {
 
 test('incidentReportLink generates full url', () => {
   assert.equal(incidentReportLink('abc123xyz', 'https://odysseyph.com'), 'https://odysseyph.com/incident-report/abc123xyz');
+});
+
+test('toIsoDate handles various date formats', () => {
+  assert.equal(toIsoDate('2026-11-06'), '2026-11-06');
+  assert.equal(toIsoDate('November 6, 2026'), '2026-11-06');
+  assert.equal(toIsoDate('Friday, Nov 6, 2026'), '2026-11-06');
+  assert.equal(toIsoDate('invalid-date'), '');
 });
 
 test('parseIncidentReportText extracts fields, sections, and signers', () => {
@@ -77,6 +86,15 @@ Jetch Merald S. Madaya, Founder
   assert.equal(parsed.approvers[0].name, 'Jetch Merald S. Madaya');
 });
 
+test('splitAnnexes partitions document into main body and annexes', () => {
+  const content = `## 1. Overview\nIncident details here.\n\n# Annex A — Server Metrics\nLog entries...`;
+  const result = splitAnnexes(content);
+  assert.match(result.main, /Overview/);
+  assert.equal(result.annexes.length, 1);
+  assert.match(result.annexes[0].title, /Annex A — Server Metrics/);
+  assert.match(result.annexes[0].body, /Log entries/);
+});
+
 test('buildIncidentReportHtml generates branded document with metadata grid and signatures', () => {
   const report = {
     id: 'rep_123',
@@ -91,7 +109,7 @@ test('buildIncidentReportHtml generates branded document with metadata grid and 
     reportedByName: 'Maria Santos',
     reportedByTitle: 'Office Administrator',
     personsInvolved: 'Maintenance Contractor',
-    body: '## 1. Incident Overview\nFiber line was severed during renovation.',
+    body: '## 1. Incident Overview\nFiber line was severed during renovation.\n\n# Annex A — Damage Photos\nPhotos attached.',
     signers: {
       s1: { kind: 'reporter', name: 'Maria Santos', title: 'Office Administrator', order: 1 },
       s2: { kind: 'approver', name: 'Jetch Merald S. Madaya', title: 'Founder', order: 2 },
@@ -104,6 +122,10 @@ test('buildIncidentReportHtml generates branded document with metadata grid and 
   };
 
   const html = buildIncidentReportHtml(report, signatures, { origin: 'https://odysseyph.com' });
+
+  // Brand Bible compliance assertions
+  assert.match(html, /brand\/odc-mark\.svg/);
+  assert.match(html, /OdysseyPH IT Solutions/);
   assert.match(html, /INCIDENT REPORT/);
   assert.match(html, /IR-2026-11-001/);
   assert.match(html, /Workplace Fiber Cable Damage/);
@@ -112,4 +134,6 @@ test('buildIncidentReportHtml generates branded document with metadata grid and 
   assert.match(html, /Maria Santos/);
   assert.match(html, /Jetch Merald S\. Madaya/);
   assert.match(html, /Signed electronically/);
+  assert.match(html, /Great\+Vibes/);
+  assert.match(html, /ANNEX A/);
 });
