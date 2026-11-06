@@ -14,6 +14,7 @@ import {
   ListChecks,
   Target,
   ScrollText,
+  ShieldAlert,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -151,6 +152,16 @@ export const ALL_ADMIN_NAVIGATIONS = [
     color: '#ff6a13',
     actions: [
       { id: 'officeorders:manage', label: 'Manage Office Orders', desc: 'Draft, issue, sign and revoke office orders' },
+    ],
+  },
+  {
+    id: 'incidentreports',
+    label: 'Incident Reports',
+    desc: 'Incident logging, CAPA & signoffs',
+    icon: ShieldAlert,
+    color: '#ef4444',
+    actions: [
+      { id: 'incidentreports:manage', label: 'Manage Incident Reports', desc: 'Draft, issue, sign and close incident reports' },
     ],
   },
   {
