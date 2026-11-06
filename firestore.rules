@@ -954,7 +954,7 @@ service cloud.firestore {
         d.severity in ['low', 'medium', 'high', 'critical'] &&
         docText(d.reportedByName, 0, 200) && docText(d.reportedByTitle, 0, 200) && docText(d.personsInvolved, 0, 300) &&
         docText(d.body, 0, 80000) && docText(d.get('bodyJson', ''), 0, 400000) && d.signers is map && d.signers.size() <= 12 &&
-        d.status in ['draft', 'issued', 'closed', 'revoked'] && docText(d.statusReason, 0, 500) &&
+        d.status in ['draft', 'issued', 'closed', 'revoked'] && docText(d.get('statusReason', ''), 0, 500) &&
         d.controlMonth.matches('[0-9]{4}-[0-9]{2}') && d.controlSeq is int && d.controlSeq > 0 && d.controlNumber == 'IR-' + d.controlMonth + '-' + seqText(d.controlSeq) &&
         d.updatedAt == request.time && d.updatedByUid == request.auth.uid;
     }

@@ -70,3 +70,4 @@ const IncidentReportFrame = forwardRef(function IncidentReportFrame({ report, si
 });
 
 export default IncidentReportFrame;
+

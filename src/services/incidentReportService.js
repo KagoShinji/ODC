@@ -1,13 +1,16 @@
 import { auth, db } from '../lib/firebase';
 import { collection, doc, onSnapshot, query, orderBy, runTransaction, serverTimestamp, writeBatch, setDoc } from 'firebase/firestore';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
-import { controlMonthOf, formatControlNumber } from '../utils/incidentReportDocument';
+import { controlMonthOf, formatControlNumber, toIsoDate } from '../utils/incidentReportDocument';
 
 const reportsRef = collection(db, 'incidentReports');
 const nameOf = user => user?.displayName || formatDisplayIdentifier(user?.email || '');
 const rows = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
 function check(condition, message) { if (!condition) throw new Error(message); }
+
+/** Collapses spacing so "Maria  Santos " matches "Maria Santos" (the rules compare trimmed, lower-cased names). */
+export const normalizeSignerName = value => (value || '').trim().replace(/\s+/g, ' ');
 
 /**
  * Form values → stored fields, trimmed to the limits the security rules enforce.
@@ -16,7 +19,7 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 function reportFields(form) {
   const signers = {};
   (form.signers || []).forEach((s, index) => {
-    const name = (s.name || '').trim().slice(0, 200);
+    const name = normalizeSignerName(s.name).slice(0, 200);
     const title = (s.title || '').trim().slice(0, 200);
     if (s.kind === 'acknowledger' ? name || title : name) {
       signers[s.id || `s${index + 1}`] = { kind: s.kind || 'reporter', name, title, order: index + 1 };
@@ -26,7 +29,8 @@ function reportFields(form) {
   check(form.title?.trim(), 'Add a title for the incident report.');
   check(form.bodyText?.trim(), 'Write or paste the content of the incident report.');
   check((form.bodyJson || '').length <= 400000, 'The incident report is too long. Move long attachments into a separate file.');
-  check(Object.values(signers).some(s => s.kind === 'reporter' || s.kind === 'approver'), 'Add who filed or approved this incident report.');
+  check(form.reportedByName?.trim() || Object.values(signers).some(s => s.kind === 'reporter' && s.name), 'Add who filed this incident report.');
+  check(Object.values(signers).some(s => s.kind === 'approver' && s.name), 'Add an approver for this incident report.');
   check(Object.keys(signers).length <= 12, 'Use at most 12 signers.');
 
   const category = ['operational', 'security', 'conduct', 'safety', 'equipment', 'other'].includes(form.category)
@@ -36,9 +40,9 @@ function reportFields(form) {
 
   return {
     title: form.title.trim().slice(0, 300),
-    incidentDate: form.incidentDate || '',
+    incidentDate: toIsoDate(form.incidentDate) || form.incidentDate || '',
     incidentTime: (form.incidentTime || '').trim().slice(0, 30),
-    dateReported: form.dateReported || '',
+    dateReported: toIsoDate(form.dateReported) || form.dateReported || '',
     location: (form.location || '').trim().slice(0, 200),
     category,
     severity,
@@ -150,9 +154,6 @@ export async function deleteIncidentReportDraft(id) {
   await batch.commit();
 }
 
-/** Collapses spacing so "Maria  Santos " matches "Maria Santos" (the rules compare trimmed, lower-cased names). */
-export const normalizeSignerName = value => (value || '').trim().replace(/\s+/g, ' ');
-
 /**
  * Records a signature for one signer slot in incidentReports/{id}/signatures/{slotId}.
  */
@@ -166,3 +167,4 @@ export async function signIncidentReport(id, slotId, name, user = auth.currentUs
     userAgent: (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '').slice(0, 300),
   });
 }
+

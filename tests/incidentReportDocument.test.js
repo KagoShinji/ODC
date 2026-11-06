@@ -137,3 +137,89 @@ test('buildIncidentReportHtml generates branded document with metadata grid and 
   assert.match(html, /Great\+Vibes/);
   assert.match(html, /ANNEX A/);
 });
+
+test('buildIncidentReportHtml gracefully handles unformatted or invalid dates without Invalid Date output', () => {
+  const report = {
+    controlNumber: 'IR-2026-11-002',
+    title: 'Power Surge Incident',
+    incidentDate: 'unformatted-date-string',
+    dateReported: '',
+    body: '## 1. Overview\nPower outage occurred.',
+    signers: {
+      s1: { kind: 'reporter', name: 'Devon Vance', title: 'Admin', order: 1 },
+      s2: { kind: 'approver', name: 'Jetch Merald S. Madaya', title: 'Founder', order: 2 },
+    },
+    status: 'draft',
+  };
+
+  const html = buildIncidentReportHtml(report, {}, { origin: 'https://odysseyph.com' });
+  assert.doesNotMatch(html, /Invalid Date/);
+  assert.match(html, /unformatted-date-string/);
+  assert.match(html, /DRAFT/);
+});
+
+test('buildIncidentReportHtml renders TipTap JSON document structure with tables and annexes', () => {
+  const doc = {
+    type: 'doc',
+    content: [
+      {
+        type: 'heading',
+        attrs: { level: 2 },
+        content: [{ type: 'text', text: '1. Incident Timeline' }],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Events recorded in chronological order.' }],
+      },
+      {
+        type: 'table',
+        content: [
+          {
+            type: 'tableRow',
+            content: [
+              { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Time' }] }] },
+              { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Event' }] }] },
+            ],
+          },
+          {
+            type: 'tableRow',
+            content: [
+              { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: '09:00' }] }] },
+              { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Alarm fired' }] }] },
+            ],
+          },
+        ],
+      },
+      {
+        type: 'heading',
+        attrs: { level: 1 },
+        content: [{ type: 'text', text: 'Annex A — Audit Logs' }],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Audit log contents.' }],
+      },
+    ],
+  };
+
+  const report = {
+    controlNumber: 'IR-2026-11-003',
+    title: 'Server Alert',
+    incidentDate: '2026-11-06',
+    dateReported: '2026-11-06',
+    body: 'fallback text',
+    bodyJson: JSON.stringify(doc),
+    signers: {
+      s1: { kind: 'reporter', name: 'Devon Vance', title: 'Admin', order: 1 },
+      s2: { kind: 'approver', name: 'Jetch Merald S. Madaya', title: 'Founder', order: 2 },
+    },
+    status: 'issued',
+  };
+
+  const html = buildIncidentReportHtml(report, {}, { origin: 'https://odysseyph.com' });
+  assert.match(html, /Incident Timeline/);
+  assert.match(html, /<div class="tbl"><table>/);
+  assert.match(html, /Alarm fired/);
+  assert.match(html, /ANNEX A/i);
+  assert.match(html, /Audit Logs/i);
+});

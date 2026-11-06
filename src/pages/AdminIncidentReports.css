@@ -57,3 +57,4 @@
 .ir-detail-doc{min-width:0;overflow-x:auto}
 
 @media(max-width:1000px){.ir-detail{grid-template-columns:1fr}.ir-detail-side{position:static}}
+

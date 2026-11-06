@@ -440,10 +440,16 @@ export function buildIncidentReportHtml(report, signatures = {}, { origin = (typ
   const catLabel = CATEGORIES[report.category] || report.category || 'Operational';
   const reportedBy = [report.reportedByName, report.reportedByTitle].filter(Boolean).join(', ');
 
+  const safeLongDate = d => {
+    if (!d) return '—';
+    const formatted = longDate(d);
+    return formatted && formatted !== 'Invalid Date' ? formatted : esc(d);
+  };
+
   const grid = `<dl class="inc-grid">
     <dt>Title</dt><dd class="title">${esc(report.title || 'Untitled Incident')}</dd>
-    <dt>Incident Date</dt><dd>${longDate(report.incidentDate) || esc(report.incidentDate || '—')}${report.incidentTime ? ` at ${esc(report.incidentTime)}` : ''}</dd>
-    <dt>Date Reported</dt><dd>${longDate(report.dateReported) || esc(report.dateReported || '—')}</dd>
+    <dt>Incident Date</dt><dd>${safeLongDate(report.incidentDate)}${report.incidentTime ? ` at ${esc(report.incidentTime)}` : ''}</dd>
+    <dt>Date Reported</dt><dd>${safeLongDate(report.dateReported)}</dd>
     <dt>Location</dt><dd>${esc(report.location || '—')}</dd>
     <dt>Severity</dt><dd>${sevBadge}</dd>
     <dt>Category</dt><dd>${esc(catLabel)}</dd>
@@ -476,3 +482,4 @@ ${ack.length ? `<div class="ack-block"><div class="eyebrow" style="color:var(--n
 
   return html;
 }
+

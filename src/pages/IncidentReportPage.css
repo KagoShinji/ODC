@@ -50,3 +50,4 @@
 @media(max-width:1180px){.irp-layout{grid-template-columns:minmax(0,816px)}.irp-side{position:static}}
 @media(max-width:600px){.irp-bar{padding:10px 16px}.irp-layout{padding:16px 16px 40px}.irp-actions{width:100%}.irp-actions button{flex:1}}
 @media print{.irp-bar,.irp-side{display:none}}
+

@@ -356,3 +356,4 @@ export default function IncidentReportEditor({ form, controlNumber, initialConte
     </div>
   );
 }
+

@@ -251,3 +251,4 @@ match /incidentReports/{reportId} {
    - Issue the Incident Report and verify it locks further content edits.
    - Navigate to `/incident-report/:id` and test electronic signature submission.
    - Confirm print popup window opens formatted letter page.
+

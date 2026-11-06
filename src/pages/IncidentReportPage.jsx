@@ -99,6 +99,10 @@ export default function IncidentReportPage() {
 
   const sign = e => {
     e.preventDefault();
+    if (!chosen) {
+      setMessage({ tone: 'error', text: 'Please choose a signature line from the dropdown.' });
+      return;
+    }
     if (!agree) {
       setMessage({ tone: 'error', text: 'Please check the box confirming you acknowledge the facts in this report.' });
       return;
@@ -251,3 +255,4 @@ export default function IncidentReportPage() {
     </main>
   );
 }
+

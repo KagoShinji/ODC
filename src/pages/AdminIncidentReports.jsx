@@ -10,7 +10,7 @@ import IncidentReportEditor from '../components/incidentReports/IncidentReportEd
 import {
   emptyIncidentSigners, incidentReportLink, CATEGORIES, SEVERITIES, SIGNER_KINDS,
 } from '../utils/incidentReportDocument';
-import { longDate } from '../utils/brandDocument';
+import { BRAND_CO, longDate } from '../utils/brandDocument';
 import {
   subscribeIncidentReports, subscribeIncidentReport, subscribeIncidentSignatures,
   createIncidentReport, updateIncidentReport, issueIncidentReport,
@@ -28,6 +28,64 @@ const todayIso = () => {
 const errorText = err => (err?.code === 'permission-denied'
   ? 'You do not have permission for this action, or the report was updated elsewhere. Refresh and try again.'
   : err?.message || 'Something went wrong. Please try again.');
+
+function mergeIncidentParsed(f, parsed) {
+  const next = { ...f };
+  for (const key of ['title', 'incidentDate', 'incidentTime', 'dateReported', 'location', 'category', 'severity', 'reportedByName', 'reportedByTitle', 'personsInvolved']) {
+    if (parsed[key]) next[key] = parsed[key];
+  }
+
+  const hasSigners = Boolean(
+    (parsed.reporters && parsed.reporters.length) ||
+    (parsed.investigators && parsed.investigators.length) ||
+    (parsed.approvers && parsed.approvers.length) ||
+    (parsed.acknowledgers && parsed.acknowledgers.length)
+  );
+
+  if (!hasSigners) {
+    if (parsed.reportedByName) {
+      next.signers = (f.signers || []).map(s => (s.kind === 'reporter' && !s.name
+        ? { ...s, name: parsed.reportedByName, title: parsed.reportedByTitle || s.title }
+        : s));
+    }
+    return next;
+  }
+
+  const signers = [];
+  let order = 1;
+  const slot = () => `s${order}`;
+
+  const reporters = (parsed.reporters && parsed.reporters.length)
+    ? parsed.reporters
+    : (parsed.reportedByName ? [{ name: parsed.reportedByName, title: parsed.reportedByTitle || '' }] : []);
+
+  for (const r of reporters) {
+    signers.push({ id: slot(), kind: 'reporter', name: r.name || '', title: r.title || '', order: order++ });
+  }
+  if (!signers.some(s => s.kind === 'reporter')) {
+    const existing = f.signers?.find(s => s.kind === 'reporter');
+    signers.push({ id: slot(), kind: 'reporter', name: existing?.name || '', title: existing?.title || '', order: order++ });
+  }
+
+  for (const inv of (parsed.investigators || [])) {
+    signers.push({ id: slot(), kind: 'investigator', name: inv.name || '', title: inv.title || '', order: order++ });
+  }
+
+  const approvers = (parsed.approvers && parsed.approvers.length)
+    ? parsed.approvers
+    : [{ name: BRAND_CO.approvedBy, title: 'Founder' }];
+
+  for (const app of approvers) {
+    signers.push({ id: slot(), kind: 'approver', name: app.name || BRAND_CO.approvedBy, title: app.title || 'Founder', order: order++ });
+  }
+
+  for (const ack of (parsed.acknowledgers || [])) {
+    signers.push({ id: slot(), kind: 'acknowledger', name: ack.name || '', title: ack.title || '', order: order++ });
+  }
+
+  next.signers = signers;
+  return next;
+}
 
 function formFrom(report) {
   const signers = Object.entries(report?.signers || emptyIncidentSigners())
@@ -66,20 +124,8 @@ function Editor({ user, report, onClose, onSaved }) {
   const set = (key, value) => setForm(f => ({ ...f, [key]: value }));
   const onDoc = useCallback((json, text) => setForm(f => ({ ...f, bodyJson: JSON.stringify(json), bodyText: text })), []);
   const onParsed = useCallback(parsed => {
-    setForm(f => ({
-      ...f,
-      title: parsed.title || f.title,
-      incidentDate: parsed.incidentDate || f.incidentDate,
-      incidentTime: parsed.incidentTime || f.incidentTime,
-      dateReported: parsed.dateReported || f.dateReported,
-      location: parsed.location || f.location,
-      category: parsed.category || f.category,
-      severity: parsed.severity || f.severity,
-      reportedByName: parsed.reportedByName || f.reportedByName,
-      reportedByTitle: parsed.reportedByTitle || f.reportedByTitle,
-      personsInvolved: parsed.personsInvolved || f.personsInvolved,
-    }));
-    setNotice('Draft parsed and formatted into the report. Check the details and save.');
+    setForm(f => mergeIncidentParsed(f, parsed));
+    setNotice('Draft parsed and formatted into the report. Check the details and signers, then save.');
   }, []);
 
   const save = async () => {
@@ -471,3 +517,4 @@ export default function AdminIncidentReports({ firebaseUser, can }) {
     </div>
   );
 }
+
