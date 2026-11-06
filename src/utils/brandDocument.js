@@ -87,6 +87,7 @@ tbody tr:first-child td{border-top:none}
 .sigs{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin:84px 0 40px}
 .sigs .eyebrow{color:var(--navy)}
 .sig-line{border-bottom:1px solid #3a4a5c;margin:36px 0 10px}
+.sig-mark + .sig-line{margin-top:0}
 .sig-name{font-family:Poppins,sans-serif;font-size:14px;font-weight:600;color:var(--navy)}
 .sig-tag{font-size:9.5px;font-weight:700;letter-spacing:1px;color:#c2410c;margin-top:4px}
 .sig-date{font-size:11px;color:var(--muted);margin-top:3px}

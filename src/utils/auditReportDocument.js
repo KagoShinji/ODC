@@ -87,16 +87,19 @@ Audit Engagement Details:
 `;
 
 const FIELD_PATTERNS = [
-  ['title', /^(?:title|subject|audit title|engagement title|re)\s*[:\-–]\s*(.+)$/i],
-  ['category', /^(?:category|audit type|type of audit|scope area)\s*[:\-–]\s*(.+)$/i],
-  ['rating', /^(?:rating|overall rating|audit rating|outcome|audit opinion)\s*[:\-–]\s*(.+)$/i],
-  ['periodCovered', /^(?:period covered|audit period|period|coverage)\s*[:\-–]\s*(.+)$/i],
-  ['auditDate', /^(?:date conducted|audit date|date of audit|conducted on)\s*[:\-–]\s*(.+)$/i],
-  ['dateIssued', /^(?:date issued|report date|date of report|issued date|date)\s*[:\-–]\s*(.+)$/i],
-  ['leadAuditor', /^(?:lead auditor|audited by|prepared by|auditor)\s*[:\-–]\s*(.+)$/i],
-  ['auditeeEntity', /^(?:auditee|department|entity audited|target|system audited)\s*[:\-–]\s*(.+)$/i],
-  ['auditeeContact', /^(?:auditee contact|contact person|auditee head)\s*[:\-–]\s*(.+)$/i],
-  ['auditTeam', /^(?:audit team|team members|auditors|observers)\s*[:\-–]\s*(.+)$/i],
+  ['title', /^(?:#+\s*)?(?:\*\*)?(?:title|subject|audit title|engagement title|re)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['referenceNo', /^(?:\*\*)?(?:incident reference|audit reference|reference no\.?|reference|ref no\.?|ref)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['classification', /^(?:\*\*)?(?:classification|confidentiality|security classification)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['category', /^(?:\*\*)?(?:category|audit type|type of audit|scope area)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['rating', /^(?:\*\*)?(?:status|overall rating|rating|audit rating|outcome|audit opinion)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['periodCovered', /^(?:\*\*)?(?:period covered|audit period|period|coverage)\s*[:\-–]\s*(.+)$/i],
+  ['auditDate', /^(?:\*\*)?(?:date conducted|audit date|date of audit|conducted on|date & time|date and time|date)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['dateIssued', /^(?:\*\*)?(?:date issued|report date|date of report|issued date)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['leadAuditor', /^(?:\*\*)?(?:lead auditor|audited by|prepared by|auditor|investigated by)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['auditeeEntity', /^(?:\*\*)?(?:target venue|target entity|venue|auditee|department|entity audited|target|system audited)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['venueDomain', /^(?:\*\*)?(?:domain|website|url|host)(?:\*\*)?\s*[:\-–]\s*(.+)$/i],
+  ['auditeeContact', /^(?:\*\*)?(?:auditee contact|contact person|auditee head)\s*[:\-–]\s*(.+)$/i],
+  ['auditTeam', /^(?:\*\*)?(?:audit team|team members|auditors|observers)\s*[:\-–]\s*(.+)$/i],
 ];
 
 const NOISE = /^(?:\*\*)?(?:audit report(?:\s*(?:no\.?|number|#).*)?|[-=_*]{3,})(?:\*\*)?$/i;
@@ -105,10 +108,18 @@ const SIGN_REV = /^(?:reviewed|noted|verified)\s*by\s*:?\s*$/i;
 const SIGN_APP = /^(?:approved|authorized)\s*by\s*:?\s*$/i;
 const SIGN_ACK = /^(?:acknowledged|conforme|received)\s*(?:by)?\s*:?\s*$/i;
 
-const clean = s => s.replace(/^[#>*\s]+|\*\*|__/g, '').replace(/\s+$/, '').trim();
+export const clean = s => String(s || '')
+  .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  .replace(/`([^`]+)`/g, '$1')
+  .replace(/^\s*[#>*\-\s]+|\*\*|__|`/g, '')
+  .replace(/[`\s]+$/, '')
+  .trim();
 
 export function toIsoDate(text) {
-  const value = clean(String(text || '')).replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/i, '');
+  const value = clean(String(text || ''))
+    .replace(/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),?\s*/i, '')
+    .split(/\s*(?:·|at|@|\sat\s)\s*/)[0]
+    .trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? '' : `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
@@ -121,9 +132,9 @@ export function splitPerson(text) {
 
 export function normalizeCategory(val) {
   const s = String(val || '').toLowerCase();
-  if (s.includes('sec') || s.includes('it') || s.includes('cyber')) return 'it_security';
+  if (s.includes('sec') || s.includes('it') || s.includes('cyber') || s.includes('forensic') || s.includes('database') || s.includes('post-mortem') || s.includes('api')) return 'it_security';
   if (s.includes('oper') || s.includes('proc')) return 'operations';
-  if (s.includes('fin') || s.includes('money') || s.includes('acc')) return 'financial';
+  if (s.includes('fin') || s.includes('money') || s.includes('acc') || s.includes('revenue') || s.includes('billing')) return 'financial';
   if (s.includes('comp') || s.includes('reg') || s.includes('legal')) return 'compliance';
   if (s.includes('inv') || s.includes('asset') || s.includes('stock')) return 'inventory';
   if (s.includes('qual') || s.includes('sop') || s.includes('qa')) return 'quality';
@@ -132,8 +143,9 @@ export function normalizeCategory(val) {
 
 export function normalizeRating(val) {
   const s = String(val || '').toLowerCase();
-  if (s.includes('unsat') || s.includes('non') || s.includes('fail') || s.includes('poor')) return 'unsatisfactory';
+  if (s.includes('unsat') || s.includes('fail') || s.includes('critical') || s.includes('non-complian')) return 'unsatisfactory';
   if (s.includes('need') || s.includes('improv') || s.includes('qual') || s.includes('fair') || s.includes('cond')) return 'needs_improvement';
+  if (s.includes('resolv') || s.includes('reconcil') || s.includes('pass') || s.includes('satisfact') || s.includes('clean') || s.includes('complian')) return 'satisfactory';
   return 'satisfactory';
 }
 
@@ -163,6 +175,11 @@ export function parseAuditReportText(raw) {
     const line = rawLine.trim();
 
     if (!headerDone) {
+      if (line === '---' || line === '***' || line === '___') continue;
+      if (line.startsWith('# ') && !fields.title) {
+        fields.title = clean(line.replace(/^#+\s*/, ''));
+        continue;
+      }
       if (NOISE.test(line)) continue;
       let matched = false;
       for (const [key, pattern] of FIELD_PATTERNS) {
@@ -174,7 +191,9 @@ export function parseAuditReportText(raw) {
         }
       }
       if (matched) continue;
-      if (line.startsWith('#') || line.length > 0) {
+      if (line.startsWith('## ') || line.startsWith('### ')) {
+        headerDone = true;
+      } else if (!line.startsWith('#') && line.length > 0 && !line.startsWith('**') && !line.startsWith('*')) {
         headerDone = true;
       }
     }
@@ -214,7 +233,12 @@ export function parseAuditReportText(raw) {
 
   const out = {};
   if (fields.title) out.title = clean(fields.title);
+  if (fields.referenceNo) out.referenceNo = clean(fields.referenceNo);
+  if (fields.classification) out.classification = clean(fields.classification);
   if (fields.category) out.category = normalizeCategory(fields.category);
+  else if (fields.classification) out.category = normalizeCategory(fields.classification);
+  else out.category = 'it_security';
+
   if (fields.rating) out.rating = normalizeRating(fields.rating);
 
   if (fields.periodCovered) {
@@ -224,6 +248,7 @@ export function parseAuditReportText(raw) {
   }
   if (fields.auditDate) out.auditDate = toIsoDate(fields.auditDate) || fields.auditDate.trim();
   if (fields.dateIssued) out.dateIssued = toIsoDate(fields.dateIssued) || fields.dateIssued.trim();
+  else if (out.auditDate) out.dateIssued = out.auditDate;
 
   if (fields.leadAuditor) {
     const p = splitPerson(fields.leadAuditor);
@@ -231,6 +256,7 @@ export function parseAuditReportText(raw) {
     out.leadAuditorTitle = p.title || 'Lead Auditor';
   }
   if (fields.auditeeEntity) out.auditeeEntity = clean(fields.auditeeEntity);
+  if (fields.venueDomain) out.venueDomain = clean(fields.venueDomain).replace(/^https?:\/\//, '').replace(/\/$/, '');
   if (fields.auditeeContact) out.auditeeContact = clean(fields.auditeeContact);
   if (fields.auditTeam) out.auditTeam = clean(fields.auditTeam);
 
@@ -337,6 +363,10 @@ export function markdownToHtml(md) {
   let inOl = false;
   let inTable = false;
   let tableRows = [];
+  let tableAlignments = [];
+  let inCodeBlock = false;
+  let codeBlockLang = '';
+  let codeBlockLines = [];
 
   const closeList = () => {
     if (inUl) { out.push('</ul>'); inUl = false; }
@@ -344,9 +374,18 @@ export function markdownToHtml(md) {
   };
   const closeTable = () => {
     if (!inTable) return;
-    out.push(`<table class="tbl">${tableRows.join('')}</table>`);
+    out.push(`<div class="tbl-wrap"><table class="tbl">${tableRows.join('')}</table></div>`);
     inTable = false;
     tableRows = [];
+    tableAlignments = [];
+  };
+  const closeCodeBlock = () => {
+    if (!inCodeBlock) return;
+    const langClass = codeBlockLang ? ` class="language-${esc(codeBlockLang)}"` : '';
+    out.push(`<pre><code${langClass}>${esc(codeBlockLines.join('\n'))}</code></pre>`);
+    inCodeBlock = false;
+    codeBlockLang = '';
+    codeBlockLines = [];
   };
 
   const inline = s => esc(s)
@@ -358,18 +397,65 @@ export function markdownToHtml(md) {
 
   for (const raw of lines) {
     const line = raw.trim();
+
+    if (line.startsWith('```')) {
+      closeList();
+      closeTable();
+      if (inCodeBlock) {
+        closeCodeBlock();
+      } else {
+        inCodeBlock = true;
+        codeBlockLang = line.slice(3).trim();
+        codeBlockLines = [];
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      codeBlockLines.push(raw);
+      continue;
+    }
+
     if (!line) { closeList(); closeTable(); continue; }
+
+    if (line.startsWith('$$') && line.endsWith('$$') && line.length >= 4) {
+      closeList();
+      closeTable();
+      const mathText = line.slice(2, -2).trim();
+      out.push(`<div class="math-block"><code>${esc(mathText)}</code></div>`);
+      continue;
+    }
+
+    if (/^[-*_]{3,}$/.test(line)) {
+      closeList();
+      closeTable();
+      out.push('<hr>');
+      continue;
+    }
+
     if (line.startsWith('|') && line.endsWith('|')) {
       closeList();
-      if (/^\|[\s\-:|]+\|$/.test(line)) continue;
+      if (/^\|[\s\-:|]+\|$/.test(line)) {
+        tableAlignments = line.slice(1, -1).split('|').map(c => {
+          const s = c.trim();
+          if (s.startsWith(':') && s.endsWith(':')) return 'center';
+          if (s.endsWith(':')) return 'right';
+          return 'left';
+        });
+        continue;
+      }
       const cells = line.slice(1, -1).split('|').map(c => c.trim());
       const isHeader = !inTable;
       inTable = true;
       const tag = isHeader ? 'th' : 'td';
-      tableRows.push(`<tr>${cells.map(c => `<${tag}>${inline(c)}</${tag}>`).join('')}</tr>`);
+      tableRows.push(`<tr>${cells.map((c, idx) => {
+        const align = tableAlignments[idx] || (isHeader ? 'left' : 'left');
+        const alignStyle = align !== 'left' ? ` style="text-align:${align}"` : '';
+        return `<${tag}${alignStyle}>${inline(c)}</${tag}>`;
+      }).join('')}</tr>`);
       continue;
     }
     closeTable();
+
     if (/^#{1,6}\s+/.test(line)) {
       closeList();
       const level = line.match(/^#+/)[0].length;
@@ -399,6 +485,7 @@ export function markdownToHtml(md) {
   }
   closeList();
   closeTable();
+  closeCodeBlock();
   return out.join('\n');
 }
 
@@ -409,7 +496,7 @@ export function renderBody(markdown) {
     const m = sec.match(/^<h([23])>(.*?)<\/h\1>([\s\S]*)$/i);
     if (!m) return sec.trim() ? `<div class="sec body">${sec}</div>` : '';
     const [, lvl, hText, rest] = m;
-    const numMatch = hText.match(/^(\d+(?:\.\d+)*|[A-Z])[\.\)]\s*(.*)$/);
+    const numMatch = hText.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•\.\-\)]\s*|\s+-\s+)\s*(.*)$/);
     const badge = numMatch ? `<span>${esc(numMatch[1])}</span>` : '<span class="dot"></span>';
     const cleanTitle = numMatch ? numMatch[2] : hText;
     return `<div class="sec body"><h${lvl}>${badge}${cleanTitle}</h${lvl}>${rest}</div>`;
@@ -482,15 +569,20 @@ const AUDIT_CSS = `
 .body p{margin:0 0 7px}
 .body ol,.body ul{padding-left:20px;margin:4px 0 8px}
 .body li{margin-bottom:3px}
-.body .tbl{margin:8px 0 10px;break-inside:avoid;width:100%;border-collapse:collapse}
-.body td{padding:9px 14px;font-size:12px;vertical-align:top;border:1px solid #e4e7ec}
-.body th{padding:9px 14px;font-size:11px;font-weight:700;background:#f8fafc;color:var(--navy);border:1px solid #e4e7ec;text-align:left}
+.tbl-wrap{width:100%;overflow-x:auto;margin:10px 0 14px}
+.body .tbl{width:100%;border-collapse:collapse;font-size:11.5px;border:1px solid #d0d5dd}
+.body td{padding:7px 10px;font-size:11.5px;vertical-align:top;border:1px solid #e4e7ec}
+.body th{padding:8px 10px;font-size:11px;font-weight:700;background:#f8fafc;color:var(--navy);border:1px solid #e4e7ec;text-align:left}
+.body tr:nth-child(even){background:#fafbfd}
 .callout{margin:8px 0;border-left:3px solid var(--orange);background:#f8f6f2;padding:9px 14px;font-size:12px;line-height:1.6;border-radius:0 8px 8px 0}
+.math-block{margin:12px 0;padding:12px 18px;background:#f8fafc;border:1px solid #cbd5e1;border-left:4px solid var(--orange);border-radius:6px;font-family:'Fira Code',Consolas,'Cambria Math',monospace;font-size:12.5px;text-align:center;color:var(--navy);overflow-x:auto;font-weight:600}
+pre{background:#0f172a;color:#f8fafc;padding:12px 16px;border-radius:8px;font-family:'Fira Code',Consolas,Menlo,monospace;font-size:11.5px;line-height:1.55;overflow-x:auto;margin:10px 0}
+pre code{background:none!important;color:inherit!important;padding:0!important;font-size:inherit!important}
 .signers{display:grid;grid-template-columns:1fr 1fr;gap:28px 56px;margin:34px 0 18px;break-inside:avoid}
 .signers.ack{grid-template-columns:repeat(2,1fr);gap:24px;margin-top:10px}
 .signer .eyebrow{color:var(--navy)}
-.sig-mark{font-family:'Great Vibes',cursive;font-size:30px;line-height:1;color:#111;height:40px;margin-top:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-mark.empty{height:40px}
+.sig-mark{font-family:'Great Vibes',cursive;font-size:32px;line-height:1;color:#111;height:44px;display:flex;align-items:flex-end;padding-bottom:2px;margin-bottom:-4px;white-space:nowrap;overflow:visible}
+.sig-mark.empty{height:44px}
 .signer .sig-line{margin:0 0 8px;border-bottom:1px solid #3a4a5c}
 .signer .sig-name{font-size:13px;font-weight:700;color:var(--navy)}
 .signer .sig-name.blank{color:var(--muted);font-weight:400;font-style:italic}
@@ -559,17 +651,20 @@ export function buildAuditReportHtml(report, signatures = {}, { origin = (typeof
 
   const periodString = report.auditPeriodStart
     ? `${safeLongDate(report.auditPeriodStart)}${report.auditPeriodEnd ? ` to ${safeLongDate(report.auditPeriodEnd)}` : ''}`
-    : '—';
+    : '';
 
   const grid = `<dl class="audit-grid">
     <dt>Engagement</dt><dd class="title">${esc(report.title || 'Untitled Audit Engagement')}</dd>
+    ${report.referenceNo ? `<dt>Reference</dt><dd><code>${esc(report.referenceNo)}</code></dd>` : ''}
+    ${report.classification ? `<dt>Classification</dt><dd>${esc(report.classification)}</dd>` : ''}
     <dt>Scope Area</dt><dd>${esc(catLabel)}</dd>
     <dt>Overall Rating</dt><dd>${ratingBadge}</dd>
-    <dt>Period Covered</dt><dd>${periodString}</dd>
+    ${periodString ? `<dt>Period Covered</dt><dd>${periodString}</dd>` : ''}
     <dt>Date Conducted</dt><dd>${safeLongDate(report.auditDate)}</dd>
     <dt>Date Issued</dt><dd>${safeLongDate(report.dateIssued)}</dd>
-    <dt>Lead Auditor</dt><dd>${esc(leadAuditor || '—')}</dd>
+    ${leadAuditor ? `<dt>Lead Auditor</dt><dd>${esc(leadAuditor)}</dd>` : ''}
     <dt>Audited Entity</dt><dd>${esc(report.auditeeEntity || '—')}${report.auditeeContact ? ` (${esc(report.auditeeContact)})` : ''}</dd>
+    ${report.venueDomain ? `<dt>Domain</dt><dd><a href="https://${esc(report.venueDomain.replace(/^https?:\/\//, ''))}" target="_blank" rel="noopener">${esc(report.venueDomain)}</a></dd>` : ''}
     ${report.auditTeam ? `<dt>Audit Team</dt><dd class="full">${esc(report.auditTeam)}</dd>` : ''}
   </dl>`;
 

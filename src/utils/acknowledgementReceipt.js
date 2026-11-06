@@ -59,8 +59,27 @@ function serviceList(items) {
 const serviceCell = (s) => esc(s).replace(/(\(.*?\))/g, '<span class="muted">$1</span>');
 
 const AR_CSS = `
-.sig-mark{font-family:'Great Vibes',cursive;font-size:30px;line-height:1;color:#111;height:40px;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-mark.empty{height:40px}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:64px;margin:40px 0 24px}
+.sigs .eyebrow,
+.signer .eyebrow{color:var(--navy);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.sig-mark{
+  font-family:'Great Vibes',cursive;
+  font-size:32px;
+  line-height:1;
+  color:#111;
+  height:44px;
+  display:flex;
+  align-items:flex-end;
+  padding-bottom:2px;
+  margin-bottom:-4px;
+  white-space:nowrap;
+  overflow:visible;
+}
+.sig-mark.empty{height:44px}
+.sigs .sig-line,
+.signer .sig-line{margin:0 0 8px;border-bottom:1px solid #3a4a5c}
+.sig-name{font-family:Poppins,sans-serif;font-size:13px;font-weight:700;color:var(--navy)}
+.sig-tag{font-size:9.5px;font-weight:700;letter-spacing:1px;color:#c2410c;margin-top:2px}
 .sig-meta{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.4}
 `;
 
@@ -73,7 +92,7 @@ function signerBlock(title, slotId, defaultName, defaultTitle, signature, signDa
     ? `<div class="sig-meta">Signed electronically ${esc(new Date(signature.signedAt).toLocaleString('en-PH', { timeZone, dateStyle: 'medium', timeStyle: 'short' }))}</div>`
     : `<div class="sig-meta">Date: ${signDate}</div>`;
 
-  return `<div>
+  return `<div class="signer">
     <div class="eyebrow">${esc(title)}</div>
     ${signed}
     <div class="sig-line"></div>

@@ -33,8 +33,8 @@ const ACCEPTANCE_CSS = `
 .coa-legal{font-size:10px;line-height:1.5;color:var(--muted);margin-top:20px;text-align:justify;border-top:1px dashed var(--line);padding-top:10px}
 .signers{display:grid;grid-template-columns:1fr 1fr;gap:28px 56px;margin:32px 0 16px;break-inside:avoid}
 .signer .eyebrow{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--navy);text-transform:uppercase}
-.sig-mark{font-family:'Great Vibes',cursive;font-size:30px;line-height:1;color:#111;height:40px;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-mark.empty{height:40px}
+.sig-mark{font-family:'Great Vibes',cursive;font-size:32px;line-height:1;color:#111;height:44px;display:flex;align-items:flex-end;padding-bottom:2px;margin-bottom:-4px;white-space:nowrap;overflow:visible}
+.sig-mark.empty{height:44px}
 .signer .sig-line{margin:0 0 8px;border-bottom:1px solid #3a4a5c}
 .sig-name{font-weight:700;font-size:12.5px;color:var(--navy)}
 .sig-name.blank{color:var(--muted);font-weight:500;font-style:italic}
@@ -161,3 +161,4 @@ export function buildAcceptanceCertificateHtml(coa, signatures = {}, { origin = 
 
   return html;
 }
+

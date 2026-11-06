@@ -391,9 +391,9 @@ const ORDER_CSS = `
 .signers{display:grid;grid-template-columns:1fr 1fr;gap:28px 56px;margin:34px 0 18px;break-inside:avoid}
 .signers.ack{grid-template-columns:repeat(3,1fr);gap:24px;margin-top:10px}
 .signer .eyebrow{color:var(--navy)}
-.sig-mark{font-family:'Great Vibes',cursive;font-size:30px;line-height:1;color:#111;height:40px;margin-top:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sig-mark.empty{height:40px}
-.signer .sig-line{margin:0 0 8px}
+.sig-mark{font-family:'Great Vibes',cursive;font-size:32px;line-height:1;color:#111;height:44px;display:flex;align-items:flex-end;padding-bottom:2px;margin-bottom:-4px;white-space:nowrap;overflow:visible}
+.sig-mark.empty{height:44px}
+.signer .sig-line{margin:0 0 8px;border-bottom:1px solid #3a4a5c}
 .signers.ack .sig-name{font-size:12.5px}
 .sig-meta{font-size:9.5px;color:var(--muted);margin-top:3px;line-height:1.4}
 .ack-block{break-inside:avoid;margin-top:8px}
