@@ -48,3 +48,4 @@ export async function signDocumentSlot(collectionName, docId, slotId, name, user
     userAgent: (typeof navigator !== 'undefined' ? navigator.userAgent || '' : '').slice(0, 300),
   });
 }
+

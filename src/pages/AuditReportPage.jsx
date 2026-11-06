@@ -174,7 +174,10 @@ export default function AuditReportPage() {
             <h2><ClipboardCheck size={16} aria-hidden="true" /> Audit Engagement Summary</h2>
             <dl>
               <dt>Tracking no.</dt><dd>{report.controlNumber}</dd>
+              {report.referenceNo && <><dt>Ref. No.</dt><dd><code>{report.referenceNo}</code></dd></>}
+              {report.classification && <><dt>Classification</dt><dd>{report.classification}</dd></>}
               <dt>Engagement</dt><dd>{report.title}</dd>
+              {report.venueDomain && <><dt>Domain</dt><dd><a href={`https://${report.venueDomain.replace(/^https?:\/\//, '')}`} target="_blank" rel="noreferrer">{report.venueDomain}</a></dd></>}
               <dt>Scope Area</dt><dd>{AUDIT_CATEGORIES[report.category] || report.category}</dd>
               <dt>Rating</dt><dd>{AUDIT_RATINGS[report.rating]?.label || report.rating}</dd>
               {report.auditPeriodStart && <><dt>Coverage</dt><dd>{longDate(report.auditPeriodStart)}{report.auditPeriodEnd ? ` to ${longDate(report.auditPeriodEnd)}` : ''}</dd></>}
@@ -267,3 +270,4 @@ export default function AuditReportPage() {
     </main>
   );
 }
+

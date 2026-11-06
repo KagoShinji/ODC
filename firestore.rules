@@ -1032,9 +1032,13 @@ service cloud.firestore {
       return d.keys().hasOnly(['controlNumber', 'controlMonth', 'controlSeq', 'title', 'category', 'rating',
           'auditPeriodStart', 'auditPeriodEnd', 'auditDate', 'dateIssued',
           'leadAuditorName', 'leadAuditorTitle', 'auditeeEntity', 'auditeeContact', 'auditTeam',
+          'referenceNo', 'classification', 'venueDomain',
           'body', 'bodyJson', 'signers', 'status', 'statusReason', 'createdAt', 'createdByUid', 'createdByName',
           'updatedAt', 'updatedByUid', 'issuedAt', 'closedAt', 'revokedAt']) &&
         docText(d.title, 1, 300) &&
+        docText(d.get('referenceNo', ''), 0, 100) &&
+        docText(d.get('classification', ''), 0, 200) &&
+        docText(d.get('venueDomain', ''), 0, 200) &&
         d.category in ['it_security', 'operations', 'financial', 'compliance', 'inventory', 'quality', 'other'] &&
         d.rating in ['satisfactory', 'needs_improvement', 'unsatisfactory'] &&
         docText(d.get('auditPeriodStart', ''), 0, 20) &&

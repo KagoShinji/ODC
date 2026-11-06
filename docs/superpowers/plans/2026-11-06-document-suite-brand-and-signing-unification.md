@@ -152,3 +152,4 @@
   - Command: `node --test tests/*.test.js && npm run build`
 - [ ] **Step 5: Commit changes**
   - Command: `git add src/pages/AdminInvoices.jsx src/pages/AdminMOA.jsx src/pages/AdminAcceptance.jsx && git commit -m "feat(admin): integrate unified branded document templates into admin dashboards"`
+

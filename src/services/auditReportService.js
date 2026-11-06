@@ -40,6 +40,9 @@ function reportFields(form) {
 
   return {
     title: form.title.trim().slice(0, 300),
+    referenceNo: (form.referenceNo || '').trim().slice(0, 100),
+    classification: (form.classification || '').trim().slice(0, 200),
+    venueDomain: (form.venueDomain || '').trim().slice(0, 200),
     category,
     rating,
     auditPeriodStart: toIsoDate(form.auditPeriodStart) || form.auditPeriodStart || '',

@@ -349,6 +349,11 @@ function renderBlock(block) {
       return `<div class="callout">${text}</div>`;
     case 'table':
       return renderTable(block);
+    case 'codeBlock': {
+      const lang = block.attrs?.language || '';
+      const langClass = lang ? ` class="language-${esc(lang)}"` : '';
+      return `<pre><code${langClass}>${text}</code></pre>`;
+    }
     case 'horizontalRule':
       return '<hr>';
     default:
@@ -533,7 +538,7 @@ export function renderDocJson(doc) {
     if (block.type === 'heading' && (block.attrs?.level === 2 || block.attrs?.level === 3)) {
       const lvl = block.attrs.level;
       const text = (block.content || []).map(renderInline).join('');
-      const numMatch = text.match(/^(\d+(?:\.\d+)*|[A-Z])[\.\)]\s*(.*)$/);
+      const numMatch = text.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•\.\-\)]\s*|\s+-\s+)\s*(.*)$/);
       const badge = numMatch ? `<span>${esc(numMatch[1])}</span>` : '<span class="dot"></span>';
       const cleanTitle = numMatch ? numMatch[2] : text;
       current.html.push(`<div class="sec body"><h${lvl}>${badge}${cleanTitle}</h${lvl}></div>`);

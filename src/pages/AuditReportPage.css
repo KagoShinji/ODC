@@ -50,3 +50,4 @@
 @media(max-width:1180px){.arp-layout{grid-template-columns:minmax(0,816px)}.arp-side{position:static}}
 @media(max-width:600px){.arp-bar{padding:10px 16px}.arp-layout{padding:16px 16px 40px}.arp-actions{width:100%}.arp-actions button{flex:1}}
 @media print{.arp-bar,.arp-side{display:none}}
+

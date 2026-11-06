@@ -5,7 +5,7 @@ import { TableKit } from '@tiptap/extension-table';
 import TextAlign from '@tiptap/extension-text-align';
 import { Placeholder } from '@tiptap/extensions';
 import {
-  Undo2, Redo2, Bold, Italic, Underline, Strikethrough, List, ListOrdered, Quote, AlignLeft, AlignCenter, AlignRight, AlignJustify, Eraser, Wand2, ClipboardCopy, Plus, Trash2,
+  Undo2, Redo2, Bold, Italic, Underline, Strikethrough, Code, List, ListOrdered, Quote, AlignLeft, AlignCenter, AlignRight, AlignJustify, Eraser, Wand2, ClipboardCopy, Plus, Trash2,
 } from 'lucide-react';
 import { BRAND_CO } from '../../utils/brandDocument.js';
 import {
@@ -20,6 +20,7 @@ const BLOCKS = [
   { id: 'h2', label: 'Section heading' },
   { id: 'h3', label: 'Sub-heading' },
   { id: 'h1', label: 'Annex page title' },
+  { id: 'codeBlock', label: 'Code block' },
 ];
 
 const TABLE_ACTIONS = [
@@ -40,8 +41,9 @@ function Toolbar({ editor, onAiPaste }) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
-      block: e.isActive('heading', { level: 1 }) ? 'h1' : e.isActive('heading', { level: 2 }) ? 'h2' : e.isActive('heading', { level: 3 }) ? 'h3' : 'p',
+      block: e.isActive('heading', { level: 1 }) ? 'h1' : e.isActive('heading', { level: 2 }) ? 'h2' : e.isActive('heading', { level: 3 }) ? 'h3' : e.isActive('codeBlock') ? 'codeBlock' : 'p',
       bold: e.isActive('bold'), italic: e.isActive('italic'), underline: e.isActive('underline'), strike: e.isActive('strike'),
+      code: e.isActive('code'),
       bullet: e.isActive('bulletList'), ordered: e.isActive('orderedList'), quote: e.isActive('blockquote'),
       align: ['center', 'right', 'justify'].find(a => e.isActive({ textAlign: a })) || 'left',
       inTable: e.isActive('table'), canUndo: e.can().undo(), canRedo: e.can().redo(),
@@ -51,6 +53,7 @@ function Toolbar({ editor, onAiPaste }) {
   const chain = () => editor.chain().focus();
   const setBlock = id => {
     if (id === 'p') chain().setParagraph().run();
+    else if (id === 'codeBlock') chain().setCodeBlock().run();
     else chain().setHeading({ level: Number(id[1]) }).run();
   };
   const tableAction = id => {
@@ -71,6 +74,7 @@ function Toolbar({ editor, onAiPaste }) {
       <ToolButton label="Italic" active={state.italic} onClick={() => chain().toggleItalic().run()}><Italic size={16} /></ToolButton>
       <ToolButton label="Underline" active={state.underline} onClick={() => chain().toggleUnderline?.().run()}><Underline size={16} /></ToolButton>
       <ToolButton label="Strikethrough" active={state.strike} onClick={() => chain().toggleStrike().run()}><Strikethrough size={16} /></ToolButton>
+      <ToolButton label="Inline code" active={state.code} onClick={() => chain().toggleCode().run()}><Code size={16} /></ToolButton>
       <span className="ae-sep" />
       <ToolButton label="Bulleted list" active={state.bullet} onClick={() => chain().toggleBulletList().run()}><List size={16} /></ToolButton>
       <ToolButton label="Numbered list" active={state.ordered} onClick={() => chain().toggleOrderedList().run()}><ListOrdered size={16} /></ToolButton>
@@ -117,7 +121,7 @@ export default function AuditReportEditor({ form, controlNumber, initialContent,
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ code: false, codeBlock: false, heading: { levels: [1, 2, 3] }, link: { openOnClick: false, autolink: true } }),
+      StarterKit.configure({ heading: { levels: [1, 2, 3] }, link: { openOnClick: false, autolink: true } }),
       TableKit.configure({ table: { resizable: false } }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Placeholder.configure({ placeholder: 'Start typing audit objectives, methodology, observations, or paste from AI…' }),
@@ -205,6 +209,24 @@ export default function AuditReportEditor({ form, controlNumber, initialContent,
                 />
               </div>
 
+              <span className="ae-grid-lbl">Ref &amp; Class</span>
+              <div className="ae-grid-val full">
+                <input
+                  value={form.referenceNo || ''}
+                  maxLength={100}
+                  onChange={e => onField('referenceNo', e.target.value)}
+                  placeholder="Ref No. (e.g. INC-20261106-PP)"
+                  style={{ flex: 1 }}
+                />
+                <input
+                  value={form.classification || ''}
+                  maxLength={200}
+                  onChange={e => onField('classification', e.target.value)}
+                  placeholder="Classification (e.g. Confidential · Client Post-Mortem &amp; Forensic Audit)"
+                  style={{ flex: 2 }}
+                />
+              </div>
+
               <span className="ae-grid-lbl">Scope Area</span>
               <div className="ae-grid-val">
                 <select value={form.category || 'it_security'} onChange={e => onField('category', e.target.value)}>
@@ -231,6 +253,16 @@ export default function AuditReportEditor({ form, controlNumber, initialContent,
                     );
                   })}
                 </div>
+              </div>
+
+              <span className="ae-grid-lbl">Target Domain</span>
+              <div className="ae-grid-val">
+                <input
+                  value={form.venueDomain || ''}
+                  maxLength={200}
+                  onChange={e => onField('venueDomain', e.target.value)}
+                  placeholder="Domain (e.g. thepicklepointcebu.com)"
+                />
               </div>
 
               <span className="ae-grid-lbl">Period Covered</span>
@@ -371,3 +403,4 @@ export default function AuditReportEditor({ form, controlNumber, initialContent,
     </div>
   );
 }
+

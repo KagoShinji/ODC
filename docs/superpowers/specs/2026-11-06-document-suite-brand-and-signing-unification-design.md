@@ -75,3 +75,4 @@ Each document type defines its signature slots. Public pages (`/invoice/:id`, `/
 ## 5. Security & Verification Rules (`firestore.rules`)
 - **Public Read Access**: Allow `get` on `/invoices/{id}`, `/moas/{id}`, `/certificates/{id}`, and `/receipts/{id}` regardless of paid/accepted status so legitimate parties can verify and print.
 - **Subcollection Write Access**: Allow creating signatures in `{docCollection}/{id}/signatures/{slotId}` if the document is in an active/issued state, the slot exists, the name matches the assigned signer, and rate-limits are honored.
+

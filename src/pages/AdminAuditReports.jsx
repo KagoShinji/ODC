@@ -31,7 +31,7 @@ const errorText = err => (err?.code === 'permission-denied'
 
 function mergeAuditParsed(f, parsed) {
   const next = { ...f };
-  for (const key of ['title', 'category', 'rating', 'auditPeriodStart', 'auditPeriodEnd', 'auditDate', 'dateIssued', 'leadAuditorName', 'leadAuditorTitle', 'auditeeEntity', 'auditeeContact', 'auditTeam']) {
+  for (const key of ['title', 'category', 'rating', 'auditPeriodStart', 'auditPeriodEnd', 'auditDate', 'dateIssued', 'leadAuditorName', 'leadAuditorTitle', 'auditeeEntity', 'auditeeContact', 'auditTeam', 'referenceNo', 'classification', 'venueDomain']) {
     if (parsed.fields && parsed.fields[key]) next[key] = parsed.fields[key];
   }
 
@@ -60,6 +60,9 @@ function formFrom(report) {
     auditeeEntity: report?.auditeeEntity || 'Engineering & Operations',
     auditeeContact: report?.auditeeContact || '',
     auditTeam: report?.auditTeam || '',
+    referenceNo: report?.referenceNo || '',
+    classification: report?.classification || '',
+    venueDomain: report?.venueDomain || '',
     bodyJson: report?.bodyJson || '',
     bodyText: report?.body || '',
     signers,
@@ -197,7 +200,17 @@ function Detail({ user, id, onBack, onEdit }) {
         <button type="button" className="ar-back" onClick={onBack}><ArrowLeft size={14} /> Back to audit reports</button>
         <span className={`task-pill ar-status-${report.status}`}>{STATUS_LABEL[report.status]}</span>
         <h3 className="ar-number">{report.controlNumber}</h3>
+        {report.referenceNo && (
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--task-muted)', letterSpacing: '0.5px', marginTop: -4, marginBottom: 4 }}>
+            REF: <code>{report.referenceNo}</code> {report.classification ? `· ${report.classification}` : ''}
+          </div>
+        )}
         <p className="ar-title">{report.title}</p>
+        {report.venueDomain && (
+          <div style={{ fontSize: 11, color: 'var(--task-muted)', marginBottom: 6 }}>
+            Domain: <a href={`https://${report.venueDomain.replace(/^https?:\/\//, '')}`} target="_blank" rel="noreferrer" style={{ color: '#ff6a13' }}>{report.venueDomain}</a>
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <span className={`ar-rating-badge rating-${report.rating}`}>
             <i></i>{(AUDIT_RATINGS[report.rating]?.label || report.rating).toUpperCase()}
@@ -337,7 +350,7 @@ export default function AdminAuditReports({ firebaseUser, can }) {
   const visible = reports.filter(r => {
     const matchStatus = status === 'all' || r.status === status;
     const matchRating = rating === 'all' || r.rating === rating;
-    const matchSearch = !search || `${r.controlNumber} ${r.title} ${r.auditeeEntity} ${r.leadAuditorName}`.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || `${r.controlNumber} ${r.referenceNo || ''} ${r.classification || ''} ${r.venueDomain || ''} ${r.title} ${r.auditeeEntity} ${r.leadAuditorName}`.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchRating && matchSearch;
   });
 
@@ -442,7 +455,10 @@ export default function AdminAuditReports({ firebaseUser, can }) {
                           {r.controlNumber}
                         </button>
                       </th>
-                      <td style={{ fontWeight: 600 }}>{r.title}</td>
+                      <td style={{ fontWeight: 600 }}>
+                        <div>{r.title}</div>
+                        {r.referenceNo && <small style={{ color: 'var(--task-muted)', fontSize: 11, fontWeight: 500, display: 'block' }}>Ref: {r.referenceNo}</small>}
+                      </td>
                       <td>{AUDIT_CATEGORIES[r.category] || r.category || 'General Audit'}</td>
                       <td>
                         <span className={`ar-rating-badge rating-${r.rating || 'satisfactory'}`}>
@@ -484,3 +500,4 @@ export default function AdminAuditReports({ firebaseUser, can }) {
     </div>
   );
 }
+

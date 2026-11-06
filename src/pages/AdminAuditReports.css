@@ -56,3 +56,4 @@
 .ar-detail-doc{min-width:0;overflow-x:auto}
 
 @media(max-width:1000px){.ar-detail{grid-template-columns:1fr}.ar-detail-side{position:static}}
+

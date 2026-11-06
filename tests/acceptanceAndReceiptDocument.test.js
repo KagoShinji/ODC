@@ -88,3 +88,4 @@ test('buildReceiptHtml renders cursive electronic signatures and audit timestamp
   assert.match(html, /Johnjosefir Roca/);
   assert.match(html, /Jetch Merald S\. Madaya/);
 });
+

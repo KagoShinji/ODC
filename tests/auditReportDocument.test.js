@@ -97,3 +97,81 @@ test('buildAuditReportHtml produces valid Brand Bible HTML with rating badge and
   assert.match(html, /Jane Doe/);
   assert.match(html, /brand\/odc-mark\.svg/);
 });
+
+test('parseAuditReportText and buildAuditReportHtml flexibly handle client post-mortem & forensic audit documents', () => {
+  const doc = `# ODYSSEY · OFFICIAL INCIDENT REPORT
+**Incident Reference:** \`INC-20261106-PP\`  
+**Classification:** Confidential · Client Post-Mortem & Forensic Audit  
+**Target Venue:** The Pickle Point - Cebu (\`picklepoint_cebu\`)  
+**Domain:** [thepicklepointcebu.com](https://thepicklepointcebu.com)  
+**Date & Time:** November 6, 2026 · 1:55 PM PHT  
+**Status:** **RESOLVED & RECONCILED**  
+
+---
+
+## 01 · Executive Summary
+
+This incident report officially resolves the inquiry raised by the executive management of **The Pickle Point - Cebu**.
+
+## 02 · Incident Timeline
+
+| Timestamp (PHT) | Event & Engineering Action |
+| :--- | :--- |
+| **Feb 7, 2026** | The Pickle Point - Cebu begins operations. |
+
+## 03 · Root Cause Analysis: The 1,000-Row API Query Ceiling
+
+Under standard configurations:
+\`\`\`ini
+max-rows = 1000
+\`\`\`
+When the client application executed:
+\`\`\`javascript
+const { data } = await supabase.from('bookings').select('*');
+\`\`\`
+
+## 04 · Forensic Mathematical Proof & Reconciliation
+
+$$\\text{PHP 1,898,250 (Pre-Nov 3 Displayed)} + \\text{PHP 1,811,900 (Restored Historical)} = \\mathbf{PHP\\ 3,710,150.00}$$
+
+| Dataset Segment | Record Count | Revenue Total (PHP) | Status |
+| :--- | :---: | :---: | :--- |
+| **Pre-Nov 3 Dashboard View** | 1,000 bookings | **PHP 1,898,250.00** | Capped at PostgREST limit |
+| **Verified Lifetime Total** | **2,248 bookings** | **PHP 3,710,150.00** | **Current Live Dashboard Total** |
+
+## 09 · Verification & Sign-off
+
+**Odyssey Platform Engineering · Central Database Infrastructure Team**  
+*Report Reference: INC-20261106-PP*
+`;
+
+  const parsed = parseAuditReportText(doc);
+  assert.equal(parsed.fields.title, 'ODYSSEY · OFFICIAL INCIDENT REPORT');
+  assert.equal(parsed.fields.referenceNo, 'INC-20261106-PP');
+  assert.equal(parsed.fields.classification, 'Confidential · Client Post-Mortem & Forensic Audit');
+  assert.equal(parsed.fields.auditeeEntity, 'The Pickle Point - Cebu (picklepoint_cebu)');
+  assert.equal(parsed.fields.venueDomain, 'thepicklepointcebu.com');
+  assert.equal(parsed.fields.auditDate, '2026-11-06');
+  assert.equal(parsed.fields.dateIssued, '2026-11-06');
+  assert.equal(parsed.fields.rating, 'satisfactory');
+  assert.equal(parsed.fields.category, 'it_security');
+
+  const report = {
+    controlNumber: 'AR-2026-11-002',
+    ...parsed.fields,
+    body: parsed.body,
+    signers: parsed.signers,
+    status: 'issued',
+  };
+
+  const html = buildAuditReportHtml(report, {}, { origin: 'https://odysseyph.com' });
+  assert.match(html, /<span>01<\/span>Executive Summary/);
+  assert.match(html, /<pre><code class="language-ini">max-rows = 1000<\/code><\/pre>/);
+  assert.match(html, /<pre><code class="language-javascript">const \{ data \} = await supabase/);
+  assert.match(html, /class="math-block"/);
+  assert.match(html, /<table class="tbl">/);
+  assert.match(html, /INC-20261106-PP/);
+  assert.match(html, /The Pickle Point - Cebu/);
+  assert.match(html, /thepicklepointcebu\.com/);
+});
+

@@ -72,3 +72,4 @@ test('buildBillingStatementHtml renders PAID status stamp when settled', () => {
 test('normalizeSignerName cleans extra whitespace', () => {
   assert.equal(normalizeSignerName('  Jetch   Merald  S.   Madaya '), 'Jetch Merald S. Madaya');
 });
+

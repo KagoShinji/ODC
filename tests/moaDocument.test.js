@@ -79,3 +79,4 @@ test('buildMoaHtml formats freeform text contracts properly', () => {
   assert.match(html, /Compensation/);
   assert.match(html, /Acme Corp/);
 });
+
