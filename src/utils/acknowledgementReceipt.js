@@ -1,9 +1,11 @@
 // Acknowledgement Receipt (AR): issued when a billing statement (SOA) is paid.
 // The AR number is the tracking number and mirrors the SOA it settles
 // (SOA-2026-10-076 -> AR-2026-10-076), so either number finds the other.
-import { BRAND_CO, isoDate, esc, money, longDate, amountInWords, brandPage, openPrintWindow } from './brandDocument';
+import { BRAND_CO, isoDate, esc, money, longDate, amountInWords, brandPage, openPrintWindow } from './brandDocument.js';
 
 export { amountInWords };
+
+export const normalizeSignerName = value => (value || '').trim().replace(/\s+/g, ' ');
 
 export const PAYMENT_METHODS = {
   cash: 'Cash',
@@ -56,7 +58,32 @@ function serviceList(items) {
 // "Domain Fee (Yearly)" -> "Domain Fee <span class=muted>(Yearly)</span>"
 const serviceCell = (s) => esc(s).replace(/(\(.*?\))/g, '<span class="muted">$1</span>');
 
-export function buildReceiptHtml(r, { origin, autoPrint = false } = {}) {
+const AR_CSS = `
+.sig-mark{font-family:'Great Vibes',cursive;font-size:30px;line-height:1;color:#111;height:40px;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sig-mark.empty{height:40px}
+.sig-meta{font-size:9px;color:var(--muted);margin-top:3px;line-height:1.4}
+`;
+
+function signerBlock(title, slotId, defaultName, defaultTitle, signature, signDate, timeZone) {
+  const name = signature?.name || defaultName;
+  const signed = (signature || name)
+    ? `<div class="sig-mark">${esc(signature?.name || name)}</div>`
+    : '<div class="sig-mark empty"></div>';
+  const meta = signature
+    ? `<div class="sig-meta">Signed electronically ${esc(new Date(signature.signedAt).toLocaleString('en-PH', { timeZone, dateStyle: 'medium', timeStyle: 'short' }))}</div>`
+    : `<div class="sig-meta">Date: ${signDate}</div>`;
+
+  return `<div>
+    <div class="eyebrow">${esc(title)}</div>
+    ${signed}
+    <div class="sig-line"></div>
+    <div class="sig-name">${esc(name)}</div>
+    <div class="sig-tag">${esc((defaultTitle || '').toUpperCase())}</div>
+    ${meta}
+  </div>`;
+}
+
+export function buildReceiptHtml(r, { signatures = {}, origin = (typeof window !== 'undefined' ? window.location.origin : ''), timeZone = 'Asia/Manila', autoPrint = false } = {}) {
   const method = PAYMENT_METHODS[r.paymentMethod] || r.paymentMethod || '';
   const rows = (r.items || []).map(i => `<tr><td>${serviceCell(i.service)}</td><td class="ar">${money(i.amount)}</td></tr>`).join('');
   const via = [
@@ -66,6 +93,16 @@ export function buildReceiptHtml(r, { origin, autoPrint = false } = {}) {
   ].join('');
   const services = serviceList(r.items || []);
   const signDate = longDate(r.paymentDate);
+
+  const preparedSig = signatures.prepared || (r.preparedSigned ? {
+    name: r.preparedSigneeName || r.preparedBy,
+    signedAt: r.preparedSignedAt?.toDate?.()?.toISOString() || r.preparedSignedAt || r.paymentDate,
+  } : null);
+
+  const approvedSig = signatures.approved || (r.approvedSigned ? {
+    name: r.approvedSigneeName || r.approvedBy,
+    signedAt: r.approvedSignedAt?.toDate?.()?.toISOString() || r.approvedSignedAt || r.paymentDate,
+  } : null);
 
   const body = `
     <div class="meta">
@@ -92,22 +129,23 @@ export function buildReceiptHtml(r, { origin, autoPrint = false } = {}) {
       <div class="via">${via}</div>
     </div>
     <div class="sigs">
-      <div><div class="eyebrow">Prepared by</div><div class="sig-line"></div>
-        <div class="sig-name">${esc(r.preparedBy)}</div><div class="sig-tag">DIGITALLY PREPARED &amp; SIGNED</div><div class="sig-date">${signDate}</div></div>
-      <div><div class="eyebrow">Approved by</div><div class="sig-line"></div>
-        <div class="sig-name">${esc(r.approvedBy)}</div><div class="sig-tag">DIGITALLY APPROVED &amp; SIGNED</div><div class="sig-date">${signDate}</div></div>
+      ${signerBlock('Prepared by', 'prepared', r.preparedBy, 'Finance Representative', preparedSig, signDate, timeZone)}
+      ${signerBlock('Approved by', 'approved', r.approvedBy || BRAND_CO.approvedBy, 'Executive Approval', approvedSig, signDate, timeZone)}
     </div>`;
 
-  return brandPage({
+  let html = brandPage({
     title: 'ACKNOWLEDGEMENT RECEIPT',
     numberLabel: 'AR NO.',
     number: r.receiptNumber,
     body,
     footLeft: 'Thank you for choosing Odyssey.',
     footRight: `Ref. ${r.invoiceNumber} · ${r.receiptNumber}`,
+    extraCss: AR_CSS,
     origin,
     autoPrint,
   });
+
+  return html.replace('</head>', '<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet"></head>');
 }
 
 export const printReceipt = (r, target) => openPrintWindow(buildReceiptHtml(r, { autoPrint: true }), target);
