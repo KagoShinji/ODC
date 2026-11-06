@@ -1,0 +1,319 @@
+/* Universal Document Portal view — ODC Brand Bible: Navy #16273a, Orange #ff6a13 */
+.docp {
+  --navy: #16273a;
+  --orange: #ff6a13;
+  --muted: #5b6574;
+  --line: #d9dde3;
+  min-height: 100dvh;
+  background: #eef0f3;
+  color: #1d2939;
+  font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+}
+
+.docp-state {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 120px 20px;
+  text-align: center;
+}
+.docp-state h1 {
+  font-family: Poppins, sans-serif;
+  color: var(--navy);
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+.docp-state p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.docp-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: var(--navy);
+  color: #fff;
+  border-bottom: 3px solid var(--orange);
+}
+
+.docp-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.docp-id img {
+  height: 34px;
+  width: auto;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.docp-id small {
+  display: block;
+  color: #c4cbd4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+.docp-id strong {
+  font-family: Poppins, sans-serif;
+  color: var(--orange);
+  font-size: 18px;
+  letter-spacing: 0.4px;
+}
+
+.docp-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #ffffff1a;
+}
+.docp-status-paid, .docp-status-accepted, .docp-status-executed, .docp-status-closed {
+  background: #16a34a;
+  color: #fff;
+}
+.docp-status-pending, .docp-status-sent, .docp-status-issued {
+  background: #d97706;
+  color: #fff;
+}
+.docp-status-draft {
+  background: #475569;
+  color: #fff;
+}
+.docp-status-void, .docp-status-cancelled, .docp-status-revoked {
+  background: #dc2626;
+  color: #fff;
+}
+
+.docp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.docp button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid #ffffff40;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.docp button:hover {
+  background: #ffffff14;
+}
+.docp button:focus-visible, .docp input:focus-visible, .docp select:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.docp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 816px) 320px;
+  gap: 28px;
+  justify-content: center;
+  align-items: start;
+  padding: 28px 20px 60px;
+}
+.docp-doc {
+  min-width: 0;
+}
+.docp-side {
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: 84px;
+}
+.docp-side section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+.docp-side h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Poppins, sans-serif;
+  font-size: 14px;
+  color: var(--navy);
+  margin: 0 0 12px;
+}
+.docp-side h2 small {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: auto;
+}
+.docp-side h2 svg {
+  color: var(--orange);
+}
+.docp-side dl {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 7px 10px;
+  margin: 0;
+  font-size: 12.5px;
+}
+.docp-side dt {
+  color: var(--muted);
+}
+.docp-side dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.docp-signers {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.docp-signers li {
+  display: grid;
+  gap: 1px;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid var(--line);
+  font-size: 13px;
+}
+.docp-signers li.is-signed {
+  border-left-color: #16a34a;
+}
+.docp-signers small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.docp-sign {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.docp-sign label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+}
+.docp-sign input:not([type=checkbox]), .docp-sign select {
+  padding: 9px 11px;
+  border: 1px solid #c6ccd5;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  color: #1d2939;
+  background: #fff;
+}
+.docp-check {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 8px !important;
+  font-weight: 400 !important;
+  color: #3d4756 !important;
+  line-height: 1.5;
+}
+.docp-check input {
+  margin-top: 3px;
+  accent-color: var(--orange);
+}
+.docp-preview {
+  font-family: 'Great Vibes', cursive;
+  font-size: 30px;
+  color: #111;
+  margin: 0;
+  padding: 4px 2px;
+  border-bottom: 1px solid #3a4a5c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.docp .docp-primary {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+}
+.docp .docp-primary:hover {
+  background: #e85d0c;
+}
+
+.docp-msg {
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin: 0 0 10px;
+}
+.docp-msg-ok {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.docp-msg-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.docp-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+.docp-frame iframe {
+  display: block;
+  border: 0;
+  background: #fff;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+}
+
+@media (max-width: 1180px) {
+  .docp-layout {
+    grid-template-columns: minmax(0, 816px);
+  }
+  .docp-side {
+    position: static;
+  }
+}
+@media (max-width: 600px) {
+  .docp-bar {
+    padding: 10px 16px;
+  }
+  .docp-layout {
+    padding: 16px 16px 40px;
+  }
+  .docp-actions {
+    width: 100%;
+  }
+  .docp-actions button {
+    flex: 1;
+  }
+}
+@media print {
+  .docp-bar, .docp-side {
+    display: none;
+  }
+}
