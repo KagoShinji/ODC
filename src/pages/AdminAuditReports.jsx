@@ -172,23 +172,22 @@ function Detail({ user, id, onBack, onEdit }) {
     });
   };
 
-  const issue = () => {
-    modal.confirm({
-      title: 'Issue Audit Report?',
+  const issue = async () => {
+    if (!await modal.confirm({
+      title: `Issue Audit Report ${report.controlNumber}?`,
       message: `Issuing ${report.controlNumber} locks its contents and publishes it for official review. Designated signers will be able to sign via the verification link. Continue?`,
       confirmLabel: 'Issue Audit Report',
-      onConfirm: () => run('issue', () => issueAuditReport(user, report.id)),
-    });
+    })) return;
+    run('issue', () => issueAuditReport(user, report.id));
   };
 
-  const remove = () => {
-    modal.confirm({
-      title: 'Delete draft?',
+  const remove = async () => {
+    if (!await modal.confirm({
+      title: `Delete draft ${report.controlNumber}?`,
       message: `Permanently delete draft ${report.controlNumber}? The control number cannot be reused.`,
       confirmLabel: 'Delete draft',
-      danger: true,
-      onConfirm: () => run('delete', async () => { await deleteAuditReportDraft(report.id); onBack(); }),
-    });
+    })) return;
+    run('delete', async () => { await deleteAuditReportDraft(report.id); onBack(); });
   };
 
   const approverSlot = signers.find(s => s.kind === 'approver');
