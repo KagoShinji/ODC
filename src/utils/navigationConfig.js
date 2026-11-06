@@ -15,6 +15,7 @@ import {
   Target,
   ScrollText,
   ShieldAlert,
+  ClipboardCheck,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -162,6 +163,16 @@ export const ALL_ADMIN_NAVIGATIONS = [
     color: '#ef4444',
     actions: [
       { id: 'incidentreports:manage', label: 'Manage Incident Reports', desc: 'Draft, issue, sign and close incident reports' },
+    ],
+  },
+  {
+    id: 'auditreports',
+    label: 'Audit Reports',
+    desc: 'Engagement audits, ratings, CAPA & signoffs',
+    icon: ClipboardCheck,
+    color: '#0ea5e9',
+    actions: [
+      { id: 'auditreports:manage', label: 'Manage Audit Reports', desc: 'Draft, issue, sign, close and revoke audit reports' },
     ],
   },
   {

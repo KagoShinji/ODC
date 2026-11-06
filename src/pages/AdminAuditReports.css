@@ -1,0 +1,58 @@
+/* Audit Reports — builds on the task board tokens in AdminTasks.css */
+.ar-module{--ar-orange:#ff6a13;--ar-blue:#0ea5e9}
+.ar-module button.ar-link{padding:0;border:0;background:none;color:var(--task-accent);font-weight:600;justify-content:flex-start}
+.ar-module button.ar-link:hover{background:none;text-decoration:underline}
+.ar-module button.ar-back{border:0;padding:4px 0;margin-bottom:14px;color:var(--task-muted);background:none}
+
+.ar-table-wrap{overflow-x:auto;border:1px solid var(--task-line);border-radius:10px}
+.ar-table{width:100%;border-collapse:collapse;font-size:13px}
+.ar-table th,.ar-table td{padding:12px 14px;text-align:left;border-bottom:1px solid #ffffff0d;vertical-align:top}
+.ar-table thead th{background:#141a25;color:var(--task-muted);font-size:11px;font-weight:550;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.ar-table tbody tr:hover{background:#ffffff05}
+.ar-table tbody th{white-space:nowrap;font-variant-numeric:tabular-nums}
+
+.task-pill.ar-status-draft{color:#c3cad6;border-color:#c3cad640}
+.task-pill.ar-status-issued{color:#60a5fa;border-color:#60a5fa40}
+.task-pill.ar-status-closed{color:var(--task-done);border-color:#7fd8a640}
+.task-pill.ar-status-revoked{color:var(--task-overdue);border-color:#f2a3a340}
+
+.ar-rating-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.ar-rating-badge i{width:6px;height:6px;border-radius:50%;display:inline-block}
+.ar-rating-badge.rating-satisfactory{background:#10b98122;color:#34d399}.ar-rating-badge.rating-satisfactory i{background:#34d399}
+.ar-rating-badge.rating-needs_improvement{background:#f59e0b22;color:#fbbf24}.ar-rating-badge.rating-needs_improvement i{background:#fbbf24}
+.ar-rating-badge.rating-unsatisfactory{background:#ef444422;color:#f87171}.ar-rating-badge.rating-unsatisfactory i{background:#f87171}
+
+.ar-doc-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.ar-doc-head h3{font-size:20px!important;margin:0!important}
+.ar-doc-head .ar-back{margin:0!important}
+.ar-doc-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.ar-doc-side{position:sticky;top:16px;display:grid;gap:8px;padding:16px;border:1px solid var(--task-line);border-radius:12px;background:#ffffff04;max-height:calc(100dvh - 32px);overflow-y:auto}
+.ar-doc-side h4{margin:0 0 6px!important}
+.ar-doc-save{display:flex;gap:8px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--task-line);margin-top:6px}
+@media(max-width:1200px){.ar-doc-layout{grid-template-columns:1fr}.ar-doc-side{position:static;max-height:none}}
+
+.ar-module textarea{width:100%;min-width:0;padding:10px 12px;border:1px solid #ffffff25;border-radius:7px;background:#10151f;color:#e8ecf3;font:inherit;font-size:13px;box-sizing:border-box;resize:vertical}
+.ar-notice{padding:10px 14px;border-radius:8px;font-size:13px;border:1px solid #7fd8a640;background:#7fd8a60c;color:#bfeccf}
+
+.ar-detail{display:grid;grid-template-columns:340px minmax(0,1fr);gap:28px;align-items:start}
+.ar-detail-side{position:sticky;top:16px;display:grid;gap:12px;align-content:start}
+.ar-detail-side h4{margin:10px 0 0!important}
+.ar-detail-side h4 small{color:var(--task-muted);font-weight:400}
+.ar-number{font-family:Poppins,'Outfit',sans-serif;font-size:24px!important;color:#ffb184;letter-spacing:.02em;margin:0!important}
+.ar-title{font-size:15px;font-weight:550;margin:0!important}
+.ar-detail-side>.task-pill{justify-self:start}
+.ar-actions{display:flex;flex-wrap:wrap;gap:8px}
+.ar-link-box code{display:block;padding:8px 10px;border:1px solid var(--task-line);border-radius:7px;font-size:11.5px;overflow-wrap:anywhere;color:#d3d9e3}
+.ar-inline{display:grid;gap:6px;padding:12px;border:1px solid var(--task-line);border-radius:10px}
+.ar-inline>button{justify-self:end}
+.ar-sign-list{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.ar-sign-list li{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid #ffffff0c;font-size:13px}
+.ar-sign-list li>span:nth-child(2){display:grid;gap:1px;flex:1;min-width:0}
+.ar-sign-list small{color:var(--task-muted);font-size:11px}
+.ar-sign-list li>button{padding:5px 7px}
+.ar-dot{width:9px;height:9px;border-radius:50%;border:2px solid #ffffff40;margin-top:5px;flex-shrink:0}
+.ar-dot.is-signed{background:var(--task-done);border-color:var(--task-done)}
+.ar-small{font-size:11.5px!important}
+.ar-detail-doc{min-width:0;overflow-x:auto}
+
+@media(max-width:1000px){.ar-detail{grid-template-columns:1fr}.ar-detail-side{position:static}}

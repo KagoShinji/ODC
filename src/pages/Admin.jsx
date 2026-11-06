@@ -62,6 +62,7 @@ const AdminTasks = lazy(() => import('./AdminTasks'));
 const AdminSales = lazy(() => import('./AdminSales'));
 const AdminOfficeOrders = lazy(() => import('./AdminOfficeOrders'));
 const AdminIncidentReports = lazy(() => import('./AdminIncidentReports'));
+const AdminAuditReports = lazy(() => import('./AdminAuditReports'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -894,6 +895,10 @@ function AdminDashboard({ firebaseUser }) {
 
                 {activeTab === 'incidentreports' && hasPermission('incidentreports') && (
                     <AdminIncidentReports firebaseUser={firebaseUser} can={can} />
+                )}
+
+                {activeTab === 'auditreports' && hasPermission('auditreports') && (
+                    <AdminAuditReports firebaseUser={firebaseUser} can={can} />
                 )}
 
                 {activeTab === 'sales' && hasPermission('sales') && (
