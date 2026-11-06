@@ -501,7 +501,7 @@ export function renderBody(markdown) {
     const m = sec.match(/^<h([23])>(.*?)<\/h\1>([\s\S]*)$/i);
     if (!m) return sec.trim() ? `<div class="sec body">${sec}</div>` : '';
     const [, lvl, hText, rest] = m;
-    const numMatch = hText.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•\.\-\)]\s*|\s+-\s+)\s*(.*)$/);
+    const numMatch = hText.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•.)-]\s*|\s+-\s+)\s*(.*)$/);
     const badge = numMatch ? `<span>${esc(numMatch[1])}</span>` : '<span class="dot"></span>';
     const cleanTitle = numMatch ? numMatch[2] : hText;
     return `<div class="sec body"><h${lvl}>${badge}${cleanTitle}</h${lvl}>${rest}</div>`;
@@ -538,7 +538,7 @@ export function renderDocJson(doc) {
     if (block.type === 'heading' && (block.attrs?.level === 2 || block.attrs?.level === 3)) {
       const lvl = block.attrs.level;
       const text = (block.content || []).map(renderInline).join('');
-      const numMatch = text.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•\.\-\)]\s*|\s+-\s+)\s*(.*)$/);
+      const numMatch = text.match(/^(\d+(?:\.\d+)*|[A-Z])\s*(?:[·•.)-]\s*|\s+-\s+)\s*(.*)$/);
       const badge = numMatch ? `<span>${esc(numMatch[1])}</span>` : '<span class="dot"></span>';
       const cleanTitle = numMatch ? numMatch[2] : text;
       current.html.push(`<div class="sec body"><h${lvl}>${badge}${cleanTitle}</h${lvl}></div>`);

@@ -76,8 +76,8 @@ export function buildMoaHtml(moa, signatures = {}, { origin = (typeof window !==
   const isVoid = moa.status === 'Void' || moa.status === 'Cancelled';
 
   const stamp = isExecuted ? '<div class="stamp executed">EXECUTED</div>' :
-                isVoid ? '<div class="stamp void">VOID</div>' :
-                '<div class="stamp">DRAFT</div>';
+    isVoid ? '<div class="stamp void">VOID</div>' :
+      '<div class="stamp">DRAFT</div>';
 
   const providerName = moa.providerName || moa.providerSigneeName || BRAND_CO.approvedBy;
   const clientName = moa.clientName || moa.clientSigneeName || '';

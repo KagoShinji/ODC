@@ -96,11 +96,11 @@ export function buildBillingStatementHtml(invoice, signatures = {}, { origin = (
   const isCancelled = invoice.status === 'cancelled';
 
   const stamp = isPaid ? '<div class="stamp paid">PAID</div>' :
-                isCancelled ? '<div class="stamp cancelled">CANCELLED</div>' :
-                invoice.status === 'draft' ? '<div class="stamp">DRAFT</div>' : '';
+    isCancelled ? '<div class="stamp cancelled">CANCELLED</div>' :
+      invoice.status === 'draft' ? '<div class="stamp">DRAFT</div>' : '';
 
   const pill = isPaid ? '<span class="soa-pill paid"><i></i>PAID IN FULL</span>' :
-               '<span class="soa-pill pending"><i></i>OUTSTANDING</span>';
+    '<span class="soa-pill pending"><i></i>OUTSTANDING</span>';
 
   const rows = items.map(item => `
     <tr>

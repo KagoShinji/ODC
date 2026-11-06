@@ -432,8 +432,8 @@ export function buildIncidentReportHtml(report, signatures = {}, { origin = (typ
   const ack = signers.filter(s => s.kind === 'acknowledger');
 
   const stamp = report.status === 'revoked' ? '<div class="stamp revoked">REVOKED</div>' :
-                report.status === 'closed' ? '<div class="stamp closed">CLOSED</div>' :
-                report.status === 'draft' ? '<div class="stamp">DRAFT</div>' : '';
+    report.status === 'closed' ? '<div class="stamp closed">CLOSED</div>' :
+      report.status === 'draft' ? '<div class="stamp">DRAFT</div>' : '';
 
   const sev = report.severity || 'medium';
   const sevBadge = `<span class="sev-pill sev-${esc(sev)}"><i></i>${esc(sev.toUpperCase())}</span>`;
@@ -458,7 +458,7 @@ export function buildIncidentReportHtml(report, signatures = {}, { origin = (typ
   </dl>`;
 
   const statusNote = report.status === 'revoked' ? `<div class="revoked-note"><b>This Incident Report has been revoked</b>${report.statusReason ? ` — ${esc(report.statusReason)}` : ''}. It is kept for historical audit purposes only.</div>` :
-                     report.status === 'closed' ? `<div class="closed-note"><b>This Incident has been investigated and closed</b>${report.statusReason ? ` — ${esc(report.statusReason)}` : ''}.</div>` : '';
+    report.status === 'closed' ? `<div class="closed-note"><b>This Incident has been investigated and closed</b>${report.statusReason ? ` — ${esc(report.statusReason)}` : ''}.</div>` : '';
 
   const reportContent = `${stamp}
 ${statusNote}

@@ -69,10 +69,10 @@ export function buildAcceptanceCertificateHtml(coa, signatures = {}, { origin = 
   const isAccepted = coa.status === 'Accepted' || Boolean(signatures.acceptor || coa.signeeName);
 
   const stamp = isAccepted ? '<div class="stamp accepted">ACCEPTED</div>' :
-                '<div class="stamp">PENDING</div>';
+    '<div class="stamp">PENDING</div>';
 
   const pill = isAccepted ? '<span class="coa-pill accepted"><i></i>ACCEPTED &amp; TURNED OVER</span>' :
-               '<span class="coa-pill pending"><i></i>PENDING ACCEPTANCE</span>';
+    '<span class="coa-pill pending"><i></i>PENDING ACCEPTANCE</span>';
 
   const providerName = coa.providerName || BRAND_CO.approvedBy;
   const clientName = coa.clientName || coa.signeeName || '';
