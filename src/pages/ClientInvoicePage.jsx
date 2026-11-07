@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import {
-  Printer, Check, Link2, FileText, CheckCircle2,
-  AlertCircle, ShieldCheck, CreditCard, Sparkles,
+  Printer, Check, Copy, Link2, FileText,
+  ShieldCheck, CreditCard,
 } from 'lucide-react';
 import LoadingButton from '../components/ui/LoadingButton';
 import BrandedDocumentFrame from '../components/common/BrandedDocumentFrame';
@@ -12,6 +12,7 @@ import {
   buildBillingStatementHtml,
   statementNumberFor,
   ODC_BANK_INFO,
+  copyTextToClipboard,
 } from '../utils/billingStatementDocument';
 import {
   subscribeDocumentSignatures,
@@ -37,6 +38,7 @@ export default function ClientInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState('');
 
   // Signing form state
   const [slot, setSlot] = useState('');
@@ -110,12 +112,16 @@ export default function ClientInvoicePage() {
   }, [invoice, signatures]);
 
   const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
+    if (await copyTextToClipboard(window.location.href)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
-    } catch {
-      /* fallback */
+    }
+  };
+
+  const handleCopyBankField = async (key, value) => {
+    if (await copyTextToClipboard(value)) {
+      setCopiedField(key);
+      setTimeout(() => setCopiedField(prev => (prev === key ? '' : prev)), 2000);
     }
   };
 
@@ -315,11 +321,52 @@ export default function ClientInvoicePage() {
 
           <section>
             <h2><CreditCard size={16} /> Official Bank Settlement</h2>
-            <div style={{ fontSize: 12.5, lineHeight: 1.6, color: '#334155' }}>
-              <strong>Bank:</strong> {ODC_BANK_INFO.bankName}<br />
-              <strong>Account No.:</strong> {ODC_BANK_INFO.bankAccount}<br />
-              <strong>Account Name:</strong> {ODC_BANK_INFO.bankAccountName}<br />
-              <strong>Mobile / Contact:</strong> {ODC_BANK_INFO.approvedPhone}
+            <div className="docp-bank-list">
+              <div className="docp-bank-item">
+                <div className="docp-bank-meta">
+                  <small>Bank</small>
+                  <strong>{ODC_BANK_INFO.bankName}</strong>
+                </div>
+              </div>
+
+              <div className="docp-bank-item">
+                <div className="docp-bank-meta">
+                  <small>Account No.</small>
+                  <strong>{ODC_BANK_INFO.bankAccount}</strong>
+                </div>
+                <button
+                  type="button"
+                  className={`docp-copy-btn ${copiedField === 'account' ? 'is-copied' : ''}`}
+                  onClick={() => handleCopyBankField('account', ODC_BANK_INFO.bankAccount)}
+                  aria-label="Copy account number"
+                >
+                  {copiedField === 'account' ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedField === 'account' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+
+              <div className="docp-bank-item">
+                <div className="docp-bank-meta">
+                  <small>Account Name</small>
+                  <strong>{ODC_BANK_INFO.bankAccountName}</strong>
+                </div>
+                <button
+                  type="button"
+                  className={`docp-copy-btn ${copiedField === 'name' ? 'is-copied' : ''}`}
+                  onClick={() => handleCopyBankField('name', ODC_BANK_INFO.bankAccountName)}
+                  aria-label="Copy account name"
+                >
+                  {copiedField === 'name' ? <Check size={12} /> : <Copy size={12} />}
+                  {copiedField === 'name' ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+
+              <div className="docp-bank-item">
+                <div className="docp-bank-meta">
+                  <small>Mobile / Contact</small>
+                  <strong>{ODC_BANK_INFO.approvedPhone}</strong>
+                </div>
+              </div>
             </div>
           </section>
         </aside>

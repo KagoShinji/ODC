@@ -56,7 +56,7 @@ const BrandedDocumentFrame = forwardRef(function BrandedDocumentFrame({ html, ti
         pixelRatio: 2,
         backgroundColor: '#ffffff',
         fontEmbedCSS,
-        filter: el => !el.classList?.contains('stamp'),
+        filter: el => !el.classList?.contains('stamp') && !el.classList?.contains('soa-copy-btn'),
       });
       const a = document.createElement('a');
       a.download = filename;

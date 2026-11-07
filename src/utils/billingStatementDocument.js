@@ -7,13 +7,47 @@ import { BRAND_CO, esc, money, longDate, brandPage } from './brandDocument.js';
 export const normalizeSignerName = value => (value || '').trim().replace(/\s+/g, ' ');
 
 export const ODC_BANK_INFO = {
-  bankName: 'GoTyme',
-  bankAccount: '012267894321',
-  bankAccountName: 'Johnjosefir Roca',
+  bankName: 'Metrobank',
+  bankAccount: '1723925339319',
+  bankAccountName: 'ODYSSEYPH IT SOLUTIONS',
   approvedBy: BRAND_CO.approvedBy,
   approvedPhone: '0909-985-5322',
   preparedBy: 'Johnjosefir Roca',
 };
+
+export async function copyTextToClipboard(
+  text,
+  nav = typeof navigator !== 'undefined' ? navigator : null,
+  doc = typeof document !== 'undefined' ? document : null
+) {
+  const value = String(text ?? '');
+  if (!value) return false;
+  if (nav?.clipboard?.writeText) {
+    try {
+      await nav.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall through to execCommand fallback for mobile WebViews
+    }
+  }
+  if (doc?.createElement) {
+    try {
+      const ta = doc.createElement('textarea');
+      ta.value = value;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      doc.body.appendChild(ta);
+      ta.select();
+      const copied = doc.execCommand('copy');
+      doc.body.removeChild(ta);
+      return Boolean(copied);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
 
 export function statementNumberFor(inv) {
   const num = inv?.invoiceNumber || '';
@@ -47,7 +81,12 @@ const STATEMENT_CSS = `
 .soa-tbl .tot b{font-family:Poppins,sans-serif;color:var(--orange);font-size:20px;font-weight:800}
 .soa-pay-box{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px;padding:14px 18px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;break-inside:avoid}
 .soa-pay-col h4{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--navy);text-transform:uppercase;margin-bottom:8px}
-.soa-pay-col p{font-size:11.5px;line-height:1.6;color:#334155;margin:0}
+.soa-pay-col p{font-size:11.5px;line-height:1.7;color:#334155;margin:0}
+.soa-copy-val{user-select:all}
+.soa-copy-btn{display:inline-flex;align-items:center;margin-left:6px;padding:1px 7px;font-family:inherit;font-size:10px;font-weight:700;color:var(--navy);background:#e2e8f0;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;vertical-align:middle;line-height:1.4}
+.soa-copy-btn:hover{background:#cbd5e1}
+.soa-copy-btn.is-copied{background:#ecfdf5;color:#065f46;border-color:#a7f3d0}
+@media print{.soa-copy-btn{display:none!important}}
 .soa-qrs{display:flex;gap:18px;justify-content:center;margin:16px 0 10px;break-inside:avoid}
 .soa-qr{text-align:center;width:120px}
 .soa-qr img{width:100px;height:100px;display:block;margin:0 auto;border:1px solid #cbd5e1;border-radius:6px;padding:6px;background:#fff;image-rendering:crisp-edges}
@@ -140,6 +179,10 @@ export function buildBillingStatementHtml(invoice, signatures = {}, { origin = (
     </div>
   `;
 
+  const copyBtn = (val, label) => autoPrint
+    ? ''
+    : ` <button type="button" class="soa-copy-btn" data-copy="${esc(val)}" aria-label="${esc(label)}">Copy</button>`;
+
   const body = `
     ${stamp}
     <dl class="soa-grid">
@@ -177,8 +220,8 @@ export function buildBillingStatementHtml(invoice, signatures = {}, { origin = (
         <h4>Bank Details</h4>
         <p>
           Bank: <strong>${esc(ODC_BANK_INFO.bankName)}</strong><br>
-          Account No: <strong>${esc(ODC_BANK_INFO.bankAccount)}</strong><br>
-          Account Name: <strong>${esc(ODC_BANK_INFO.bankAccountName)}</strong><br>
+          Account No: <strong class="soa-copy-val">${esc(ODC_BANK_INFO.bankAccount)}</strong>${copyBtn(ODC_BANK_INFO.bankAccount, 'Copy account number')}<br>
+          Account Name: <strong class="soa-copy-val">${esc(ODC_BANK_INFO.bankAccountName)}</strong>${copyBtn(ODC_BANK_INFO.bankAccountName, 'Copy account name')}<br>
           Contact: <strong>${esc(ODC_BANK_INFO.approvedPhone)}</strong>
         </p>
       </div>
@@ -208,9 +251,46 @@ export function buildBillingStatementHtml(invoice, signatures = {}, { origin = (
     autoPrint,
   });
 
+  const copyScript = autoPrint ? '' : `<script>
+document.addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest && e.target.closest('[data-copy]');
+  if (!btn) return;
+  var val = btn.getAttribute('data-copy') || '';
+  var done = function() {
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('is-copied');
+    clearTimeout(btn._t);
+    btn._t = setTimeout(function() {
+      btn.textContent = 'Copy';
+      btn.classList.remove('is-copied');
+    }, 1800);
+  };
+  var fallback = function() {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = val;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      done();
+    } catch (_) {}
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(val).then(done, fallback);
+  } else {
+    fallback();
+  }
+});
+</script>`;
+
   html = html
     .replace('</head>', '<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet"></head>')
-    .replace(/<title>.*?<\/title>/, `<title>${esc(number)} — ${esc(invoice.billTo || 'Billing Statement')}</title>`);
+    .replace(/<title>.*?<\/title>/, `<title>${esc(number)} — ${esc(invoice.billTo || 'Billing Statement')}</title>`)
+    .replace('</body>', `${copyScript}</body>`);
 
   return html;
 }

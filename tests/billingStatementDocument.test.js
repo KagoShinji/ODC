@@ -4,6 +4,8 @@ import {
   statementNumberFor,
   buildBillingStatementHtml,
   normalizeSignerName,
+  ODC_BANK_INFO,
+  copyTextToClipboard,
 } from '../src/utils/billingStatementDocument.js';
 
 test('statementNumberFor transforms INV prefix to SOA', () => {
@@ -72,4 +74,68 @@ test('buildBillingStatementHtml renders PAID status stamp when settled', () => {
 test('normalizeSignerName cleans extra whitespace', () => {
   assert.equal(normalizeSignerName('  Jetch   Merald  S.   Madaya '), 'Jetch Merald S. Madaya');
 });
+
+test('buildBillingStatementHtml renders copy buttons for Metrobank account details in interactive mode', () => {
+  const html = buildBillingStatementHtml(
+    { id: 'inv_copy_1', billTo: 'Acme Corp', items: [{ service: 'Web App', amount: 10000 }] },
+    {},
+    { origin: 'https://odysseyph.com', autoPrint: false }
+  );
+
+  assert.match(html, new RegExp(`data-copy="${ODC_BANK_INFO.bankAccount}"`));
+  assert.match(html, new RegExp(`data-copy="${ODC_BANK_INFO.bankAccountName}"`));
+  assert.match(html, /@media print\s*\{[^}]*\.soa-copy-btn\s*\{\s*display:\s*none\s*!important/);
+});
+
+test('buildBillingStatementHtml omits copy buttons when autoPrint is true', () => {
+  const html = buildBillingStatementHtml(
+    { id: 'inv_copy_2', billTo: 'Acme Corp', items: [{ service: 'Web App', amount: 10000 }] },
+    {},
+    { origin: 'https://odysseyph.com', autoPrint: true }
+  );
+
+  assert.doesNotMatch(html, /data-copy=/);
+  assert.match(html, new RegExp(ODC_BANK_INFO.bankName));
+  assert.match(html, new RegExp(ODC_BANK_INFO.bankAccount));
+  assert.match(html, new RegExp(ODC_BANK_INFO.bankAccountName));
+});
+
+test('copyTextToClipboard writes exact text via clipboard API', async () => {
+  let written = '';
+  const ok = await copyTextToClipboard(ODC_BANK_INFO.bankAccount, {
+    clipboard: { writeText: async text => { written = text; } },
+  });
+
+  assert.equal(ok, true);
+  assert.equal(written, '1723925339319');
+});
+
+test('copyTextToClipboard falls back to execCommand when clipboard API rejects', async () => {
+  let selectedValue = '';
+  let removed = false;
+  const fakeDoc = {
+    createElement: () => ({
+      value: '',
+      style: {},
+      setAttribute() {},
+      select() { selectedValue = this.value; },
+    }),
+    body: {
+      appendChild() {},
+      removeChild() { removed = true; },
+    },
+    execCommand: cmd => cmd === 'copy',
+  };
+
+  const ok = await copyTextToClipboard(
+    ODC_BANK_INFO.bankAccountName,
+    { clipboard: { writeText: async () => { throw new Error('blocked'); } } },
+    fakeDoc
+  );
+
+  assert.equal(ok, true);
+  assert.equal(selectedValue, 'ODYSSEYPH IT SOLUTIONS');
+  assert.equal(removed, true);
+});
+
 
