@@ -1,15 +1,23 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Plus, X, Search, CalendarClock, CheckCircle2, Circle, ListChecks, AlertTriangle, Clock, Trash2, Pencil, MessageSquarePlus, Share2, Check, Copy } from 'lucide-react';
+import {
+  Plus, X, Search, CalendarClock, CheckCircle2, Circle, ListChecks,
+  AlertTriangle, Clock, Trash2, Pencil, MessageSquarePlus, Share2, Check,
+  LayoutGrid, List, Eye, EyeOff, Filter,
+} from 'lucide-react';
 import LoadingButton from '../components/ui/LoadingButton';
 import { useSystemModal } from '../components/ui/SystemModalContext';
 import { formatDisplayIdentifier } from '../utils/authHelpers';
 import {
   TASK_STATUSES, TASK_PRIORITIES, TASK_LIMITS, statusLabel, priorityLabel,
   toDate, dateInputValue, timeInputValue, dueState, formatDue, formatStamp, initials, byDeadline,
+  filterTasks, groupTasksBy,
 } from '../utils/taskTracker';
 import {
   subscribeTasks, listAssignableStaff, createTask, editTask, changeTaskStatus, addTaskNote, toggleChecklistItem, deleteTask,
 } from '../services/taskService';
+import TaskBoardView from '../components/tasks/TaskBoardView';
+import TaskListView from '../components/tasks/TaskListView';
+import TaskCard, { shareTaskHelper } from '../components/tasks/TaskCard';
 import './AdminTasks.css';
 
 const SECTIONS = [{ id: 'mine', label: 'My tasks' }, { id: 'board', label: 'Team board' }];
@@ -69,74 +77,6 @@ function Avatars({ people }) {
       {people.length > 4 && <span className="task-avatar task-avatar-more" aria-hidden="true">+{people.length - 4}</span>}
       <span className="task-visually-hidden">Assigned to {people.map(p => p.name).join(', ')}</span>
     </span>
-  );
-}
-
-async function shareTaskHelper(task, now, onCopied) {
-  const shareUrl = `${window.location.origin}/task/${task.id}`;
-  const shareTitle = `Task: ${task.title}`;
-  const assigneesText = task?.assignees?.length 
-    ? `Assigned to: ${task.assignees.map(a => a.name).join(', ')}` 
-    : 'ODC Team Workspace';
-  const shareText = `Task: "${task.title}". ${assigneesText}. Due: ${formatDue(task.dueAt, now)}`;
-
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
-      return;
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        console.warn('Navigator share error:', err);
-      }
-    }
-  }
-
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    onCopied?.();
-  } catch (err) {
-    console.warn('Clipboard write error:', err);
-  }
-}
-
-function TaskCard({ task, now, onOpen, compact = false }) {
-  const [copied, setCopied] = useState(false);
-  const done = (task.checklist || []).filter(i => i.done).length;
-  const total = (task.checklist || []).length;
-
-  const handleShareClick = e => {
-    e.stopPropagation();
-    shareTaskHelper(task, now, () => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
-  return (
-    <div className="task-card-wrapper">
-      <button type="button" className={`task-card task-card-${dueState(task, now)}`} onClick={() => onOpen(task.id)}>
-        <span className="task-card-top">
-          <PriorityPill priority={task.priority} />
-          <SalesPill task={task} />
-          {!compact && <StatusPill status={task.status} />}
-        </span>
-        <strong className="task-card-title">{task.title}</strong>
-        <span className="task-card-meta">
-          <DueLabel task={task} now={now} />
-          {total > 0 && <span className="task-checklist-count"><ListChecks size={13} aria-hidden="true" />{done}/{total}</span>}
-        </span>
-        <Avatars people={task.assignees} />
-      </button>
-      {task.category !== 'sales' && <button
-        type="button"
-        className="task-card-share-btn"
-        title={copied ? 'Link copied!' : 'Share task link'}
-        aria-label={`Share link for ${task.title}`}
-        onClick={handleShareClick}
-      >
-        {copied ? <Check size={13} style={{ color: 'var(--task-done)' }} /> : <Share2 size={13} />}
-      </button>}
-    </div>
   );
 }
 
@@ -364,16 +304,6 @@ function TaskDetail({ task, now, canEdit, canUpdate, onEdit, onDelete, onStatus,
   );
 }
 
-function groupByDeadline(list, now) {
-  const groups = { overdue: [], today: [], upcoming: [], done: [] };
-  for (const task of list) {
-    const state = dueState(task, now);
-    groups[state === 'done' || state === 'overdue' || state === 'today' ? state : 'upcoming'].push(task);
-  }
-  groups.done.sort((a, b) => (toDate(b.completedAt)?.getTime() || 0) - (toDate(a.completedAt)?.getTime() || 0));
-  return groups;
-}
-
 /**
  * The team task board. With `category` it becomes a focused board for one kind of work
  * (e.g. My Sales Tasks): only that category is loaded and new tasks are filed under it.
@@ -401,8 +331,48 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // High-volume UX additions
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('odc_task_view_mode') || 'kanban'; } catch { return 'kanban'; }
+  });
+  const [hideDone, setHideDone] = useState(() => {
+    try { return localStorage.getItem('odc_task_hide_done') === 'true'; } catch { return false; }
+  });
+  const [quickFilter, setQuickFilter] = useState('all'); // 'all' | 'overdue' | 'today' | 'mine'
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
   const section = SECTIONS.some(s => s.id === initialSection) ? initialSection : localSection;
-  const selectSection = id => { setLocalSection(id); onSectionChange?.(id); };
+  const selectSection = id => { setLocalSection(id); onSectionChange?.(id); setPage(1); };
+
+  const handleViewModeChange = mode => {
+    setViewMode(mode);
+    try { localStorage.setItem('odc_task_view_mode', mode); } catch {}
+  };
+
+  const handleHideDoneToggle = () => {
+    setHideDone(prev => {
+      const next = !prev;
+      try { localStorage.setItem('odc_task_hide_done', String(next)); } catch {}
+      return next;
+    });
+  };
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setAssigneeFilter('all');
+    setPriorityFilter('all');
+    setCategoryFilter('all');
+    setQuickFilter('all');
+    setHideDone(false);
+    try { localStorage.setItem('odc_task_hide_done', 'false'); } catch {}
+    setPage(1);
+  };
+
+  // Reset page when any filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, assigneeFilter, priorityFilter, categoryFilter, quickFilter, hideDone, mineScope, section]);
 
   useEffect(() => subscribeTasks(
     list => { setTasks(list); setLoading(false); setLoadError(''); },
@@ -423,13 +393,23 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
   const canEditTask = task => isManager || task.createdByUid === firebaseUser.uid;
   const canUpdateTask = task => canEditTask(task) || isAssignee(task);
 
-  const matchesSearch = task => !search || `${task.title} ${task.description} ${(task.assignees || []).map(a => a.name).join(' ')}`.toLowerCase().includes(search.toLowerCase());
-
-  const mine = useMemo(() => tasks
+  // Filtered dataset for "My Tasks"
+  const mineRaw = useMemo(() => tasks
     .filter(t => mineScope === 'assigned' ? (t.assigneeEmails || []).includes(myEmail) : t.createdByUid === firebaseUser.uid)
     .sort(byDeadline), [tasks, mineScope, myEmail, firebaseUser.uid]);
 
-  const mineGroups = groupByDeadline(mine.filter(matchesSearch), now);
+  const mineTasks = useMemo(() => filterTasks(mineRaw, {
+    search,
+    category: category || categoryFilter,
+    priority: priorityFilter,
+    assignee: 'all',
+    hideDone,
+    quickFilter,
+    myEmail,
+    now,
+  }), [mineRaw, search, category, categoryFilter, priorityFilter, hideDone, quickFilter, myEmail, now]);
+
+  const mineGroups = useMemo(() => groupTasksBy(mineTasks, 'deadline', now), [mineTasks, now]);
 
   const stats = useMemo(() => {
     const assigned = tasks.filter(t => (t.assigneeEmails || []).includes(myEmail));
@@ -449,10 +429,22 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
     return [...people].map(([email, name]) => ({ email, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [tasks]);
 
-  const boardTasks = tasks.filter(t => matchesSearch(t)
-    && (priorityFilter === 'all' || t.priority === priorityFilter)
-    && (categoryFilter === 'all' || (t.category || 'general') === categoryFilter)
-    && (assigneeFilter === 'all' || (assigneeFilter === 'none' ? !(t.assigneeEmails || []).length : (t.assigneeEmails || []).includes(assigneeFilter))));
+  // Filtered dataset for "Team Board"
+  const boardTasks = useMemo(() => filterTasks(tasks, {
+    search,
+    category: category || categoryFilter,
+    priority: priorityFilter,
+    assignee: assigneeFilter,
+    hideDone,
+    quickFilter,
+    myEmail,
+    now,
+  }), [tasks, search, category, categoryFilter, priorityFilter, assigneeFilter, hideDone, quickFilter, myEmail, now]);
+
+  const totalDoneCount = useMemo(() => {
+    const list = section === 'mine' ? mineRaw : tasks;
+    return list.filter(t => t.status === 'done').length;
+  }, [section, mineRaw, tasks]);
 
   const activeTask = dialog?.taskId ? tasks.find(t => t.id === dialog.taskId) : null;
   const closeDialog = () => { setDialog(null); setError(''); };
@@ -518,18 +510,93 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
 
       {loadError && <p className="task-error" role="alert">{loadError}</p>}
 
+      {/* Main Toolbar */}
       <div className="task-toolbar">
+        {/* Search */}
         <label className="task-search">
           <Search size={15} aria-hidden="true" />
           <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks or people…" aria-label="Search tasks" />
         </label>
+
+        {/* View Switcher Toggle: Kanban vs List */}
+        <div className="task-view-switcher" role="group" aria-label="View format">
+          <button
+            type="button"
+            className={`task-view-btn ${viewMode === 'kanban' ? 'is-active' : ''}`}
+            onClick={() => handleViewModeChange('kanban')}
+            title="Kanban Board view"
+            aria-pressed={viewMode === 'kanban'}
+          >
+            <LayoutGrid size={15} />
+            <span>Board</span>
+          </button>
+          <button
+            type="button"
+            className={`task-view-btn ${viewMode === 'list' ? 'is-active' : ''}`}
+            onClick={() => handleViewModeChange('list')}
+            title="High-density List/Table view"
+            aria-pressed={viewMode === 'list'}
+          >
+            <List size={15} />
+            <span>List</span>
+          </button>
+        </div>
+
+        {/* "Hide Done" Toggle */}
+        <button
+          type="button"
+          className={`task-hide-done-toggle ${hideDone ? 'is-active' : ''}`}
+          onClick={handleHideDoneToggle}
+          title={hideDone ? 'Showing active tasks only (Completed hidden)' : 'Showing all tasks including completed'}
+          aria-pressed={hideDone}
+        >
+          {hideDone ? <EyeOff size={14} /> : <Eye size={14} />}
+          <span>Hide done</span>
+          {totalDoneCount > 0 && <span className="task-count">{totalDoneCount}</span>}
+        </button>
+
+        {/* Quick Filter Chips */}
+        <div className="task-quick-chips" role="group" aria-label="Quick filters">
+          <button
+            type="button"
+            className={`task-chip ${quickFilter === 'all' ? 'is-active' : ''}`}
+            onClick={() => setQuickFilter('all')}
+          >
+            All
+          </button>
+          <button
+            type="button"
+            className={`task-chip task-chip-overdue ${quickFilter === 'overdue' ? 'is-active' : ''}`}
+            onClick={() => setQuickFilter(f => f === 'overdue' ? 'all' : 'overdue')}
+          >
+            Overdue
+          </button>
+          <button
+            type="button"
+            className={`task-chip task-chip-today ${quickFilter === 'today' ? 'is-active' : ''}`}
+            onClick={() => setQuickFilter(f => f === 'today' ? 'all' : 'today')}
+          >
+            Due today
+          </button>
+          {section === 'board' && (
+            <button
+              type="button"
+              className={`task-chip ${quickFilter === 'mine' ? 'is-active' : ''}`}
+              onClick={() => setQuickFilter(f => f === 'mine' ? 'all' : 'mine')}
+            >
+              My tasks
+            </button>
+          )}
+        </div>
+
+        {/* Section-specific Filters */}
         {section === 'mine' ? (
           <div className="task-segmented" role="group" aria-label="Which tasks">
             <button type="button" aria-pressed={mineScope === 'assigned'} onClick={() => setMineScope('assigned')}>Assigned to me</button>
             <button type="button" aria-pressed={mineScope === 'created'} onClick={() => setMineScope('created')}>Posted by me</button>
           </div>
         ) : (
-          <>
+          <div className="task-dropdown-filters">
             <label className="task-filter">
               <span>Assignee</span>
               <select value={assigneeFilter} onChange={e => setAssigneeFilter(e.target.value)}>
@@ -556,7 +623,7 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
                 </select>
               </label>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -574,45 +641,76 @@ export default function AdminTasks({ firebaseUser, can, initialSection, onSectio
               ))}
             </div>
           )}
-          {mine.length === 0 ? (
-            <div className="task-empty">
-              <ListChecks size={32} aria-hidden="true" />
-              <h3>{mineScope === 'assigned' ? 'Nothing assigned to you' : "You haven't posted any tasks"}</h3>
-              <p>{mineScope === 'assigned' ? 'Tasks that teammates assign to you will show up here with their deadlines.' : canCreate ? 'Use “New task” to post work for the team.' : 'Ask an administrator for task posting access.'}</p>
-            </div>
+
+          {viewMode === 'list' ? (
+            <TaskListView
+              tasks={mineTasks}
+              now={now}
+              groupBy="deadline"
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+              onStatusChange={(taskId, newStatus) => run(() => changeTaskStatus(firebaseUser, taskId, newStatus))}
+              onOpenTask={openTask}
+              onEditTask={taskId => { setError(''); setDialog({ type: 'form', taskId }); }}
+              canUpdateTask={canUpdateTask}
+              canEditTask={canEditTask}
+              onClearFilters={handleClearFilters}
+            />
           ) : (
-            <>
-              {renderGroup('overdue', 'Overdue', mineGroups.overdue)}
-              {renderGroup('today', 'Due today', mineGroups.today)}
-              {renderGroup('upcoming', 'Upcoming', mineGroups.upcoming)}
-              {mineGroups.done.length > 0 && (
-                <section className="task-group">
-                  <button type="button" className="task-done-toggle" aria-expanded={showDone} onClick={() => setShowDone(v => !v)}>
-                    {showDone ? 'Hide' : 'Show'} completed <span className="task-count">{mineGroups.done.length}</span>
+            mineTasks.length === 0 ? (
+              <div className="task-empty">
+                <ListChecks size={32} aria-hidden="true" />
+                <h3>{mineScope === 'assigned' ? 'Nothing assigned to you' : "You haven't posted any tasks"}</h3>
+                <p>{mineScope === 'assigned' ? 'Tasks that teammates assign to you will show up here with their deadlines.' : canCreate ? 'Use “New task” to post work for the team.' : 'Ask an administrator for task posting access.'}</p>
+                {(search || quickFilter !== 'all' || hideDone) && (
+                  <button type="button" className="task-primary" style={{ marginTop: '10px' }} onClick={handleClearFilters}>
+                    Clear active filters
                   </button>
-                  {showDone && <div className="task-grid">{mineGroups.done.map(task => <TaskCard key={task.id} task={task} now={now} onOpen={openTask} />)}</div>}
-                </section>
-              )}
-            </>
+                )}
+              </div>
+            ) : (
+              <>
+                {renderGroup('overdue', 'Overdue', mineGroups.overdue)}
+                {renderGroup('today', 'Due today', mineGroups.today)}
+                {renderGroup('upcoming', 'Upcoming', mineGroups.upcoming)}
+                {!hideDone && mineGroups.done.length > 0 && (
+                  <section className="task-group">
+                    <button type="button" className="task-done-toggle" aria-expanded={showDone} onClick={() => setShowDone(v => !v)}>
+                      {showDone ? 'Hide' : 'Show'} completed <span className="task-count">{mineGroups.done.length}</span>
+                    </button>
+                    {showDone && <div className="task-grid">{mineGroups.done.map(task => <TaskCard key={task.id} task={task} now={now} onOpen={openTask} />)}</div>}
+                  </section>
+                )}
+              </>
+            )
           )}
         </>
       ) : (
-        <div className="task-board">
-          {TASK_STATUSES.map(status => {
-            const column = boardTasks.filter(t => t.status === status.id);
-            const ordered = status.id === 'done'
-              ? column.sort((a, b) => (toDate(b.completedAt)?.getTime() || 0) - (toDate(a.completedAt)?.getTime() || 0))
-              : column.sort(byDeadline);
-            return (
-              <section key={status.id} className={`task-column task-column-${status.id}`} aria-labelledby={`task-col-${status.id}`}>
-                <h3 id={`task-col-${status.id}`}>{status.label} <span className="task-count">{column.length}</span></h3>
-                {ordered.length === 0
-                  ? <p className="task-column-empty">No tasks</p>
-                  : ordered.map(task => <TaskCard key={task.id} task={task} now={now} onOpen={openTask} compact />)}
-              </section>
-            );
-          })}
-        </div>
+        viewMode === 'list' ? (
+          <TaskListView
+            tasks={boardTasks}
+            now={now}
+            groupBy="status"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            onStatusChange={(taskId, newStatus) => run(() => changeTaskStatus(firebaseUser, taskId, newStatus))}
+            onOpenTask={openTask}
+            onEditTask={taskId => { setError(''); setDialog({ type: 'form', taskId }); }}
+            canUpdateTask={canUpdateTask}
+            canEditTask={canEditTask}
+            onClearFilters={handleClearFilters}
+          />
+        ) : (
+          <TaskBoardView
+            tasks={boardTasks}
+            now={now}
+            onOpenTask={openTask}
+          />
+        )
       )}
 
       {dialog?.type === 'form' && (
