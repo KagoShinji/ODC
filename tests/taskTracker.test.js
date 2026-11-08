@@ -88,3 +88,4 @@ test('groupTasksBy groups tasks by status or deadline', () => {
   assert.equal(deadlineGroups.upcoming.length, 1);
   assert.equal(deadlineGroups.done.length, 1);
 });
+

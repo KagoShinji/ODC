@@ -90,3 +90,4 @@ export default function TaskBoardView({ tasks = [], now = Date.now(), onOpenTask
     </div>
   );
 }
+

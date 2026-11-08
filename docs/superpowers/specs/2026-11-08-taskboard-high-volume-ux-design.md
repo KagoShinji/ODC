@@ -132,3 +132,4 @@ src/
    - Verify independent column scrolling in Kanban mode without full-page stretch.
    - Verify collapsing and expanding columns (e.g. Done column).
    - Verify inline status change updates Firestore and reflects immediately.
+

@@ -278,3 +278,4 @@ Expected: All tests pass, build succeeds cleanly.
 git add src/pages/AdminTasks.jsx src/pages/AdminTasks.css
 git commit -m "feat(tasks): integrate dual-view switcher, quick filters, and list view into AdminTasks"
 ```
+

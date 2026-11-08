@@ -126,3 +126,4 @@ export default function TaskCard({ task, now, onOpen, compact = false }) {
     </div>
   );
 }
+

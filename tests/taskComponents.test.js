@@ -53,3 +53,4 @@ test('statusLabel and priorityLabel resolve correctly for table columns', () => 
   assert.equal(priorityLabel('medium'), 'Medium');
   assert.equal(priorityLabel('low'), 'Low');
 });
+
