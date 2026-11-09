@@ -1,0 +1,6 @@
+/* On-page Certificate of Acceptance editor matching the Brand Bible shell */
+@import '../auditReports/AuditReportEditor.css';
+
+.ce-wrap {
+  composes: ae-wrap;
+}

@@ -1,0 +1,6 @@
+/* On-page MOA editor matching the Brand Bible shell */
+@import '../auditReports/AuditReportEditor.css';
+
+.me-wrap {
+  composes: ae-wrap;
+}
