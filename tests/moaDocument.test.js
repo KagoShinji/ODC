@@ -80,3 +80,96 @@ test('buildMoaHtml formats freeform text contracts properly', () => {
   assert.match(html, /Acme Corp/);
 });
 
+test('formatControlNumber formats sequence with MOA prefix and 3 digits', async () => {
+  const { formatControlNumber, controlMonthOf } = await import('../src/utils/moaDocument.js');
+  assert.equal(formatControlNumber('2026-11', 1), 'MOA-2026-11-001');
+  assert.equal(formatControlNumber('2026-11', 42), 'MOA-2026-11-042');
+  assert.match(controlMonthOf(new Date('2026-11-09')), /2026-11/);
+});
+
+test('parseMoaText extracts metadata headers, sections, and signers', async () => {
+  const { parseMoaText } = await import('../src/utils/moaDocument.js');
+  const sample = `
+TITLE: Custom ERP & Inventory Management Portal
+CLIENT NAME: Kharyl Simolde
+BUSINESS NAME: Nickleball Avenue Corp.
+ADDRESS: Talisay City, Cebu
+PROJECT COST: 75,000.00
+TIMELINE: 4 Weeks
+
+## 1. Scope of Work
+Development of real-time inventory tracking and multi-branch point of sale.
+
+## 2. Payment Terms
+50% downpayment upon signing, 50% upon final acceptance.
+
+Party B (Service Provider):
+Jetch Merald S. Madaya
+Owner & Engineering Lead
+
+Party A (Client):
+Kharyl Simolde
+Managing Director
+`;
+
+  const parsed = parseMoaText(sample);
+  assert.equal(parsed.fields.title, 'Custom ERP & Inventory Management Portal');
+  assert.equal(parsed.fields.clientName, 'Kharyl Simolde');
+  assert.equal(parsed.fields.clientBusiness, 'Nickleball Avenue Corp.');
+  assert.equal(parsed.fields.clientAddress, 'Talisay City, Cebu');
+  assert.equal(parsed.fields.projectCost, '75000');
+  assert.equal(parsed.fields.timeline, '4 Weeks');
+  assert.match(parsed.body, /## 1\. Scope of Work/);
+  assert.ok(parsed.signers.s1);
+  assert.equal(parsed.signers.s1.name, 'Jetch Merald S. Madaya');
+  assert.ok(parsed.signers.s2);
+  assert.equal(parsed.signers.s2.name, 'Kharyl Simolde');
+});
+
+test('buildMoaHtml renders TipTap JSON document structure with section badges and multi-signers', () => {
+  const moa = {
+    id: 'moa_tiptap',
+    controlNumber: 'MOA-2026-11-003',
+    title: 'Digital Platform Modernization Agreement',
+    clientBusiness: 'Vertex Tech Inc.',
+    clientName: 'Alex Mercer',
+    projectCost: 120000,
+    bodyJson: JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: '1. Project Scope & Architecture' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Odyssey shall deploy modern cloud serverless functions and real-time Firestore sync.' }],
+        },
+      ],
+    }),
+    signers: {
+      s1: { kind: 'provider', name: 'Jetch Merald S. Madaya', title: 'Lead Architect', order: 1 },
+      s2: { kind: 'client', name: 'Alex Mercer', title: 'VP Engineering', order: 2 },
+      s3: { kind: 'witness', name: 'Sam Taylor', title: 'Legal Counsel', order: 3 },
+    },
+    status: 'issued',
+  };
+
+  const signatures = {
+    s1: { name: 'Jetch Merald S. Madaya', signedAt: '2026-11-09T08:00:00.000Z' },
+  };
+
+  const html = buildMoaHtml(moa, signatures, { origin: 'https://odysseyph.com' });
+  assert.match(html, /MOA-2026-11-003/);
+  assert.match(html, /<span>1<\/span>Project Scope &amp; Architecture/);
+  assert.match(html, /Odyssey shall deploy modern cloud serverless functions/);
+  assert.match(html, /Great\+Vibes/);
+  assert.match(html, /Jetch Merald S\. Madaya/);
+  assert.match(html, /Alex Mercer/);
+  assert.match(html, /Sam Taylor/);
+  assert.match(html, /Signed electronically/);
+  assert.match(html, /Date: ____________/);
+});
+
+
