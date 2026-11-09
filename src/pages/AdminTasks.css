@@ -11,6 +11,7 @@
 .task-visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 
 .task-module button,.task-dialog button{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:9px 13px;border:1px solid #ffffff22;border-radius:8px;background:#ffffff05;color:#dbe1eb;font:inherit;font-size:12px;cursor:pointer;transition:transform .2s,background .2s,border-color .2s}
+.task-module button svg,.task-dialog button svg{display:inline-block;flex-shrink:0}
 .task-module button:hover,.task-dialog button:hover{background:#ffffff0e}
 .task-module button:active,.task-dialog button:active{transform:scale(.98)}
 .task-module button:disabled,.task-dialog button:disabled{opacity:.45;cursor:default}

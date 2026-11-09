@@ -251,7 +251,7 @@ function Detail({ user, id, onBack, onEdit }) {
             </LoadingButton>
           )}
           {report.status !== 'draft' && (
-            <button type="button" onClick={() => copy(link, 'link')}>
+            <button type="button" className={copied === 'link' ? 'ar-btn-copied' : ''} onClick={() => copy(link, 'link')}>
               {copied === 'link' ? <Check size={14} /> : <Link2 size={14} />} {copied === 'link' ? 'Link copied' : 'Copy link'}
             </button>
           )}
@@ -276,7 +276,23 @@ function Detail({ user, id, onBack, onEdit }) {
           )}
         </div>
 
-        {report.status !== 'draft' && <p className="ir-link-box"><code>{link}</code></p>}
+        {report.status !== 'draft' && (
+          <div className="ir-link-box">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="task-muted ir-small">Incident Verification URL:</span>
+              <button
+                type="button"
+                className={`ir-mini-copy ${copied === 'link' ? 'ar-copied' : ''}`}
+                title="Copy incident verification link"
+                onClick={() => copy(link, 'link')}
+              >
+                {copied === 'link' ? <Check size={11} /> : <Link2 size={11} />}
+                <span>{copied === 'link' ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
+            <code>{link}</code>
+          </div>
+        )}
 
         {closing && (
           <form className="ir-inline" onSubmit={e => { e.preventDefault(); run('close', async () => { await closeIncidentReport(user, report.id, reason); setClosing(false); setReason(''); }); }}>
@@ -315,7 +331,13 @@ function Detail({ user, id, onBack, onEdit }) {
                   <small>{sig ? `Signed ${new Date(sig.signedAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Pending signature'}</small>
                 </span>
                 {!sig && report.status === 'issued' && (
-                  <button type="button" onClick={() => copy(`${link}?sign=${s.slot}`, s.slot)} title="Copy signature link">
+                  <button
+                    type="button"
+                    className={`ir-slot-copy ${copied === s.slot ? 'ar-copied' : ''}`}
+                    onClick={() => copy(`${link}?sign=${s.slot}`, s.slot)}
+                    title={`Copy signature link for ${s.name || s.title}`}
+                    aria-label={`Copy signature link for ${s.name || s.title}`}
+                  >
                     {copied === s.slot ? <Check size={13} /> : <Link2 size={13} />}
                   </button>
                 )}

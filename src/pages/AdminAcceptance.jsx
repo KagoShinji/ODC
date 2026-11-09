@@ -211,7 +211,7 @@ function Detail({ user, id, onBack, onEdit, canEdit, canDelete }) {
               )}
               <LoadingButton type="button" loading={busy === 'issue'} loadingLabel="Issuing…" onClick={issue}><Send size={14} /> Issue certificate</LoadingButton>
               {canDelete && (
-                <LoadingButton type="button" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
+                <LoadingButton type="button" className="task-danger" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
               )}
             </>
           )}
@@ -222,14 +222,14 @@ function Detail({ user, id, onBack, onEdit, canEdit, canDelete }) {
               <LoadingButton type="button" loading={busy === 'png'} loadingLabel="Rendering…" onClick={() => run('png', () => frame.current.savePng(`${number}.png`))}>
                 <ImageDown size={14} /> Save as PNG
               </LoadingButton>
-              <button type="button" onClick={() => copy('link', link)}>
+              <button type="button" className={copied === 'link' ? 'ar-btn-copied' : ''} onClick={() => copy('link', link)}>
                 {copied === 'link' ? <Check size={14} /> : <Link2 size={14} />} {copied === 'link' ? 'Copied' : 'Copy signing link'}
               </button>
             </>
           )}
 
           {status === 'issued' && (
-            <button type="button" onClick={() => setRevoking(v => !v)}>
+            <button type="button" className="task-danger" onClick={() => setRevoking(v => !v)}>
               <Ban size={14} /> Revoke certificate
             </button>
           )}
@@ -239,13 +239,24 @@ function Detail({ user, id, onBack, onEdit, canEdit, canDelete }) {
           <form className="ar-inline" onSubmit={e => { e.preventDefault(); run('revoke', async () => { await revokeCertificate(user, coa.id, reason); setRevoking(false); setReason(''); }); }}>
             <label htmlFor="coa-revoke-reason" className="ar-small task-muted">Reason for revoking:</label>
             <textarea id="coa-revoke-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Explain why this certificate is revoked…" required />
-            <LoadingButton type="submit" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Certificate</LoadingButton>
+            <LoadingButton type="submit" className="task-danger" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Certificate</LoadingButton>
           </form>
         )}
 
         {status !== 'draft' && (
           <div className="ar-link-box">
-            <span className="task-muted ar-small">Client Acceptance Link:</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="task-muted ar-small">Client Acceptance Link:</span>
+              <button
+                type="button"
+                className={`ar-mini-copy ${copied === 'link' ? 'ar-copied' : ''}`}
+                title="Copy client acceptance link"
+                onClick={() => copy('link', link)}
+              >
+                {copied === 'link' ? <Check size={11} /> : <Link2 size={11} />}
+                <span>{copied === 'link' ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
             <code>{link}</code>
           </div>
         )}
@@ -265,7 +276,13 @@ function Detail({ user, id, onBack, onEdit, canEdit, canDelete }) {
                   <small>{sig ? `Signed ${new Date(sig.signedAt?.toDate?.() || sig.signedAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Pending signature'}</small>
                 </span>
                 {status !== 'draft' && !sig && (
-                  <button type="button" onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}>
+                  <button
+                    type="button"
+                    className={`ar-slot-copy ${copied === `slot-${s.slot}` ? 'ar-copied' : ''}`}
+                    title={`Copy personal signing link for ${s.name || s.title}`}
+                    aria-label={`Copy personal signing link for ${s.name || s.title}`}
+                    onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}
+                  >
                     {copied === `slot-${s.slot}` ? <Check size={12} /> : <Link2 size={12} />}
                   </button>
                 )}
@@ -329,26 +346,11 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
     return num.includes(q) || project.includes(q) || client.includes(q) || business.includes(q);
   });
 
-  if (view.mode === 'edit') {
-    return <Editor user={user} coa={view.coa} onClose={() => setView({ mode: 'list' })} onSaved={id => setView({ mode: 'detail', id })} />;
-  }
-
-  if (view.mode === 'detail') {
-    return (
-      <Detail
-        user={user}
-        id={view.id}
-        onBack={() => setView({ mode: 'list' })}
-        onEdit={c => setView({ mode: 'edit', coa: c })}
-        canEdit={canEditCert}
-        canDelete={canDeleteCert}
-      />
-    );
-  }
-
   return (
-    <div className="task-module">
-      <div className="task-heading">
+    <div className="task-module ar-module">
+      {view.mode === 'list' && (
+        <>
+          <div className="task-heading">
         <div>
           <h2>Certificates of Acceptance</h2>
           <span className="task-muted">Draft, issue, and manage client project handover and acceptance certificates.</span>
@@ -454,6 +456,28 @@ export default function AdminAcceptance({ firebaseUser, isSuperAdmin, can }) {
             </tbody>
           </table>
         </div>
+      )}
+      </>
+      )}
+
+      {view.mode === 'edit' && (
+        <Editor
+          user={user}
+          coa={view.coa}
+          onClose={() => setView(view.coa ? { mode: 'detail', id: view.coa.id } : { mode: 'list' })}
+          onSaved={id => setView({ mode: 'detail', id })}
+        />
+      )}
+
+      {view.mode === 'detail' && (
+        <Detail
+          user={user}
+          id={view.id}
+          onBack={() => setView({ mode: 'list' })}
+          onEdit={c => setView({ mode: 'edit', coa: c })}
+          canEdit={canEditCert}
+          canDelete={canDeleteCert}
+        />
       )}
     </div>
   );

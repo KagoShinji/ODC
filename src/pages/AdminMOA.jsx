@@ -212,7 +212,7 @@ function Detail({ user, id, onBack, onEdit, canEdit, canSign, canDelete }) {
               )}
               <LoadingButton type="button" loading={busy === 'issue'} loadingLabel="Issuing…" onClick={issue}><Send size={14} /> Issue agreement</LoadingButton>
               {canDelete && (
-                <LoadingButton type="button" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
+                <LoadingButton type="button" className="task-danger" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
               )}
             </>
           )}
@@ -223,14 +223,14 @@ function Detail({ user, id, onBack, onEdit, canEdit, canSign, canDelete }) {
               <LoadingButton type="button" loading={busy === 'png'} loadingLabel="Rendering…" onClick={() => run('png', () => frame.current.savePng(`${number}.png`))}>
                 <ImageDown size={14} /> Save as PNG
               </LoadingButton>
-              <button type="button" onClick={() => copy('link', link)}>
+              <button type="button" className={copied === 'link' ? 'ar-btn-copied' : ''} onClick={() => copy('link', link)}>
                 {copied === 'link' ? <Check size={14} /> : <Link2 size={14} />} {copied === 'link' ? 'Copied' : 'Copy signing link'}
               </button>
             </>
           )}
 
           {status === 'issued' && (
-            <button type="button" onClick={() => setRevoking(v => !v)}>
+            <button type="button" className="task-danger" onClick={() => setRevoking(v => !v)}>
               <Ban size={14} /> Revoke agreement
             </button>
           )}
@@ -240,13 +240,24 @@ function Detail({ user, id, onBack, onEdit, canEdit, canSign, canDelete }) {
           <form className="ar-inline" onSubmit={e => { e.preventDefault(); run('revoke', async () => { await revokeMoa(user, moa.id, reason); setRevoking(false); setReason(''); }); }}>
             <label htmlFor="moa-revoke-reason" className="ar-small task-muted">Reason for revoking:</label>
             <textarea id="moa-revoke-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Explain why this agreement is revoked…" required />
-            <LoadingButton type="submit" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Agreement</LoadingButton>
+            <LoadingButton type="submit" className="task-danger" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Agreement</LoadingButton>
           </form>
         )}
 
         {status !== 'draft' && (
           <div className="ar-link-box">
-            <span className="task-muted ar-small">Client Verification Link:</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="task-muted ar-small">Client Verification Link:</span>
+              <button
+                type="button"
+                className={`ar-mini-copy ${copied === 'link' ? 'ar-copied' : ''}`}
+                title="Copy client verification link"
+                onClick={() => copy('link', link)}
+              >
+                {copied === 'link' ? <Check size={11} /> : <Link2 size={11} />}
+                <span>{copied === 'link' ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
             <code>{link}</code>
           </div>
         )}
@@ -266,7 +277,13 @@ function Detail({ user, id, onBack, onEdit, canEdit, canSign, canDelete }) {
                   <small>{sig ? `Signed ${new Date(sig.signedAt?.toDate?.() || sig.signedAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Pending signature'}</small>
                 </span>
                 {status !== 'draft' && !sig && (
-                  <button type="button" onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}>
+                  <button
+                    type="button"
+                    className={`ar-slot-copy ${copied === `slot-${s.slot}` ? 'ar-copied' : ''}`}
+                    title={`Copy personal signing link for ${s.name || s.title}`}
+                    aria-label={`Copy personal signing link for ${s.name || s.title}`}
+                    onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}
+                  >
                     {copied === `slot-${s.slot}` ? <Check size={12} /> : <Link2 size={12} />}
                   </button>
                 )}
@@ -331,27 +348,11 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
     return num.includes(q) || title.includes(q) || client.includes(q) || business.includes(q);
   });
 
-  if (view.mode === 'edit') {
-    return <Editor user={user} moa={view.moa} onClose={() => setView({ mode: 'list' })} onSaved={id => setView({ mode: 'detail', id })} />;
-  }
-
-  if (view.mode === 'detail') {
-    return (
-      <Detail
-        user={user}
-        id={view.id}
-        onBack={() => setView({ mode: 'list' })}
-        onEdit={m => setView({ mode: 'edit', moa: m })}
-        canEdit={canEditMOA}
-        canSign={canSignMOA}
-        canDelete={canDeleteMOA}
-      />
-    );
-  }
-
   return (
-    <div className="task-module">
-      <div className="task-heading">
+    <div className="task-module ar-module">
+      {view.mode === 'list' && (
+        <>
+          <div className="task-heading">
         <div>
           <h2>Memorandum of Agreement</h2>
           <span className="task-muted">Draft, issue, sign, and manage legal agreements with clients and partners.</span>
@@ -460,6 +461,29 @@ export default function AdminMOA({ firebaseUser, isSuperAdmin, can }) {
             </tbody>
           </table>
         </div>
+      )}
+      </>
+      )}
+
+      {view.mode === 'edit' && (
+        <Editor
+          user={user}
+          moa={view.moa}
+          onClose={() => setView(view.moa ? { mode: 'detail', id: view.moa.id } : { mode: 'list' })}
+          onSaved={id => setView({ mode: 'detail', id })}
+        />
+      )}
+
+      {view.mode === 'detail' && (
+        <Detail
+          user={user}
+          id={view.id}
+          onBack={() => setView({ mode: 'list' })}
+          onEdit={m => setView({ mode: 'edit', moa: m })}
+          canEdit={canEditMOA}
+          canSign={canSignMOA}
+          canDelete={canDeleteMOA}
+        />
       )}
     </div>
   );

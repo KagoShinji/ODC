@@ -224,7 +224,7 @@ function Detail({ user, id, onBack, onEdit }) {
             <>
               <button type="button" className="task-primary" onClick={() => onEdit(report)}><Pencil size={14} /> Edit draft</button>
               <LoadingButton type="button" loading={busy === 'issue'} loadingLabel="Issuing…" onClick={issue}><Send size={14} /> Issue report</LoadingButton>
-              <LoadingButton type="button" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
+              <LoadingButton type="button" className="task-danger" loading={busy === 'delete'} loadingLabel="Deleting…" onClick={remove}><Trash2 size={14} /> Delete draft</LoadingButton>
             </>
           )}
 
@@ -234,7 +234,7 @@ function Detail({ user, id, onBack, onEdit }) {
               <LoadingButton type="button" loading={busy === 'png'} loadingLabel="Rendering…" onClick={() => run('png', () => frame.current.savePng(`${report.controlNumber}.png`))}>
                 <ImageDown size={14} /> Save as PNG
               </LoadingButton>
-              <button type="button" onClick={() => copy('link', link)}>
+              <button type="button" className={copied === 'link' ? 'ar-btn-copied' : ''} onClick={() => copy('link', link)}>
                 {copied === 'link' ? <Check size={14} /> : <Link2 size={14} />} {copied === 'link' ? 'Copied' : 'Copy signing link'}
               </button>
             </>
@@ -245,7 +245,7 @@ function Detail({ user, id, onBack, onEdit }) {
               <button type="button" onClick={() => { setClosing(v => !v); setRevoking(false); }}>
                 <CheckCircle2 size={14} /> Close / Remediate
               </button>
-              <button type="button" onClick={() => { setRevoking(v => !v); setClosing(false); }}>
+              <button type="button" className="task-danger" onClick={() => { setRevoking(v => !v); setClosing(false); }}>
                 <Ban size={14} /> Revoke report
               </button>
             </>
@@ -264,13 +264,24 @@ function Detail({ user, id, onBack, onEdit }) {
           <form className="ar-inline" onSubmit={e => { e.preventDefault(); run('revoke', async () => { await revokeAuditReport(user, report.id, reason); setRevoking(false); setReason(''); }); }}>
             <label htmlFor="ar-revoke-reason" className="ar-small task-muted">Reason for revoking (required):</label>
             <textarea id="ar-revoke-reason" value={reason} onChange={e => setReason(e.target.value)} rows={2} placeholder="Explain why this audit report is being revoked…" required />
-            <LoadingButton type="submit" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Report</LoadingButton>
+            <LoadingButton type="submit" className="task-danger" loading={busy === 'revoke'} loadingLabel="Revoking…">Revoke Report</LoadingButton>
           </form>
         )}
 
         {report.status !== 'draft' && (
           <div className="ar-link-box">
-            <span className="task-muted ar-small">Verification &amp; Signing URL:</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="task-muted ar-small">Verification &amp; Signing URL:</span>
+              <button
+                type="button"
+                className={`ar-mini-copy ${copied === 'link' ? 'ar-copied' : ''}`}
+                title="Copy verification & signing URL"
+                onClick={() => copy('link', link)}
+              >
+                {copied === 'link' ? <Check size={11} /> : <Link2 size={11} />}
+                <span>{copied === 'link' ? 'Copied' : 'Copy'}</span>
+              </button>
+            </div>
             <code>{link}</code>
           </div>
         )}
@@ -288,7 +299,13 @@ function Detail({ user, id, onBack, onEdit }) {
                   <small>{sig ? `Signed ${new Date(sig.signedAt).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })}` : 'Pending signature'}</small>
                 </span>
                 {report.status !== 'draft' && !sig && (
-                  <button type="button" onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}>
+                  <button
+                    type="button"
+                    className={`ar-slot-copy ${copied === `slot-${s.slot}` ? 'ar-copied' : ''}`}
+                    title={`Copy personal signing link for ${s.name || s.title}`}
+                    aria-label={`Copy personal signing link for ${s.name || s.title}`}
+                    onClick={() => copy(`slot-${s.slot}`, `${link}?sign=${s.slot}`)}
+                  >
                     {copied === `slot-${s.slot}` ? <Check size={12} /> : <Link2 size={12} />}
                   </button>
                 )}
