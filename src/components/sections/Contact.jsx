@@ -91,7 +91,7 @@ export function ContactSection() {
                                 <div className="space-y-4">
                                     {[
                                         { Icon: Envelope, label: 'Email', value: 'odysseyphitsolutions@gmail.com', href: 'mailto:odysseyphitsolutions@gmail.com' },
-                                        { Icon: Phone, label: 'Phone', value: '0993-005-0994', href: 'tel:0993-005-0994' },
+                                        { Icon: Phone, label: 'Phone', value: '0960-664-3576', href: 'tel:0960-664-3576' },
                                         { Icon: MapPin, label: 'Address', value: '3F Roxas Building, N. Bacalso National Road, Lawaan 3, Talisay City, Cebu', href: '#' },
                                         // eslint-disable-next-line no-unused-vars
                                     ].map(({ Icon, label, value, href }) => (
