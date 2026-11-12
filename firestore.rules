@@ -1089,6 +1089,73 @@ service cloud.firestore {
       }
     }
 
+    // ─── Quotations ───
+    function quotationAdmin() { return operationsRoot() || (request.auth != null && staffAction('quotations:manage')); }
+    function validQuotation(d) {
+      return d.keys().hasOnly(['controlNumber', 'controlMonth', 'controlSeq', 'projectName', 'clientBusiness',
+          'clientName', 'clientAddress', 'clientEmail', 'clientPhone', 'date', 'validUntil', 'paymentTerms',
+          'items', 'subtotal', 'discountPercent', 'discountAmount', 'taxPercent', 'taxAmount', 'total', 'totalWords',
+          'scopeText', 'scopeJson', 'signers', 'status', 'statusReason', 'revokedReason', 'createdAt', 'createdByUid', 'createdByName',
+          'updatedAt', 'updatedByUid', 'issuedAt', 'acceptedAt', 'revokedAt']) &&
+        docText(d.projectName, 1, 300) &&
+        docText(d.clientBusiness, 1, 300) &&
+        docText(d.get('clientName', ''), 0, 200) &&
+        docText(d.get('clientAddress', ''), 0, 300) &&
+        docText(d.get('clientEmail', ''), 0, 100) &&
+        docText(d.get('clientPhone', ''), 0, 50) &&
+        docText(d.get('date', ''), 0, 20) &&
+        docText(d.get('validUntil', ''), 0, 20) &&
+        docText(d.get('paymentTerms', ''), 0, 200) &&
+        d.items is list && d.items.size() <= 50 &&
+        d.subtotal is number && d.subtotal >= 0 &&
+        d.discountPercent is number && d.discountPercent >= 0 && d.discountPercent <= 100 &&
+        d.discountAmount is number && d.discountAmount >= 0 &&
+        d.taxPercent is number && d.taxPercent >= 0 &&
+        d.taxAmount is number && d.taxAmount >= 0 &&
+        d.total is number && d.total >= 0 &&
+        docText(d.get('totalWords', ''), 0, 300) &&
+        docText(d.get('scopeText', ''), 0, 80000) &&
+        docText(d.get('scopeJson', ''), 0, 400000) &&
+        d.signers is map && d.signers.size() <= 12 &&
+        d.status in ['draft', 'issued', 'accepted', 'revoked'] &&
+        docText(d.get('statusReason', ''), 0, 500) &&
+        docText(d.get('revokedReason', ''), 0, 500) &&
+        d.controlMonth.matches('[0-9]{4}-[0-9]{2}') && d.controlSeq is int && d.controlSeq > 0 && d.controlNumber == 'QT-' + d.controlMonth + '-' + seqText(d.controlSeq) &&
+        d.updatedAt == request.time && d.updatedByUid == request.auth.uid;
+    }
+    match /quotationCounters/{month} {
+      allow get: if quotationAdmin();
+      allow create, update: if quotationAdmin() && month.matches('[0-9]{4}-[0-9]{2}') && request.resource.data.keys().hasOnly(['last']) &&
+        request.resource.data.last == (resource == null ? 1 : resource.data.last + 1);
+      allow list, delete: if false;
+    }
+    match /quotations/{quotationId} {
+      allow get: if quotationAdmin() || resource.data.status in ['issued', 'accepted', 'revoked'];
+      allow list: if quotationAdmin();
+      allow create: if quotationAdmin() && validQuotation(request.resource.data) && request.resource.data.status == 'draft' &&
+        request.resource.data.createdAt == request.time && request.resource.data.createdByUid == request.auth.uid &&
+        afterRecord('quotationCounters', request.resource.data.controlMonth).last == request.resource.data.controlSeq;
+      allow update: if quotationAdmin() && validQuotation(request.resource.data) &&
+        unchanged(['controlNumber', 'controlMonth', 'controlSeq', 'createdAt', 'createdByUid', 'createdByName']) &&
+        (resource.data.status == 'draft'
+          ? request.resource.data.status == 'draft' || (request.resource.data.status == 'issued' && request.resource.data.issuedAt == request.time)
+          : resource.data.status == 'issued' && request.resource.data.status in ['accepted', 'revoked'] &&
+            ((request.resource.data.status == 'accepted' && request.resource.data.acceptedAt == request.time) ||
+             (request.resource.data.status == 'revoked' && request.resource.data.revokedAt == request.time)) &&
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusReason', 'revokedReason', 'acceptedAt', 'revokedAt', 'updatedAt', 'updatedByUid']));
+      allow delete: if quotationAdmin() && resource.data.status == 'draft';
+
+      match /signatures/{slotId} {
+        allow read: if quotationAdmin() || record('quotations', quotationId).status in ['issued', 'accepted', 'revoked'];
+        allow create: if record('quotations', quotationId).status in ['issued', 'accepted'] && record('quotations', quotationId).signers.keys().hasAny([slotId]) &&
+          request.resource.data.keys().hasOnly(['name', 'title', 'signedAt', 'signedByUid', 'signatureImage', 'userAgent']) && docText(request.resource.data.name, 2, 200) &&
+          request.resource.data.signedAt == request.time && docText(request.resource.data.get('userAgent', ''), 0, 300) &&
+          request.resource.data.signedByUid == (request.auth == null ? '' : request.auth.uid) &&
+          (record('quotations', quotationId).signers[slotId].kind != 'prepared' || quotationAdmin());
+        allow update, delete: if false;
+      }
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
