@@ -59,6 +59,31 @@ test('emptyQuotationSigners provides prepared and accepted signers', () => {
   assert.strictEqual(signers.s2.kind, 'accepted');
 });
 
+test('parseQuotationText extracts fields, table items, and scope from pasted draft', () => {
+  const sample = `
+PROJECT: Odyssey Cloud Portal
+CLIENT BUSINESS: Nexus Inc
+CLIENT NAME: Alice Walker
+DATE: November 12, 2026
+PAYMENT TERMS: 50% mobilization
+
+ITEMS:
+| Item & Description | Qty | Unit Price |
+| Cloud Migration | 1 | 45000 |
+
+## 1. Project Objectives
+Deliver enterprise cloud infrastructure.
+  `;
+  const parsed = parseQuotationText(sample);
+  assert.strictEqual(parsed.fields.projectName, 'Odyssey Cloud Portal');
+  assert.strictEqual(parsed.fields.clientBusiness, 'Nexus Inc');
+  assert.strictEqual(parsed.fields.clientName, 'Alice Walker');
+  assert.strictEqual(parsed.items.length, 1);
+  assert.strictEqual(parsed.items[0].description, 'Cloud Migration');
+  assert.strictEqual(parsed.items[0].amount, 45000);
+  assert.match(parsed.scope, /Project Objectives/);
+});
+
 test('buildQuotationHtml produces complete OdysseyPH branded document HTML', () => {
   const quotation = {
     controlNumber: 'QT-2026-11-001',

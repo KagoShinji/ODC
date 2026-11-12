@@ -1,7 +1,7 @@
 import { auth, db } from '../lib/firebase.js';
 import {
   collection, doc, onSnapshot, query, orderBy, runTransaction,
-  serverTimestamp, writeBatch, setDoc,
+  serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { formatDisplayIdentifier } from '../utils/authHelpers.js';
 import {

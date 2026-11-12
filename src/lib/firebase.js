@@ -6,7 +6,7 @@ import { getStorage, connectStorageEmulator } from "firebase/storage";
 import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
-const env = (typeof import.meta !== 'undefined' && import.meta.env) || (typeof process !== 'undefined' && process.env) || {};
+const env = (typeof import.meta !== 'undefined' && import.meta.env) || (typeof globalThis !== 'undefined' && globalThis.process?.env) || {};
 
 const firebaseConfig = {
   apiKey: env.VITE_FIREBASE_API_KEY || 'test-key',
