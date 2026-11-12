@@ -39,8 +39,10 @@ export function quotationFields(form) {
 
   const sanitizedItems = (form.items || []).slice(0, 50).map((item, idx) => {
     const desc = (item.description || '').trim().slice(0, 300) || `Item ${idx + 1}`;
-    const qty = Math.max(0, Number(item.quantity) || 1);
-    const unitPrice = Math.max(0, Number(item.unitPrice) || 0);
+    const rawQty = Number(item.quantity);
+    const qty = Number.isNaN(rawQty) || rawQty < 0 ? 0 : rawQty;
+    const rawPrice = Number(item.unitPrice);
+    const unitPrice = Number.isNaN(rawPrice) || rawPrice < 0 ? 0 : rawPrice;
     return {
       id: item.id || `item_${idx + 1}`,
       description: desc,
@@ -192,12 +194,20 @@ export async function signQuotation(id, slotId, signatureData) {
 
   const batch = writeBatch(db);
   batch.set(sigRef, payload);
-  // Mark quotation accepted if signed by client/conforme slot
-  batch.update(quoteRef, {
-    status: 'accepted',
-    acceptedAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    updatedByUid: currentUser?.uid || 'client-conforme',
-  });
+  // Mark quotation accepted only if signed by client/conforme slot
+  const isConforme = signatureData.kind === 'accepted' || slotId === 's2';
+  if (isConforme) {
+    batch.update(quoteRef, {
+      status: 'accepted',
+      acceptedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      updatedByUid: currentUser?.uid || 'client-conforme',
+    });
+  } else {
+    batch.update(quoteRef, {
+      updatedAt: serverTimestamp(),
+      updatedByUid: currentUser?.uid || 'odyssey-issuer',
+    });
+  }
   await batch.commit();
 }

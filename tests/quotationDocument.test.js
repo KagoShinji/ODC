@@ -8,6 +8,7 @@ import {
   emptyQuotationSigners,
   parseQuotationText,
   buildQuotationHtml,
+  editorContentOf,
 } from '../src/utils/quotationDocument.js';
 
 test('formatControlNumber formats with QT prefix and 3-digit sequence', () => {
@@ -51,6 +52,20 @@ test('calcQuotationTotals handles 0% discount and 0% tax cleanly', () => {
   assert.match(res.totalWords, /THREE THOUSAND PESOS/i);
 });
 
+test('calcQuotationTotals clamps negative discounts to 0 and excessive discounts to 100', () => {
+  const items = [{ quantity: 1, unitPrice: 10000 }];
+  const resNegative = calcQuotationTotals(items, -15, 0);
+  assert.strictEqual(resNegative.discountPercent, 0);
+  assert.strictEqual(resNegative.discountAmount, 0);
+  assert.strictEqual(resNegative.total, 10000);
+
+  const resExcessive = calcQuotationTotals(items, 150, 0);
+  assert.strictEqual(resExcessive.discountPercent, 100);
+  assert.strictEqual(resExcessive.discountAmount, 10000);
+  assert.strictEqual(resExcessive.total, 0);
+});
+
+
 test('emptyQuotationSigners provides prepared and accepted signers', () => {
   const signers = emptyQuotationSigners();
   assert.ok(signers.s1, 'prepared signer slot exists');
@@ -82,6 +97,16 @@ Deliver enterprise cloud infrastructure.
   assert.strictEqual(parsed.items[0].description, 'Cloud Migration');
   assert.strictEqual(parsed.items[0].amount, 45000);
   assert.match(parsed.scope, /Project Objectives/);
+});
+
+test('editorContentOf extracts parsed JSON or falls back to text', () => {
+  const jsonQuote = { scopeJson: '{"type":"doc","content":[{"type":"paragraph"}]}', scopeText: 'sample' };
+  assert.deepStrictEqual(editorContentOf(jsonQuote), { type: 'doc', content: [{ type: 'paragraph' }] });
+
+  const textQuote = { scopeText: 'Plain scope text' };
+  assert.strictEqual(editorContentOf(textQuote), 'Plain scope text');
+
+  assert.strictEqual(editorContentOf(null), '');
 });
 
 test('buildQuotationHtml produces complete OdysseyPH branded document HTML', () => {

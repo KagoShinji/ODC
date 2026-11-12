@@ -12,7 +12,7 @@ import {
 import { BRAND_CO, money } from '../../utils/brandDocument';
 import {
   AI_QUOTATION_PROMPT, SIGNER_KINDS, parseQuotationText,
-  calcLineAmount, calcQuotationTotals,
+  calcLineAmount, calcQuotationTotals, renderMarkdownBody,
 } from '../../utils/quotationDocument';
 import { useBrandFonts } from '../../hooks/useBrandFonts';
 import './QuotationEditor.css';
@@ -213,7 +213,7 @@ export default function QuotationEditor({
       attributes: { class: 'qe-prose', 'aria-label': 'Quotation scope of work' },
     },
     onUpdate: ({ editor: e }) => {
-      onDoc(e.getJSON(), e.getText());
+      onDoc(e.getJSON(), e.getHTML());
     },
   });
 
@@ -271,7 +271,7 @@ export default function QuotationEditor({
     const parsed = parseQuotationText(pasteBuffer);
     onParsed(parsed);
     if (parsed.scope && editorRef.current) {
-      editorRef.current.commands.setContent(parsed.scope);
+      editorRef.current.commands.setContent(renderMarkdownBody(parsed.scope));
     }
     setPasteBuffer('');
     setAiOpen(false);
@@ -567,3 +567,4 @@ export default function QuotationEditor({
     </div>
   );
 }
+

@@ -302,6 +302,17 @@ const EXTRA_QT_CSS = `
 .sig-badge i{width:6px;height:6px;border-radius:50%;background:#12b76a}
 `;
 
+export function editorContentOf(quotation) {
+  if (quotation?.scopeJson) {
+    try {
+      return JSON.parse(quotation.scopeJson);
+    } catch {
+      /* fall back to text */
+    }
+  }
+  return quotation?.scopeText || '';
+}
+
 export function buildQuotationHtml(quotation, signatures = {}, options = {}) {
   const q = quotation || {};
   const origin = options.origin || (typeof window !== 'undefined' ? window.location.origin : '');
@@ -330,7 +341,9 @@ export function buildQuotationHtml(quotation, signatures = {}, options = {}) {
     : `<tr><td colspan="5" class="ac muted">No line items specified.</td></tr>`;
 
   // Scope & Terms rendering
-  const scopeContent = q.scopeText ? renderMarkdownBody(q.scopeText) : '';
+  const scopeContent = q.scopeText
+    ? (q.scopeText.trim().startsWith('<') ? q.scopeText : renderMarkdownBody(q.scopeText))
+    : '';
 
   // Signers Block
   const sigList = Object.entries(q.signers || emptyQuotationSigners())
@@ -438,3 +451,4 @@ export function buildQuotationHtml(quotation, signatures = {}, options = {}) {
     autoPrint,
   });
 }
+

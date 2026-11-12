@@ -61,3 +61,18 @@ test('quotationFields rejects missing project name or client name', () => {
 test('normalizeSignerName collapses multiple whitespace characters', () => {
   assert.strictEqual(normalizeSignerName('  Jane   M.   Doe  '), 'Jane M. Doe');
 });
+
+test('quotationFields retains quantity 0 as 0 and does not convert to 1', () => {
+  const form = {
+    projectName: 'Fintech Portal',
+    clientBusiness: 'Alpha Corp',
+    items: [{ id: '1', description: 'Zero Item', quantity: 0, unitPrice: 5000 }],
+    signers: [{ id: 's1', kind: 'prepared', name: 'Jetch' }],
+  };
+  const fields = quotationFields(form);
+  assert.strictEqual(fields.items[0].quantity, 0);
+  assert.strictEqual(fields.items[0].amount, 0);
+  assert.strictEqual(fields.total, 0);
+});
+
+

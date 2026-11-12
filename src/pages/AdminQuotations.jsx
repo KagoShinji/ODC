@@ -9,7 +9,7 @@ import QuotationFrame from '../components/quotations/QuotationFrame';
 import QuotationEditor from '../components/quotations/QuotationEditor';
 import {
   emptyQuotationSigners, quotationLink, SIGNER_KINDS, defaultValidUntil,
-  mergeQuotationParsed,
+  mergeQuotationParsed, editorContentOf,
 } from '../utils/quotationDocument';
 import { BRAND_CO, longDate, money } from '../utils/brandDocument';
 import {
@@ -64,6 +64,7 @@ function formFrom(quote) {
 
 function Editor({ user, quotation, onClose, onSaved }) {
   const [form, setForm] = useState(() => formFrom(quotation));
+  const [initialContent] = useState(() => editorContentOf(quotation));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -122,7 +123,7 @@ function Editor({ user, quotation, onClose, onSaved }) {
         <QuotationEditor
           form={form}
           controlNumber={quotation?.controlNumber}
-          initialContent={quotation?.scopeText}
+          initialContent={initialContent}
           onField={set}
           onItemsChange={setItems}
           onDoc={onDoc}
@@ -590,3 +591,4 @@ export default function AdminQuotations({ firebaseUser, can }) {
     </div>
   );
 }
+

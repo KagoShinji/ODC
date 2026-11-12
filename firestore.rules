@@ -1135,14 +1135,22 @@ service cloud.firestore {
       allow create: if quotationAdmin() && validQuotation(request.resource.data) && request.resource.data.status == 'draft' &&
         request.resource.data.createdAt == request.time && request.resource.data.createdByUid == request.auth.uid &&
         afterRecord('quotationCounters', request.resource.data.controlMonth).last == request.resource.data.controlSeq;
-      allow update: if quotationAdmin() && validQuotation(request.resource.data) &&
+      allow update: if (
+        (quotationAdmin() && validQuotation(request.resource.data) &&
         unchanged(['controlNumber', 'controlMonth', 'controlSeq', 'createdAt', 'createdByUid', 'createdByName']) &&
         (resource.data.status == 'draft'
           ? request.resource.data.status == 'draft' || (request.resource.data.status == 'issued' && request.resource.data.issuedAt == request.time)
           : resource.data.status == 'issued' && request.resource.data.status in ['accepted', 'revoked'] &&
             ((request.resource.data.status == 'accepted' && request.resource.data.acceptedAt == request.time) ||
              (request.resource.data.status == 'revoked' && request.resource.data.revokedAt == request.time)) &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusReason', 'revokedReason', 'acceptedAt', 'revokedAt', 'updatedAt', 'updatedByUid']));
+            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusReason', 'revokedReason', 'acceptedAt', 'revokedAt', 'updatedAt', 'updatedByUid'])))
+        ||
+        (resource.data.status == 'issued' &&
+         request.resource.data.status == 'accepted' &&
+         request.resource.data.acceptedAt == request.time &&
+         request.resource.data.updatedAt == request.time &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt', 'updatedAt', 'updatedByUid']))
+      );
       allow delete: if quotationAdmin() && resource.data.status == 'draft';
 
       match /signatures/{slotId} {
@@ -1151,6 +1159,7 @@ service cloud.firestore {
           request.resource.data.keys().hasOnly(['name', 'title', 'signedAt', 'signedByUid', 'signatureImage', 'userAgent']) && docText(request.resource.data.name, 2, 200) &&
           request.resource.data.signedAt == request.time && docText(request.resource.data.get('userAgent', ''), 0, 300) &&
           request.resource.data.signedByUid == (request.auth == null ? '' : request.auth.uid) &&
+          (record('quotations', quotationId).signers[slotId].name == '' || request.resource.data.name.trim().lower() == record('quotations', quotationId).signers[slotId].name.trim().lower()) &&
           (record('quotations', quotationId).signers[slotId].kind != 'prepared' || quotationAdmin());
         allow update, delete: if false;
       }
