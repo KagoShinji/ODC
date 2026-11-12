@@ -16,6 +16,7 @@ import {
   ScrollText,
   ShieldAlert,
   ClipboardCheck,
+  ReceiptText,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -173,6 +174,16 @@ export const ALL_ADMIN_NAVIGATIONS = [
     color: '#0ea5e9',
     actions: [
       { id: 'auditreports:manage', label: 'Manage Audit Reports', desc: 'Draft, issue, sign, close and revoke audit reports' },
+    ],
+  },
+  {
+    id: 'quotations',
+    label: 'Price Quotations',
+    desc: 'Cost estimates, scope & client conforme',
+    icon: ReceiptText,
+    color: '#f59e0b',
+    actions: [
+      { id: 'quotations:manage', label: 'Manage Quotations', desc: 'Draft, issue, sign, and revoke quotations' },
     ],
   },
   {

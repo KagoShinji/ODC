@@ -23,6 +23,7 @@ const PublicTaskView = lazy(() => import('./pages/PublicTaskView'));
 const OfficeOrderPage = lazy(() => import('./pages/OfficeOrderPage'));
 const IncidentReportPage = lazy(() => import('./pages/IncidentReportPage'));
 const AuditReportPage = lazy(() => import('./pages/AuditReportPage'));
+const QuotationPage = lazy(() => import('./pages/QuotationPage'));
 
 function shouldSkipSplash() {
   if (typeof window === 'undefined') return true;
@@ -98,6 +99,7 @@ function AppRoutes() {
       <Route path="/office-order/:id" element={<OfficeOrderPage />} />
       <Route path="/incident-report/:id" element={<IncidentReportPage />} />
       <Route path="/audit-report/:id" element={<AuditReportPage />} />
+      <Route path="/quotation/:id" element={<QuotationPage />} />
       <Route path="/feedback" element={<FeedbackForm />} />
       <Route path="/feedback/:id" element={<FeedbackForm />} />
       {/* All other routes go to the Public Site which handles its own 404s */}
