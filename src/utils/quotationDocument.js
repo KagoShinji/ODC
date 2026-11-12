@@ -203,6 +203,67 @@ const inline = s => esc(s)
   .replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g, '$1<i>$2</i>')
   .replace(/__(.+?)__/g, '<b>$1</b>');
 
+/** Light markdown (AI paste, scope text) -> HTML for editor import */
+export function markdownToHtml(text) {
+  const out = [];
+  const lines = String(text || '').split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const t = lines[i].trim();
+    if (!t) { i += 1; continue; }
+
+    const h = t.match(/^(#{1,3})\s+(.+)$/);
+    if (h) {
+      const level = h[1].length;
+      out.push(`<h${level}>${inline(h[2])}</h${level}>`);
+      i += 1;
+      continue;
+    }
+
+    if (/^\|.*\|$/.test(t)) {
+      const rows = [];
+      while (i < lines.length && /^\|.*\|$/.test(lines[i].trim())) { rows.push(lines[i].trim()); i += 1; }
+      const cells = r => r.slice(1, -1).split('|').map(c => c.trim());
+      const filtered = rows.filter(r => !/^\|[\s:|-]+\|$/.test(r));
+      const [head, ...rest] = filtered;
+      if (head) {
+        out.push(`<table><tr>${cells(head).map(c => `<th><p>${inline(c)}</p></th>`).join('')}</tr>${rest.map(r => `<tr>${cells(r).map(c => `<td><p>${inline(c)}</p></td>`).join('')}</tr>`).join('')}</table>`);
+      }
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(t) || /^\d+[.)]\s+/.test(t)) {
+      const ordered = /^\d+[.)]\s+/.test(t);
+      const marker = ordered ? /^\d+[.)]\s+/ : /^[-*]\s+/;
+      const items = [];
+      while (i < lines.length && marker.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(marker, ''));
+        i += 1;
+      }
+      out.push(`<${ordered ? 'ol' : 'ul'}>${items.map(x => `<li><p>${inline(x)}</p></li>`).join('')}</${ordered ? 'ol' : 'ul'}>`);
+      continue;
+    }
+
+    if (/^>\s?/.test(t)) {
+      const quote = [];
+      while (i < lines.length && /^>\s?/.test(lines[i].trim())) {
+        quote.push(lines[i].trim().replace(/^>\s?/, ''));
+        i += 1;
+      }
+      out.push(`<blockquote><p>${inline(quote.join(' '))}</p></blockquote>`);
+      continue;
+    }
+
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,3}\s|\||[-*]\s|\d+[.)]\s|>)/.test(lines[i].trim())) {
+      para.push(lines[i].trim());
+      i += 1;
+    }
+    out.push(`<p>${inline(para.join(' '))}</p>`);
+  }
+  return out.join('');
+}
+
 export function renderMarkdownBody(text) {
   const out = [];
   const lines = String(text || '').split('\n');
@@ -286,6 +347,13 @@ const EXTRA_QT_CSS = `
 .qt-summary-table tr.qt-total-row td.ar{color:var(--orange);font-family:Poppins,sans-serif;font-size:18px;font-weight:800}
 .qt-words{font-size:11px;font-style:italic;color:var(--muted);text-align:right;margin-top:6px}
 .qt-scope-section{margin-top:24px;border-top:1px solid var(--line);padding-top:20px}
+.qt-scope-section table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #3a4a5c;border-radius:8px;overflow:hidden;margin:12px 0 16px}
+.qt-scope-section .tbl{border:1px solid #3a4a5c;border-radius:8px;overflow:hidden;margin:12px 0 16px}
+.qt-scope-section .tbl table{border:none;border-radius:0;margin:0;border-collapse:collapse}
+.qt-scope-section th{background:#ebe5dc;font-size:10px;letter-spacing:1.2px;text-align:left;text-transform:uppercase;padding:9px 14px;border-bottom:1px solid #3a4a5c;color:var(--navy);font-weight:700}
+.qt-scope-section td{padding:9px 14px;border-top:1px solid var(--line);font-size:12px;vertical-align:top}
+.qt-scope-section tr:first-child td{border-top:none}
+.qt-scope-section th p,.qt-scope-section td p{margin:0}
 .qt-h1{font-family:Poppins,sans-serif;font-size:18px;font-weight:700;color:var(--navy);margin:16px 0 8px}
 .qt-h2{font-family:Poppins,sans-serif;font-size:15px;font-weight:700;color:var(--navy);margin:16px 0 8px;border-bottom:1px solid #eee;padding-bottom:4px}
 .qt-h3{font-family:Poppins,sans-serif;font-size:13px;font-weight:600;color:#c2410c;margin:12px 0 6px}
@@ -310,7 +378,9 @@ export function editorContentOf(quotation) {
       /* fall back to text */
     }
   }
-  return quotation?.scopeText || '';
+  const text = quotation?.scopeText || '';
+  if (!text) return '';
+  return text.trim().startsWith('<') ? text : markdownToHtml(text);
 }
 
 export function buildQuotationHtml(quotation, signatures = {}, options = {}) {

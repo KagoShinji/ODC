@@ -12,7 +12,7 @@ import {
 import { BRAND_CO, money } from '../../utils/brandDocument';
 import {
   AI_QUOTATION_PROMPT, SIGNER_KINDS, parseQuotationText,
-  calcLineAmount, calcQuotationTotals, renderMarkdownBody,
+  calcLineAmount, calcQuotationTotals, markdownToHtml,
 } from '../../utils/quotationDocument';
 import { useBrandFonts } from '../../hooks/useBrandFonts';
 import './QuotationEditor.css';
@@ -271,7 +271,7 @@ export default function QuotationEditor({
     const parsed = parseQuotationText(pasteBuffer);
     onParsed(parsed);
     if (parsed.scope && editorRef.current) {
-      editorRef.current.commands.setContent(renderMarkdownBody(parsed.scope));
+      editorRef.current.commands.setContent(markdownToHtml(parsed.scope));
     }
     setPasteBuffer('');
     setAiOpen(false);

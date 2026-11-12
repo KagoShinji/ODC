@@ -9,6 +9,7 @@ import {
   parseQuotationText,
   buildQuotationHtml,
   editorContentOf,
+  markdownToHtml,
 } from '../src/utils/quotationDocument.js';
 
 test('formatControlNumber formats with QT prefix and 3-digit sequence', () => {
@@ -104,7 +105,7 @@ test('editorContentOf extracts parsed JSON or falls back to text', () => {
   assert.deepStrictEqual(editorContentOf(jsonQuote), { type: 'doc', content: [{ type: 'paragraph' }] });
 
   const textQuote = { scopeText: 'Plain scope text' };
-  assert.strictEqual(editorContentOf(textQuote), 'Plain scope text');
+  assert.strictEqual(editorContentOf(textQuote), '<p>Plain scope text</p>');
 
   assert.strictEqual(editorContentOf(null), '');
 });
@@ -136,4 +137,69 @@ test('buildQuotationHtml produces complete OdysseyPH branded document HTML', () 
   assert.match(html, /Enterprise Portal/);
   assert.match(html, /Core Platform Development/);
   assert.match(html, /Scope of Work/);
+});
+
+test('markdownToHtml converts markdown table into HTML table structure for TipTap', () => {
+  const md = `
+| Milestone | Timeline | Deliverables |
+| Phase 1 | 2 Weeks | Design and Architecture |
+| Phase 2 | 4 Weeks | MVP Deployment |
+  `.trim();
+  const html = markdownToHtml(md);
+  assert.match(html, /<table>/);
+  assert.match(html, /<th><p>Milestone<\/p><\/th>/);
+  assert.match(html, /<th><p>Timeline<\/p><\/th>/);
+  assert.match(html, /<td><p>Phase 1<\/p><\/td>/);
+  assert.match(html, /<td><p>MVP Deployment<\/p><\/td>/);
+  assert.match(html, /<\/table>/);
+});
+
+test('editorContentOf converts markdown scope to HTML when scopeJson is missing', () => {
+  const quoteWithMd = {
+    scopeText: '## Scope\n| Item | Spec |\n| Laptop | Apple M3 |',
+  };
+  const content = editorContentOf(quoteWithMd);
+  assert.match(content, /<h2>Scope<\/h2>/);
+  assert.match(content, /<table>/);
+  assert.match(content, /<th><p>Item<\/p><\/th>/);
+  assert.match(content, /<td><p>Laptop<\/p><\/td>/);
+});
+
+test('buildQuotationHtml renders both itemized pricing table and scope tables with brand CSS', () => {
+  const quote = {
+    controlNumber: 'QT-2026-11-002',
+    projectName: 'E-Commerce System',
+    clientBusiness: 'Retail Corp',
+    items: [
+      { id: '1', description: 'Product Catalog', quantity: 1, unitPrice: 20000, amount: 20000 },
+      { id: '2', description: 'Payment Gateway', quantity: 2, unitPrice: 15000, amount: 30000 },
+    ],
+    scopeText: `
+## Milestones
+| Milestone | Target |
+| Sprint 1 | Checkout flow |
+| Sprint 2 | Automated tests |
+    `.trim(),
+    signers: emptyQuotationSigners(),
+  };
+
+  const html = buildQuotationHtml(quote);
+
+  // Line items pricing table
+  assert.match(html, /<table class="qt-table">/);
+  assert.match(html, /Product Catalog/);
+  assert.match(html, /Payment Gateway/);
+  assert.match(html, /₱ 20,000\.00/);
+  assert.match(html, /₱ 30,000\.00/);
+
+  // Scope section rendered table
+  assert.match(html, /<div class="qt-scope-section">/);
+  assert.match(html, /<div class="tbl"><table><thead><tr><th>Milestone<\/th>/);
+  assert.match(html, /<td>Checkout flow<\/td>/);
+
+  // CSS table rules check
+  assert.match(html, /\.qt-scope-section table/);
+  assert.match(html, /\.qt-scope-section th/);
+  assert.match(html, /\.qt-scope-section td/);
+  assert.match(html, /\.qt-table-wrap/);
 });
