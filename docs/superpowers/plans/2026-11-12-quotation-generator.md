@@ -369,3 +369,4 @@ Expected: All tests pass and Vite production bundle compiles cleanly.
 git add src/utils/navigationConfig.js src/utils/staffModulePermissions.js src/pages/Admin.jsx src/App.jsx
 git commit -m "feat(quotation): wire navigation, admin dashboard tab, and public routing"
 ```
+
