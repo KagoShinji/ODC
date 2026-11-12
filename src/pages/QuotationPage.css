@@ -1,0 +1,340 @@
+/* Public Quotation Portal Page — ODC Brand: Navy #16273a, Orange #ff6a13 */
+.qtp {
+  --navy: #16273a;
+  --orange: #ff6a13;
+  --muted: #5b6574;
+  --line: #d9dde3;
+  min-height: 100dvh;
+  background: #eef0f3;
+  color: #1d2939;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+}
+
+.qtp-state {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 120px 20px;
+  text-align: center;
+}
+
+.qtp-state h1 {
+  font-family: Poppins, sans-serif;
+  color: var(--navy);
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+
+.qtp-state p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.qtp-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  background: var(--navy);
+  color: #fff;
+  border-bottom: 3px solid var(--orange);
+}
+
+.qtp-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.qtp-id img {
+  height: 34px;
+  width: auto;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.qtp-id small {
+  display: block;
+  color: #c4cbd4;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.qtp-id strong {
+  font-family: Poppins, sans-serif;
+  color: var(--orange);
+  font-size: 18px;
+  letter-spacing: 0.4px;
+}
+
+.qtp-status {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.qtp-status-issued {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.qtp-status-accepted {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.qtp-status-revoked {
+  background: #dc2626;
+  color: #fff;
+}
+
+.qtp-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.qtp button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qtp button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.qtp button:focus-visible,
+.qtp input:focus-visible,
+.qtp select:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+}
+
+.qtp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 816px) 340px;
+  gap: 28px;
+  justify-content: center;
+  align-items: start;
+  padding: 28px 20px 60px;
+}
+
+.qtp-doc {
+  min-width: 0;
+}
+
+.qtp-side {
+  display: grid;
+  gap: 16px;
+  position: sticky;
+  top: 84px;
+}
+
+.qtp-side section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.qtp-side h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Poppins, sans-serif;
+  font-size: 14px;
+  color: var(--navy);
+  margin: 0 0 12px;
+}
+
+.qtp-side h2 small {
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.qtp-side h2 svg {
+  color: var(--orange);
+}
+
+.qtp-side dl {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px 10px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.qtp-side dt {
+  color: var(--muted);
+}
+
+.qtp-side dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.qtp-signers {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.qtp-signers li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid var(--line);
+  font-size: 13px;
+}
+
+.qtp-signers li.is-signed {
+  border-left-color: #16a34a;
+}
+
+.qtp-signers small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.qtp-sign {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.qtp-sign label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.qtp-sign input:not([type="checkbox"]),
+.qtp-sign select {
+  padding: 9px 11px;
+  border: 1px solid #c6ccd5;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  color: #1d2939;
+  background: #fff;
+}
+
+.qtp-check {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 8px !important;
+  font-weight: 400 !important;
+  color: #3d4756 !important;
+  line-height: 1.5;
+}
+
+.qtp-check input {
+  margin-top: 3px;
+  accent-color: var(--orange);
+}
+
+.qtp-preview {
+  font-family: 'Great Vibes', cursive;
+  font-size: 32px;
+  color: #111;
+  margin: 0;
+  padding: 4px 2px;
+  border-bottom: 1px solid #3a4a5c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qtp .qtp-primary {
+  background: var(--orange);
+  border-color: var(--orange);
+  color: #fff;
+}
+
+.qtp .qtp-primary:hover {
+  background: #e85d0c;
+}
+
+.qtp-msg {
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 9px 12px;
+  border-radius: 8px;
+  margin: 0 0 10px;
+}
+
+.qtp-msg-ok {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.qtp-msg-error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+@media (max-width: 1180px) {
+  .qtp-layout {
+    grid-template-columns: minmax(0, 816px);
+  }
+  .qtp-side {
+    position: static;
+  }
+}
+
+@media (max-width: 600px) {
+  .qtp-bar {
+    padding: 10px 16px;
+  }
+  .qtp-layout {
+    padding: 16px 16px 40px;
+  }
+  .qtp-actions {
+    width: 100%;
+  }
+  .qtp-actions button {
+    flex: 1;
+  }
+}
+
+@media print {
+  .qtp-bar,
+  .qtp-side {
+    display: none;
+  }
+}
