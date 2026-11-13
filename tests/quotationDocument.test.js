@@ -10,6 +10,7 @@ import {
   buildQuotationHtml,
   editorContentOf,
   markdownToHtml,
+  normalizeScopeHtml,
 } from '../src/utils/quotationDocument.js';
 
 test('formatControlNumber formats with QT prefix and 3-digit sequence', () => {
@@ -202,4 +203,63 @@ test('buildQuotationHtml renders both itemized pricing table and scope tables wi
   assert.match(html, /\.qt-scope-section th/);
   assert.match(html, /\.qt-scope-section td/);
   assert.match(html, /\.qt-table-wrap/);
+});
+
+test('normalizeScopeHtml lifts TipTap leading <th> row into <thead> for multi-page print header repeat', () => {
+  const tiptapTable = '<table><tbody><tr><th><p>Module</p></th><th><p>Deliverables</p></th></tr><tr><td><p>Portal</p></td><td><p>Login</p></td></tr></tbody></table>';
+  const normalized = normalizeScopeHtml(tiptapTable);
+  assert.match(normalized, /^<table><thead><tr><th><p>Module<\/p><\/th><th><p>Deliverables<\/p><\/th><\/tr><\/thead><tbody><tr><td><p>Portal<\/p>/);
+
+  // Tables without header rows remain untouched
+  const noHeaderTable = '<table><tbody><tr><td><p>A</p></td><td><p>B</p></td></tr></tbody></table>';
+  assert.strictEqual(normalizeScopeHtml(noHeaderTable), noHeaderTable);
+});
+
+test('buildQuotationHtml keeps header clean without escaped HTML tags, prevents trailing dots, and supports signatures & print pagination', () => {
+  const issuedQuote = {
+    controlNumber: 'QT-2026-11-001',
+    status: 'issued',
+    projectName: 'Scan Portal',
+    clientBusiness: 'Mud Hound',
+    clientName: 'John Judilla',
+    clientEmail: '09177706982',
+    clientPhone: '',
+    date: '2026-11-13',
+    validUntil: '',
+    items: [{ id: '1', description: 'Setup', quantity: 0, unitPrice: 0, amount: 0 }],
+    scopeText: '<h2>1. Scope</h2><p>Summary</p><ul><li>Item A</li></ul><table><tbody><tr><th><p>Col 1</p></th></tr><tr><td><p>Val 1</p></td></tr></tbody></table>',
+    signers: emptyQuotationSigners(),
+  };
+
+  const signatures = {
+    s1: { name: 'Escalante Tiffany Marapao', signedAt: '2026-11-13T05:00:00Z' },
+  };
+
+  const html = buildQuotationHtml(issuedQuote, signatures);
+
+  // Title band must be pure text (no escaped &lt;span...)
+  assert.match(html, /<h1>PRICE QUOTATION<\/h1>/);
+  assert.doesNotMatch(html, /&lt;span/);
+  assert.match(html, /<span class="qt-status-tag qt-status-issued">ISSUED<\/span>/);
+
+  // Contact line must not end with trailing middle dot when only clientEmail is present
+  assert.doesNotMatch(html, /09177706982\s*·/);
+  assert.match(html, /09177706982/);
+
+  // Footer must not have dangling "Valid Until " when empty
+  assert.doesNotMatch(html, /Valid Until\s*<\/span>/);
+
+  // TipTap HTML tags styled & table normalized to <thead>
+  assert.match(html, /\.qt-scope-section h2/);
+  assert.match(html, /\.qt-scope-section ul/);
+  assert.match(html, /<table><thead><tr><th><p>Col 1<\/p><\/th><\/tr><\/thead><tbody><tr><td><p>Val 1<\/p><\/td><\/tr><\/tbody><\/table>/);
+
+  // Digital signature mark and Great Vibes cursive font loaded
+  assert.match(html, /Great\+Vibes/);
+  assert.match(html, /<div class="sig-mark">Escalante Tiffany Marapao<\/div>/);
+  assert.match(html, /<div class="sig-mark empty"><\/div>/);
+
+  // Desktop 816px scale preservation + print pagination rules
+  assert.match(html, /\.docno\{flex-shrink:0;white-space:nowrap\}/);
+  assert.match(html, /@page :first\{margin-top:0;margin-bottom:12mm\}/);
 });

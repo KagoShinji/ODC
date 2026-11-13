@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { buildQuotationHtml } from '../../utils/quotationDocument';
 import './QuotationFrame.css';
@@ -26,10 +26,27 @@ async function iframeFontCss(docEl) {
  * Renders the branded price quotation inside an isolated iframe,
  * exposing print() for native browser PDF printing and savePng() for image export.
  */
-const QuotationFrame = forwardRef(function QuotationFrame({ quotation, signatures, title = 'Price quotation document', scale = 1 }, ref) {
+const QuotationFrame = forwardRef(function QuotationFrame({ quotation, signatures, title = 'Price quotation document', scale: scaleProp }, ref) {
+  const wrap = useRef(null);
   const frame = useRef(null);
   const [height, setHeight] = useState(1100);
+  const [autoScale, setAutoScale] = useState(1);
   const html = useMemo(() => buildQuotationHtml(quotation, signatures), [quotation, signatures]);
+
+  const scale = scaleProp !== undefined ? scaleProp : autoScale;
+
+  useEffect(() => {
+    if (scaleProp !== undefined || !wrap.current || typeof ResizeObserver === 'undefined') return undefined;
+    const fit = () => {
+      if (!wrap.current) return;
+      const w = wrap.current.clientWidth;
+      if (w > 0) setAutoScale(Math.min(1, (w - 2) / 816));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrap.current);
+    return () => ro.disconnect();
+  }, [scaleProp]);
 
   const measure = () => {
     const body = frame.current?.contentDocument?.body;
@@ -65,7 +82,7 @@ const QuotationFrame = forwardRef(function QuotationFrame({ quotation, signature
   }), []);
 
   return (
-    <div className="qt-frame" style={{ height: height * scale }}>
+    <div ref={wrap} className="qt-frame" style={{ height: height * scale }}>
       <iframe
         ref={frame}
         title={title}

@@ -370,7 +370,7 @@ export default function QuotationEditor({
                   <input
                     value={form.clientEmail || ''}
                     maxLength={100}
-                    placeholder="email@company.com"
+                    placeholder="email@company.com / 09XX-XXX-XXXX"
                     onChange={e => onField('clientEmail', e.target.value)}
                   />
                 </div>
