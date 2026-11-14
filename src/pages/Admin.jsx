@@ -64,6 +64,7 @@ const AdminOfficeOrders = lazy(() => import('./AdminOfficeOrders'));
 const AdminIncidentReports = lazy(() => import('./AdminIncidentReports'));
 const AdminAuditReports = lazy(() => import('./AdminAuditReports'));
 const AdminQuotations = lazy(() => import('./AdminQuotations'));
+const AdminEmail = lazy(() => import('./AdminEmail'));
 
 /* ─── Superadmin emails (comma-separated in .env) ─── */
 const SUPERADMIN_EMAILS = (import.meta.env.VITE_SUPERADMIN_EMAIL || '')
@@ -1070,6 +1071,9 @@ function AdminDashboard({ firebaseUser }) {
                 )}
                 {activeTab === 'allowances' && hasPermission('allowances') && (
                     <AdminAllowances firebaseUser={firebaseUser} allowanceState={allowanceState} isSuperAdmin={superAdmin} initialSection={activeSubTabs.allowances} onSectionChange={(id) => syncSubSystem('allowances', id)} onOpenStaff={hasPermission('staff') ? () => selectSystem('staff') : undefined} />
+                )}
+                {activeTab === 'email' && hasPermission('email') && (
+                    <AdminEmail />
                 )}
                 {activeTab === 'demos' && hasPermission('demos') && (
                     <AdminDemos firebaseUser={firebaseUser} demoState={demoState} initialSection={activeSubTabs.demos} onSectionChange={(id) => syncSubSystem('demos', id)} onOpenStaff={hasPermission('staff') ? () => selectSystem('staff') : undefined} />

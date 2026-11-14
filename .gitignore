@@ -40,3 +40,7 @@ documents/
 *.svg
 !public/**
 !src/**
+
+# Cloudflare Wrangler local state
+.wrangler/
+.dev.vars

@@ -1,0 +1,52 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "odc-website",
+	"main": "worker/src/index.js",
+	"compatibility_date": "2026-10-01",
+	// The built Vite site. Unknown paths fall back to index.html for client-side routing.
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": [
+			"/api/*"
+		]
+	},
+	"d1_databases": [
+		{
+			"binding": "EMAIL_DB",
+			"database_name": "odc-email",
+			// Replace with the id printed by `npx wrangler d1 create odc-email`.
+			"database_id": "980c0bfc-8d0c-4c67-acba-d6b18df2dd08",
+			"migrations_dir": "worker/migrations"
+		},
+		{
+			"binding": "odc_email",
+			"database_name": "odc-email",
+			"database_id": "980c0bfc-8d0c-4c67-acba-d6b18df2dd08",
+			"remote": true
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "EMAIL_FILES",
+			"bucket_name": "odc-email-files"
+		},
+		{
+			"bucket_name": "odc-email-files",
+			"binding": "odc_email_files",
+			"remote": true
+		}
+	],
+	"vars": {
+		"EMAIL_DOMAIN": "odysseyph.com",
+		"EMAIL_FROM_NAME": "OdysseyPH IT Solutions",
+		"FIREBASE_PROJECT_ID": "odc-website-ce8bf",
+		// Firebase Auth UIDs that see every mailbox. Matches the operations root in firestore.rules.
+		"EMAIL_ADMIN_UIDS": "USkc70WnqpUV4Oq0ppPpdm2E4Fa2"
+	},
+	// Secrets (set with `npx wrangler secret put`): MJ_APIKEY_PUBLIC, MJ_APIKEY_PRIVATE
+	"observability": {
+		"enabled": true
+	}
+}

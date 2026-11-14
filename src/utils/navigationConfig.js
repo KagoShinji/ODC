@@ -17,6 +17,7 @@ import {
   ShieldAlert,
   ClipboardCheck,
   ReceiptText,
+  Mail,
 } from 'lucide-react';
 import { CalendarBlank } from '@phosphor-icons/react';
 
@@ -30,6 +31,16 @@ export const ALL_ADMIN_NAVIGATIONS = [
     actions: [
       { id: 'tasks:create', label: 'Post Tasks', desc: 'Create tasks, set deadlines and assign staff' },
       { id: 'tasks:manage', label: 'Manage All Tasks', desc: "Edit, reassign or delete anyone's tasks" },
+    ],
+  },
+  {
+    id: 'email', label: 'Email', desc: 'Shared @odysseyph.com inboxes · send and receive', icon: Mail, color: '#93c5fd',
+    actions: [
+      { id: 'email:hello', label: 'hello@ inbox', desc: 'Main inbox: website, social and general inquiries (also catches unknown addresses)' },
+      { id: 'email:sales', label: 'sales@ inbox', desc: 'Read and send as sales@odysseyph.com' },
+      { id: 'email:support', label: 'support@ inbox', desc: 'Read and send as support@odysseyph.com' },
+      { id: 'email:marketing', label: 'marketing@ inbox', desc: 'Read and send as marketing@odysseyph.com' },
+      { id: 'email:billing', label: 'billing@ inbox', desc: 'Read and send as billing@odysseyph.com' },
     ],
   },
   {
