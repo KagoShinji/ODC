@@ -172,17 +172,22 @@ export async function deleteQuotationDraft(id) {
   await batch.commit();
 }
 
+export const isConformeSlot = (slotId, signatureData = {}) =>
+  (signatureData.kind ? signatureData.kind === 'accepted' : slotId === 's2');
+
 /**
- * Signs the quotation as client or issuer, recording an immutable audit entry and marking document accepted.
+ * Signs the quotation as client or issuer, recording an immutable audit entry and marking document accepted
+ * when signed by the client Conforme slot.
  */
 export async function signQuotation(id, slotId, signatureData) {
-  check(signatureData.name?.trim(), 'Signer name is required.');
+  const typed = normalizeSignerName(signatureData?.name);
+  check(typed.length >= 2, 'Type your full name (at least 2 characters) to sign.');
   const currentUser = auth.currentUser;
   const sigRef = doc(db, 'quotations', id, 'signatures', slotId);
   const quoteRef = doc(db, 'quotations', id);
 
   const payload = {
-    name: normalizeSignerName(signatureData.name).slice(0, 200),
+    name: typed.slice(0, 200),
     title: (signatureData.title || '').trim().slice(0, 200),
     signedAt: serverTimestamp(),
     signedByUid: currentUser?.uid || '',
@@ -194,19 +199,14 @@ export async function signQuotation(id, slotId, signatureData) {
 
   const batch = writeBatch(db);
   batch.set(sigRef, payload);
-  // Mark quotation accepted only if signed by client/conforme slot
-  const isConforme = signatureData.kind === 'accepted' || slotId === 's2';
-  if (isConforme) {
+  // Only client Conforme acceptance transitions the parent quotation to accepted;
+  // issuer / prepared signatures only append the immutable signature entry.
+  if (isConformeSlot(slotId, signatureData)) {
     batch.update(quoteRef, {
       status: 'accepted',
       acceptedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       updatedByUid: currentUser?.uid || 'client-conforme',
-    });
-  } else {
-    batch.update(quoteRef, {
-      updatedAt: serverTimestamp(),
-      updatedByUid: currentUser?.uid || 'odyssey-issuer',
     });
   }
   await batch.commit();

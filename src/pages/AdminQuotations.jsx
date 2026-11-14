@@ -15,7 +15,7 @@ import { BRAND_CO, longDate, money } from '../utils/brandDocument';
 import {
   subscribeQuotations, subscribeQuotation, subscribeQuotationSignatures,
   createQuotation, updateQuotation, issueQuotation, revokeQuotation,
-  deleteQuotationDraft, signQuotation,
+  deleteQuotationDraft, signQuotation, normalizeSignerName,
 } from '../services/quotationService';
 import './AdminTasks.css';
 import './AdminQuotations.css';
@@ -391,15 +391,24 @@ function Detail({ user, id, onBack, onEdit }) {
           })}
         </ul>
 
-        {preparedSlot && quotation.status === 'issued' && (
+        {preparedSlot && (quotation.status === 'issued' || quotation.status === 'accepted') && (
           <form
             style={{ marginTop: '12px' }}
             onSubmit={e => {
               e.preventDefault();
-              run('sign', () => signQuotation(quotation.id, preparedSlot.slot, {
-                name: signName || preparedSlot.name,
-                title: preparedSlot.title,
-              }));
+              const typed = normalizeSignerName(signName || preparedSlot.name);
+              if (preparedSlot.name && typed.toLowerCase() !== normalizeSignerName(preparedSlot.name).toLowerCase()) {
+                setError(`Please type the exact issuer name: “${preparedSlot.name}”.`);
+                return;
+              }
+              run('sign', async () => {
+                await signQuotation(quotation.id, preparedSlot.slot, {
+                  name: typed,
+                  title: preparedSlot.title,
+                  kind: preparedSlot.kind,
+                });
+                setSignName('');
+              });
             }}
           >
             <label className="task-field">

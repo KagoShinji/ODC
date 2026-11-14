@@ -153,6 +153,7 @@ export default function QuotationPage() {
         await signQuotation(quotation.id, clientSlot.slot, {
           name: name.trim(),
           title: title.trim() || clientSlot.title,
+          kind: clientSlot.kind,
         });
         setName('');
         setTitle('');

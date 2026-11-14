@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import {
   quotationFields,
   normalizeSignerName,
+  isConformeSlot,
 } from '../src/services/quotationService.js';
 
 test('quotationFields validates required project and client fields', () => {
@@ -73,6 +74,14 @@ test('quotationFields retains quantity 0 as 0 and does not convert to 1', () => 
   assert.strictEqual(fields.items[0].quantity, 0);
   assert.strictEqual(fields.items[0].amount, 0);
   assert.strictEqual(fields.total, 0);
+});
+
+test('isConformeSlot only transitions parent quotation for accepted slots, not prepared/issuer slots', () => {
+  assert.strictEqual(isConformeSlot('s1', { kind: 'prepared' }), false);
+  assert.strictEqual(isConformeSlot('s1', {}), false);
+  assert.strictEqual(isConformeSlot('s2', { kind: 'accepted' }), true);
+  assert.strictEqual(isConformeSlot('s2', {}), true);
+  assert.strictEqual(isConformeSlot('s2', { kind: 'prepared' }), false);
 });
 
 
